@@ -294,4 +294,4 @@ Ending:   update your state file, note PAUSED_AT, tell your track owner, stop cl
 Cross-track learnings only, appended by the Integration Owner (per-track ones go in your state file).
 One line each: `[Track/Step] — what was found`. Architecture corrections go through the Contract Change Process.
 
-(no entries yet)
+[A1→B7] — evaluation/oracle_client.py has no import-linter contract yet; when B7 creates it, add a contract so only `evaluation` may import it (Integration Owner edits .importlinter).
