@@ -84,7 +84,7 @@ STACK:
   Database:   SQLite (WAL) for the product; separate SQLite for the simulator's ground truth
   Auth:       signed JWT in an HttpOnly cookie, argon2, RBAC
   Real-time:  Server-Sent Events
-  External systems (separate processes): world simulator (Python), bank gateway simulator (Node 20 + Express)
+  External systems (separate processes): world simulator (Python), bank gateway simulator (Node 24 LTS + Express)
   Deployment: Docker Compose on one VM behind Caddy (public HTTPS), same Compose offline on a laptop
 
 ARCHITECTURE IN ONE LINE:
@@ -170,7 +170,7 @@ BUILD STEP A1: Repo Scaffold & Guardrails
 
   YOUR JOB — ALONGSIDE:
     Create the public GitHub repo and protect main; confirm the licence (default MIT); the other
-    three clone and run `npm run ci` locally to prove every machine works (Python 3.11, Node 20).
+    three clone and run `npm run ci` locally to prove every machine works (Python 3.11, Node 24 LTS).
 
   Done when:
     `npm run ci` passes locally and in GitHub Actions on the empty tree. On a throwaway branch,
