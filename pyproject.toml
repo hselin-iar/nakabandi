@@ -1,0 +1,64 @@
+[project]
+name = "nakabandi-workspace"
+version = "0.0.0"
+description = "NAKABANDI monorepo root: uv workspace and shared tooling configuration."
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "nakabandi-api",
+    "nakabandi-world-sim",
+    "nakabandi-contracts",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["apps/api", "apps/world-sim", "packages/contracts"]
+
+[tool.uv.sources]
+nakabandi-api = { workspace = true }
+nakabandi-world-sim = { workspace = true }
+nakabandi-contracts = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pyright",
+    "pytest",
+    "import-linter",
+    "pre-commit",
+    # Installed only so import-linter can resolve the external packages that the
+    # domain-purity contract forbids (DOC 2 §2.6). Runtime dependencies are added per step.
+    "sqlalchemy",
+    "fastapi",
+    "httpx",
+    "requests",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "TID"]
+
+# DOC 2 §2.6: no wall-clock reads outside the Clock implementations. AP-10 / DOC 3 LC-2.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"datetime.datetime.now".msg = "Read time through the injected Clock; SystemClock is the only wall-clock reader."
+"datetime.datetime.utcnow".msg = "Read time through the injected Clock; SystemClock is the only wall-clock reader."
+"time.time".msg = "Read time through the injected Clock; SystemClock is the only wall-clock reader."
+
+[tool.ruff.lint.per-file-ignores]
+"apps/api/src/nakabandi/shared/clock.py" = ["TID251"]
+
+[tool.pyright]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
+include = ["apps", "packages"]
+exclude = ["**/node_modules"]
+
+[tool.pytest.ini_options]
+testpaths = ["apps/api/tests"]
