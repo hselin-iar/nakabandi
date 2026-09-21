@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push)",
+      "Bash(git push *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git reset --hard)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean *)",
+      "Bash(git checkout -- *)",
+      "Bash(gh pr merge *)",
+      "Bash(gh repo delete *)",
+      "Bash(sudo *)",
+      "Read(.env)",
+      "Read(**/.env)"
+    ],
+    "ask": [
+      "Bash(gh api *)",
+      "Bash(rm -rf *)"
+    ]
+  }
+}

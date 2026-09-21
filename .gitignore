@@ -5,3 +5,4 @@ __pycache__/
 *.db
 dist/
 .DS_Store
+.claude/settings.local.json
