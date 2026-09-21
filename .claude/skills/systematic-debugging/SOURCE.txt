@@ -1,0 +1,5 @@
+Repo: https://github.com/obra/superpowers
+Path: skills/systematic-debugging/
+Commit: 5bf4e78011075bcfc0dc295f0724994cd123ee71
+
+Omitted on purpose: find-polluter.sh (executable, runs the test suite file by file), condition-based-waiting-example.ts, CREATION-LOG.md, test-*.md. References to them inside the copied files are dead links. SKILL.md is verbatim upstream.
