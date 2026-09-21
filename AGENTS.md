@@ -271,7 +271,7 @@ DOC1.md              → Features M1 Scenario Simulator, M2 Predictive Engine, M
                        Notification System, M5 Law Enforcement Interface, M6 Interceptability Planner & Ladder;
                        SHOULD S1–S5, COULD C1–C4; §1.5 ethics guardrails
 DOC2.md              → Stack: React 18 + TS + Vite / FastAPI + Pydantic v2 + SQLAlchemy 2 on SQLite (WAL) / world-sim
-                       (Python) + bank-sim (Node 20 + Express) / Docker Compose + Caddy; modular monolith
+                       (Python) + bank-sim (Node 24 LTS + Express) / Docker Compose + Caddy; modular monolith
 DOC3.md              → Modules: shared, geo, intake, graph, forecast, interception, alerting, casework, access, audit,
                        analytics, evaluation, pipeline; apps/world-sim; apps/bank-sim; web features alerts/map/
                        clusters/cases/evaluation/ops/demo; Locked Contracts LC-1…LC-10
@@ -294,4 +294,4 @@ Ending:   update your state file, note PAUSED_AT, tell your track owner, stop cl
 Cross-track learnings only, appended by the Integration Owner (per-track ones go in your state file).
 One line each: `[Track/Step] — what was found`. Architecture corrections go through the Contract Change Process.
 
-(no entries yet)
+[A1→B7] — evaluation/oracle_client.py has no import-linter contract yet; when B7 creates it, add a contract so only `evaluation` may import it (Integration Owner edits .importlinter).

@@ -1,0 +1,19 @@
+{
+  "name": "nakabandi",
+  "private": true,
+  "version": "0.0.0",
+  "description": "NAKABANDI monorepo root. Scripts are the one command per task on every OS (DOC 2 §2.2).",
+  "engines": { "node": ">=24" },
+  "workspaces": ["apps/web"],
+  "scripts": {
+    "dev": "node scripts/not-yet.mjs dev",
+    "test": "uv run pytest && npm run test --workspace apps/web",
+    "ci": "npm run ci:py && npm run ci:web",
+    "ci:py": "uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run lint-imports && uv run pytest",
+    "ci:web": "npm run lint --workspace apps/web && npm run typecheck --workspace apps/web && npm run test --workspace apps/web && npm run build --workspace apps/web",
+    "types": "node scripts/not-yet.mjs types",
+    "seed": "node scripts/not-yet.mjs seed",
+    "reset": "node scripts/not-yet.mjs reset",
+    "sweep": "node scripts/not-yet.mjs sweep"
+  }
+}

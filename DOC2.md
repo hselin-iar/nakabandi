@@ -373,7 +373,7 @@ Decision: Caching
   Not used: Redis, Upstash.
 
 Decision: Bank gateway simulator
-  Chosen: Node 20 + Express, small server-rendered "bank nodal console", its own SQLite
+  Chosen: Node 24 LTS + Express, small server-rendered "bank nodal console", its own SQLite
     or JSON store; verifies the HMAC signature and timestamp window; acknowledges;
     applies an amount-limited lien in its own ledger; calls back on apply and release
   Reason: A separate process is a true system boundary and gives the webhook contract

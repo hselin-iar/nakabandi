@@ -1,0 +1,306 @@
+[importlinter]
+# Boundary contracts from DOC 2 §2.6 (rule table). Every rule there that import-linter can
+# express is encoded here; the other rows are enforced by ruff (wall clock), eslint-plugin-boundaries
+# (web features) and the `npm run types` diff check (generated client).
+root_packages =
+    nakabandi
+    nakabandi_contracts
+    worldsim
+include_external_packages = True
+
+# Row 1: interfaces -> application -> domain; infrastructure never imports interfaces.
+# (interfaces) is optional because only modules that expose HTTP have that layer.
+[importlinter:contract:layers]
+name = Layers inside every API module
+type = layers
+layers =
+    (interfaces)
+    (infrastructure)
+    application
+    domain
+containers =
+    nakabandi.intake
+    nakabandi.graph
+    nakabandi.forecast
+    nakabandi.interception
+    nakabandi.alerting
+    nakabandi.casework
+    nakabandi.access
+    nakabandi.audit
+    nakabandi.geo
+    nakabandi.analytics
+
+# Row 2: a module may import another module only through its public facade.
+# Direct imports of another module's sub-modules are forbidden; importing the facade is allowed.
+[importlinter:contract:facade-intake]
+name = intake uses other modules only through their facades
+type = forbidden
+source_modules =
+    nakabandi.intake
+forbidden_modules =
+    nakabandi.graph.**
+    nakabandi.forecast.**
+    nakabandi.interception.**
+    nakabandi.alerting.**
+    nakabandi.casework.**
+    nakabandi.access.**
+    nakabandi.audit.**
+    nakabandi.geo.**
+    nakabandi.analytics.**
+    nakabandi.evaluation.**
+    nakabandi.pipeline.**
+allow_indirect_imports = True
+[importlinter:contract:facade-graph]
+name = graph uses other modules only through their facades
+type = forbidden
+source_modules =
+    nakabandi.graph
+forbidden_modules =
+    nakabandi.intake.**
+    nakabandi.forecast.**
+    nakabandi.interception.**
+    nakabandi.alerting.**
+    nakabandi.casework.**
+    nakabandi.access.**
+    nakabandi.audit.**
+    nakabandi.geo.**
+    nakabandi.analytics.**
+    nakabandi.evaluation.**
+    nakabandi.pipeline.**
+allow_indirect_imports = True
+[importlinter:contract:facade-forecast]
+name = forecast uses other modules only through their facades
+type = forbidden
+source_modules =
+    nakabandi.forecast
+forbidden_modules =
+    nakabandi.intake.**
+    nakabandi.graph.**
+    nakabandi.interception.**
+    nakabandi.alerting.**
+    nakabandi.casework.**
+    nakabandi.access.**
+    nakabandi.audit.**
+    nakabandi.geo.**
+    nakabandi.analytics.**
+    nakabandi.evaluation.**
+    nakabandi.pipeline.**
+allow_indirect_imports = True
+[importlinter:contract:facade-interception]
+name = interception uses other modules only through their facades
+type = forbidden
+source_modules =
+    nakabandi.interception
+forbidden_modules =
+    nakabandi.intake.**
+    nakabandi.graph.**
+    nakabandi.forecast.**
+    nakabandi.alerting.**
+    nakabandi.casework.**
+    nakabandi.access.**
+    nakabandi.audit.**
+    nakabandi.geo.**
+    nakabandi.analytics.**
+    nakabandi.evaluation.**
+    nakabandi.pipeline.**
+allow_indirect_imports = True
+[importlinter:contract:facade-alerting]
+name = alerting uses other modules only through their facades
+type = forbidden
+source_modules =
+    nakabandi.alerting
+forbidden_modules =
+    nakabandi.intake.**
+    nakabandi.graph.**
+    nakabandi.forecast.**
+    nakabandi.interception.**
+    nakabandi.casework.**
+    nakabandi.access.**
+    nakabandi.audit.**
+    nakabandi.geo.**
+    nakabandi.analytics.**
+    nakabandi.evaluation.**
+    nakabandi.pipeline.**
+allow_indirect_imports = True
+[importlinter:contract:facade-casework]
+name = casework uses other modules only through their facades
+type = forbidden
+source_modules =
+    nakabandi.casework
+forbidden_modules =
+    nakabandi.intake.**
+    nakabandi.graph.**
+    nakabandi.forecast.**
+    nakabandi.interception.**
+    nakabandi.alerting.**
+    nakabandi.access.**
+    nakabandi.audit.**
+    nakabandi.geo.**
+    nakabandi.analytics.**
+    nakabandi.evaluation.**
+    nakabandi.pipeline.**
+allow_indirect_imports = True
+[importlinter:contract:facade-access]
+name = access uses other modules only through their facades
+type = forbidden
+source_modules =
+    nakabandi.access
+forbidden_modules =
+    nakabandi.intake.**
+    nakabandi.graph.**
+    nakabandi.forecast.**
+    nakabandi.interception.**
+    nakabandi.alerting.**
+    nakabandi.casework.**
+    nakabandi.audit.**
+    nakabandi.geo.**
+    nakabandi.analytics.**
+    nakabandi.evaluation.**
+    nakabandi.pipeline.**
+allow_indirect_imports = True
+[importlinter:contract:facade-audit]
+name = audit uses other modules only through their facades
+type = forbidden
+source_modules =
+    nakabandi.audit
+forbidden_modules =
+    nakabandi.intake.**
+    nakabandi.graph.**
+    nakabandi.forecast.**
+    nakabandi.interception.**
+    nakabandi.alerting.**
+    nakabandi.casework.**
+    nakabandi.access.**
+    nakabandi.geo.**
+    nakabandi.analytics.**
+    nakabandi.evaluation.**
+    nakabandi.pipeline.**
+allow_indirect_imports = True
+[importlinter:contract:facade-geo]
+name = geo uses other modules only through their facades
+type = forbidden
+source_modules =
+    nakabandi.geo
+forbidden_modules =
+    nakabandi.intake.**
+    nakabandi.graph.**
+    nakabandi.forecast.**
+    nakabandi.interception.**
+    nakabandi.alerting.**
+    nakabandi.casework.**
+    nakabandi.access.**
+    nakabandi.audit.**
+    nakabandi.analytics.**
+    nakabandi.evaluation.**
+    nakabandi.pipeline.**
+allow_indirect_imports = True
+[importlinter:contract:facade-analytics]
+name = analytics uses other modules only through their facades
+type = forbidden
+source_modules =
+    nakabandi.analytics
+forbidden_modules =
+    nakabandi.intake.**
+    nakabandi.graph.**
+    nakabandi.forecast.**
+    nakabandi.interception.**
+    nakabandi.alerting.**
+    nakabandi.casework.**
+    nakabandi.access.**
+    nakabandi.audit.**
+    nakabandi.geo.**
+    nakabandi.evaluation.**
+    nakabandi.pipeline.**
+allow_indirect_imports = True
+[importlinter:contract:facade-evaluation]
+name = evaluation uses other modules only through their facades
+type = forbidden
+source_modules =
+    nakabandi.evaluation
+forbidden_modules =
+    nakabandi.intake.**
+    nakabandi.graph.**
+    nakabandi.forecast.**
+    nakabandi.interception.**
+    nakabandi.alerting.**
+    nakabandi.casework.**
+    nakabandi.access.**
+    nakabandi.audit.**
+    nakabandi.geo.**
+    nakabandi.analytics.**
+    nakabandi.pipeline.**
+allow_indirect_imports = True
+[importlinter:contract:facade-pipeline]
+name = pipeline uses other modules only through their facades
+type = forbidden
+source_modules =
+    nakabandi.pipeline
+forbidden_modules =
+    nakabandi.intake.**
+    nakabandi.graph.**
+    nakabandi.forecast.**
+    nakabandi.interception.**
+    nakabandi.alerting.**
+    nakabandi.casework.**
+    nakabandi.access.**
+    nakabandi.audit.**
+    nakabandi.geo.**
+    nakabandi.analytics.**
+    nakabandi.evaluation.**
+allow_indirect_imports = True
+
+# Row 3: domain code stays pure.
+[importlinter:contract:domain-purity]
+name = domain packages do not import I/O or framework libraries
+type = forbidden
+source_modules =
+    nakabandi.*.domain
+forbidden_modules =
+    sqlalchemy
+    fastapi
+    httpx
+    os
+    requests
+allow_indirect_imports = True
+
+# Row 5: hidden-truth firewall (the API process never reads the oracle).
+[importlinter:contract:firewall-main]
+name = main.py does not import evaluation
+type = forbidden
+source_modules =
+    nakabandi.main
+forbidden_modules =
+    nakabandi.evaluation
+allow_indirect_imports = True
+
+# Row 6: orchestration lives in pipeline; no module imports pipeline.
+[importlinter:contract:pipeline-is-top]
+name = no module imports pipeline
+type = forbidden
+source_modules =
+    nakabandi.intake
+    nakabandi.graph
+    nakabandi.forecast
+    nakabandi.interception
+    nakabandi.alerting
+    nakabandi.casework
+    nakabandi.access
+    nakabandi.audit
+    nakabandi.geo
+    nakabandi.analytics
+    nakabandi.evaluation
+    nakabandi.shared
+forbidden_modules =
+    nakabandi.pipeline
+allow_indirect_imports = True
+
+# Row 7: the shared contracts package imports nothing from the apps.
+[importlinter:contract:contracts-are-leaf]
+name = packages/contracts imports nothing from apps
+type = forbidden
+source_modules =
+    nakabandi_contracts
+forbidden_modules =
+    nakabandi
+    worldsim
+allow_indirect_imports = True

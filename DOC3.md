@@ -703,7 +703,7 @@ TESTING PLAN:
 ## Bank Gateway Simulator
 
 ```
-FEATURE: Bank Gateway Simulator   (external system: apps/bank-sim, Node 20 + Express + TypeScript)
+FEATURE: Bank Gateway Simulator   (external system: apps/bank-sim, Node 24 LTS + Express + TypeScript)
 
 MODULE STRUCTURE:
   apps/bank-sim/src/
