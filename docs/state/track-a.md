@@ -1,7 +1,7 @@
 # TRACK A — Platform & Integration
 OWNER:            Systems lead + coding agent (Integration Owner)
-CURRENT_STEP:     A1 — Repo Scaffold & Guardrails
-LAST_COMPLETED:   None
+CURRENT_STEP:     A2 — Shared Kernel & Contracts
+LAST_COMPLETED:   A1 — Repo Scaffold & Guardrails. Evidence: green CI run https://github.com/hselin-iar/nakabandi/actions/runs/35639465047 (pull_request; the push run is .../35639464810), head 6338620; import-linter failure proven locally in the working tree: "nakabandi.graph.domain is not allowed to import sqlalchemy: nakabandi.graph.domain._tmp_violation -> sqlalchemy (l.1)", then green again after removing the file; machine confirmations 1/4 (Integration Owner's machine) with 3 pending. The four-machine line was waived as a gate by the Integration Owner; each teammate's own `npm run ci` is their onboarding gate.
 STATUS:           ACTIVE
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 1, after A2 (DOC4 §4.1a)
