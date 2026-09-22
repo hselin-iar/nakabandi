@@ -1,0 +1,96 @@
+{
+  "$defs": {
+    "CashOutObsIn": {
+      "additionalProperties": false,
+      "properties": {
+        "account_ref": {
+          "title": "Account Ref",
+          "type": "string"
+        },
+        "amount_paise": {
+          "exclusiveMinimum": 0,
+          "title": "Amount Paise",
+          "type": "integer"
+        },
+        "channel": {
+          "$ref": "#/$defs/Channel"
+        },
+        "event_at": {
+          "format": "date-time",
+          "title": "Event At",
+          "type": "string"
+        },
+        "location_id": {
+          "title": "Location Id",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "bank_report",
+            "police_report"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "account_ref",
+        "location_id",
+        "channel",
+        "amount_paise",
+        "event_at",
+        "observed_at",
+        "source"
+      ],
+      "title": "CashOutObsIn",
+      "type": "object"
+    },
+    "Channel": {
+      "description": "The channel a cash-out (or attempted cash-out) happens through.",
+      "enum": [
+        "ATM",
+        "BRANCH",
+        "AGENT"
+      ],
+      "title": "Channel",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "batch_id": {
+      "title": "Batch Id",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/CashOutObsIn"
+      },
+      "maxItems": 500,
+      "title": "Items",
+      "type": "array"
+    },
+    "sim_time": {
+      "format": "date-time",
+      "title": "Sim Time",
+      "type": "string"
+    }
+  },
+  "required": [
+    "batch_id",
+    "idempotency_key",
+    "sim_time",
+    "items"
+  ],
+  "title": "CashOutObservationBatch",
+  "type": "object"
+}

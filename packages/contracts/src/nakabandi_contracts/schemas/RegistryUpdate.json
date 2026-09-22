@@ -1,0 +1,187 @@
+{
+  "$defs": {
+    "LocationKind": {
+      "description": "The kind of a registry location. Same members as Channel (LC-2), kept as a\nseparate enum because a location's kind and a transaction's channel are distinct\nconcepts that happen to share a value set.",
+      "enum": [
+        "ATM",
+        "BRANCH",
+        "AGENT"
+      ],
+      "title": "LocationKind",
+      "type": "string"
+    },
+    "RegistryLocation": {
+      "additionalProperties": false,
+      "properties": {
+        "activity_index": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Activity Index",
+          "type": "number"
+        },
+        "area_type": {
+          "enum": [
+            "urban",
+            "semi_urban",
+            "rural"
+          ],
+          "title": "Area Type",
+          "type": "string"
+        },
+        "bank_id": {
+          "title": "Bank Id",
+          "type": "string"
+        },
+        "cell_id": {
+          "title": "Cell Id",
+          "type": "string"
+        },
+        "display_name": {
+          "title": "Display Name",
+          "type": "string"
+        },
+        "district_id": {
+          "title": "District Id",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/LocationKind"
+        },
+        "lat": {
+          "title": "Lat",
+          "type": "number"
+        },
+        "lon": {
+          "title": "Lon",
+          "type": "number"
+        },
+        "source": {
+          "enum": [
+            "osm",
+            "synthetic"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "bank_id",
+        "lat",
+        "lon",
+        "district_id",
+        "cell_id",
+        "source",
+        "display_name",
+        "area_type",
+        "activity_index"
+      ],
+      "title": "RegistryLocation",
+      "type": "object"
+    },
+    "RegistryUnit": {
+      "additionalProperties": false,
+      "properties": {
+        "district_id": {
+          "title": "District Id",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "cyber_cell",
+            "station",
+            "patrol"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "lat": {
+          "title": "Lat",
+          "type": "number"
+        },
+        "lon": {
+          "title": "Lon",
+          "type": "number"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "district_id",
+        "lat",
+        "lon",
+        "status"
+      ],
+      "title": "RegistryUnit",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "banks": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Banks",
+      "type": "array"
+    },
+    "cells": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Cells",
+      "type": "array"
+    },
+    "locations": {
+      "items": {
+        "$ref": "#/$defs/RegistryLocation"
+      },
+      "title": "Locations",
+      "type": "array"
+    },
+    "regions": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Regions",
+      "type": "array"
+    },
+    "units": {
+      "items": {
+        "$ref": "#/$defs/RegistryUnit"
+      },
+      "title": "Units",
+      "type": "array"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "banks",
+    "regions",
+    "cells",
+    "locations",
+    "units"
+  ],
+  "title": "RegistryUpdate",
+  "type": "object"
+}
