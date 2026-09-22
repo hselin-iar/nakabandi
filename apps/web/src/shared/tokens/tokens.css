@@ -1,0 +1,424 @@
+/**
+ * tokens.css — design tokens as CSS custom properties.
+ * DOC 3 Web App Shell: shared/tokens/tokens.css
+ * Designer-owned: Track D Step D1 will replace placeholder values with real ones (Sync 6).
+ * Names are the contract (frozen); values are free for D1 to change.
+ *
+ * Token namespaces (DOC 3 Interfaces & Contracts):
+ *   color: surface.{base,raised,sunken}, text.{primary,secondary,inverse},
+ *          border.{subtle,strong}, brand.{primary,accent},
+ *          severity.{low,medium,high,critical}, verdict.{good,warn,bad},
+ *          status.{open,ack,actioned,expired}, focus.ring
+ *   type:  font.{sans,mono}, size scale 12/14/16/20/24/32, weight 400/500/600
+ *   space: 4-point scale; radius.{sm,md,lg}; shadow.{sm,md}; both light and dark themes
+ */
+
+/* -------------------------------------------------------------------------
+   PLACEHOLDER VALUES — D1 will supply the real design values.
+   Both light and dark themes defined (dark is default for this shell).
+   ------------------------------------------------------------------------- */
+
+:root,
+:root[data-theme="dark"] {
+  /* Surface */
+  --nk-surface-base: #0f1117;
+  --nk-surface-raised: #1a1f2e;
+  --nk-surface-sunken: #090c12;
+
+  /* Text */
+  --nk-text-primary: #e2e8f0;
+  --nk-text-secondary: #94a3b8;
+  --nk-text-inverse: #0f1117;
+
+  /* Border */
+  --nk-border-subtle: #1e2a3a;
+  --nk-border-strong: #334155;
+
+  /* Brand */
+  --nk-brand-primary: #6366f1;
+  --nk-brand-accent: #22d3ee;
+
+  /* Severity (icon + colour, never colour alone — DOC 2 §2.7 accessibility) */
+  --nk-severity-low: #4ade80;
+  --nk-severity-medium: #facc15;
+  --nk-severity-high: #fb923c;
+  --nk-severity-critical: #f87171;
+
+  /* Verdict */
+  --nk-verdict-good: #4ade80;
+  --nk-verdict-warn: #facc15;
+  --nk-verdict-bad: #f87171;
+
+  /* Alert status */
+  --nk-status-open: #60a5fa;
+  --nk-status-ack: #a78bfa;
+  --nk-status-actioned: #4ade80;
+  --nk-status-expired: #64748b;
+
+  /* Focus ring */
+  --nk-focus-ring: #6366f1;
+
+  /* Typography */
+  --nk-font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --nk-font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  /* Type scale */
+  --nk-size-12: 0.75rem;
+  --nk-size-14: 0.875rem;
+  --nk-size-16: 1rem;
+  --nk-size-20: 1.25rem;
+  --nk-size-24: 1.5rem;
+  --nk-size-32: 2rem;
+
+  /* Weight */
+  --nk-weight-400: 400;
+  --nk-weight-500: 500;
+  --nk-weight-600: 600;
+
+  /* Space (4-point scale) */
+  --nk-space-1: 0.25rem;
+  --nk-space-2: 0.5rem;
+  --nk-space-3: 0.75rem;
+  --nk-space-4: 1rem;
+  --nk-space-6: 1.5rem;
+  --nk-space-8: 2rem;
+  --nk-space-12: 3rem;
+  --nk-space-16: 4rem;
+
+  /* Radius */
+  --nk-radius-sm: 0.25rem;
+  --nk-radius-md: 0.5rem;
+  --nk-radius-lg: 0.75rem;
+
+  /* Shadow */
+  --nk-shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+  --nk-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+}
+
+:root[data-theme="light"] {
+  --nk-surface-base: #f8fafc;
+  --nk-surface-raised: #ffffff;
+  --nk-surface-sunken: #f1f5f9;
+  --nk-text-primary: #0f172a;
+  --nk-text-secondary: #475569;
+  --nk-text-inverse: #f8fafc;
+  --nk-border-subtle: #e2e8f0;
+  --nk-border-strong: #cbd5e1;
+  --nk-brand-primary: #4f46e5;
+  --nk-brand-accent: #0891b2;
+}
+
+/* -------------------------------------------------------------------------
+   Global reset / base styles
+   ------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--nk-font-sans);
+  font-size: var(--nk-size-16);
+  color: var(--nk-text-primary);
+  background-color: var(--nk-surface-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+/* Focus styles: keyboard-visible, not mouse-click */
+:focus-visible {
+  outline: 2px solid var(--nk-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Layout: Shell
+   ------------------------------------------------------------------------- */
+
+.nk-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.nk-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--nk-space-4);
+  padding: 0 var(--nk-space-6);
+  height: 3.5rem;
+  background: var(--nk-surface-raised);
+  border-bottom: 1px solid var(--nk-border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nk-topbar__brand {
+  font-size: var(--nk-size-20);
+  font-weight: var(--nk-weight-600);
+  color: var(--nk-brand-primary);
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.nk-topbar__simtime {
+  font-family: var(--nk-font-mono);
+  font-size: var(--nk-size-14);
+  color: var(--nk-text-secondary);
+  padding: var(--nk-space-1) var(--nk-space-2);
+  background: var(--nk-surface-sunken);
+  border-radius: var(--nk-radius-sm);
+  border: 1px solid var(--nk-border-subtle);
+}
+
+.nk-topbar__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--nk-space-3);
+}
+
+.nk-topbar__role {
+  font-size: var(--nk-size-14);
+  color: var(--nk-text-secondary);
+}
+
+.nk-topbar__logout {
+  background: none;
+  border: 1px solid var(--nk-border-subtle);
+  color: var(--nk-text-secondary);
+  font-size: var(--nk-size-14);
+  padding: var(--nk-space-1) var(--nk-space-3);
+  border-radius: var(--nk-radius-sm);
+  cursor: pointer;
+  transition: color 150ms, border-color 150ms;
+}
+
+.nk-topbar__logout:hover {
+  color: var(--nk-text-primary);
+  border-color: var(--nk-border-strong);
+}
+
+.nk-shell__body {
+  display: flex;
+  flex: 1;
+}
+
+/* Side navigation */
+.nk-sidenav {
+  width: 14rem;
+  flex-shrink: 0;
+  background: var(--nk-surface-raised);
+  border-right: 1px solid var(--nk-border-subtle);
+  padding: var(--nk-space-4) 0;
+}
+
+.nk-sidenav__list {
+  list-style: none;
+}
+
+.nk-sidenav__link {
+  display: block;
+  padding: var(--nk-space-2) var(--nk-space-6);
+  font-size: var(--nk-size-14);
+  color: var(--nk-text-secondary);
+  text-decoration: none;
+  transition: color 150ms, background 150ms;
+}
+
+.nk-sidenav__link:hover {
+  color: var(--nk-text-primary);
+  background: var(--nk-surface-sunken);
+}
+
+.nk-sidenav__link--active {
+  color: var(--nk-brand-primary);
+  font-weight: var(--nk-weight-500);
+  background: color-mix(in srgb, var(--nk-brand-primary) 10%, transparent);
+}
+
+.nk-main {
+  flex: 1;
+  padding: var(--nk-space-6);
+  overflow-y: auto;
+}
+
+/* -------------------------------------------------------------------------
+   Connection dot
+   ------------------------------------------------------------------------- */
+
+.nk-connection-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.nk-dot--green {
+  background-color: var(--nk-severity-low);
+  box-shadow: 0 0 6px var(--nk-severity-low);
+}
+
+.nk-dot--amber {
+  background-color: var(--nk-severity-medium);
+}
+
+.nk-dot--red {
+  background-color: var(--nk-severity-critical);
+}
+
+/* -------------------------------------------------------------------------
+   Login page
+   ------------------------------------------------------------------------- */
+
+.nk-login-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nk-surface-base);
+  padding: var(--nk-space-4);
+}
+
+.nk-login-card {
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-lg);
+  padding: var(--nk-space-8);
+  width: 100%;
+  max-width: 28rem;
+  box-shadow: var(--nk-shadow-md);
+}
+
+.nk-login-header {
+  text-align: center;
+  margin-bottom: var(--nk-space-8);
+}
+
+.nk-login-header h1 {
+  font-size: var(--nk-size-32);
+  font-weight: var(--nk-weight-600);
+  color: var(--nk-brand-primary);
+  letter-spacing: 0.1em;
+  margin-bottom: var(--nk-space-2);
+}
+
+.nk-login-tagline {
+  font-size: var(--nk-size-14);
+  color: var(--nk-text-secondary);
+}
+
+.nk-login-label {
+  font-size: var(--nk-size-12);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--nk-text-secondary);
+  margin-bottom: var(--nk-space-3);
+}
+
+.nk-quick-login-grid {
+  display: grid;
+  gap: var(--nk-space-2);
+}
+
+.nk-quick-login-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--nk-space-3) var(--nk-space-4);
+  background: var(--nk-surface-sunken);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-md);
+  cursor: pointer;
+  transition: border-color 150ms, background 150ms;
+  text-align: left;
+  width: 100%;
+}
+
+.nk-quick-login-btn:hover {
+  border-color: var(--nk-brand-primary);
+  background: color-mix(in srgb, var(--nk-brand-primary) 6%, var(--nk-surface-sunken));
+}
+
+.nk-btn-role {
+  font-size: var(--nk-size-14);
+  font-weight: var(--nk-weight-500);
+  color: var(--nk-text-primary);
+}
+
+.nk-btn-username {
+  font-size: var(--nk-size-12);
+  font-family: var(--nk-font-mono);
+  color: var(--nk-text-secondary);
+}
+
+.nk-login-footer {
+  margin-top: var(--nk-space-6);
+  font-size: var(--nk-size-12);
+  color: var(--nk-text-secondary);
+  text-align: center;
+}
+
+.nk-login-body {
+  margin-bottom: var(--nk-space-4);
+}
+
+/* -------------------------------------------------------------------------
+   Utility states
+   ------------------------------------------------------------------------- */
+
+.nk-page-loading,
+.nk-not-found,
+.nk-not-allowed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
+  gap: var(--nk-space-2);
+  color: var(--nk-text-secondary);
+  text-align: center;
+}
+
+.nk-not-found h2,
+.nk-not-allowed h2 {
+  font-size: var(--nk-size-20);
+  color: var(--nk-text-primary);
+}
+
+/* -------------------------------------------------------------------------
+   Feature stub page
+   ------------------------------------------------------------------------- */
+
+.nk-stub-page {
+  padding: var(--nk-space-8);
+  color: var(--nk-text-secondary);
+  font-size: var(--nk-size-14);
+}
+
+.nk-stub-page h2 {
+  font-size: var(--nk-size-24);
+  color: var(--nk-text-primary);
+  margin-bottom: var(--nk-space-2);
+}

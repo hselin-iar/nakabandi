@@ -6,7 +6,7 @@
   "engines": { "node": ">=24" },
   "workspaces": ["apps/web"],
   "scripts": {
-    "dev": "node scripts/not-yet.mjs dev",
+    "dev": "npm run dev --workspace apps/web",
     "test": "uv run pytest && npm run test --workspace apps/web",
     "ci": "npm run ci:py && npm run ci:web",
     "ci:py": "uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run lint-imports && uv run pytest",
