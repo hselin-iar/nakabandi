@@ -4,7 +4,7 @@ Edits follow the Contract Change Process. Additions (a new enum member, a new ev
 announced; removals and renames are not allowed.
 """
 
-from nakabandi.shared.clock import Clock, SimClock, SystemClock
+from nakabandi.shared.clock import SIM_CLOCK_EPOCH, Clock, SimClock, SystemClock
 from nakabandi.shared.config import Settings, get_settings
 from nakabandi.shared.errors import (
     Conflict,
@@ -18,6 +18,8 @@ from nakabandi.shared.errors import (
 )
 from nakabandi.shared.events import DomainEvent, EventBus, HandlerError
 from nakabandi.shared.ids import new_id
+from nakabandi.shared.infrastructure.db import Base
+from nakabandi.shared.infrastructure.uow import SqlAlchemyUnitOfWork
 from nakabandi.shared.messages import message_for
 from nakabandi.shared.policy import Policy, PolicyLoadError
 from nakabandi.shared.scheduler import Scheduler
@@ -25,6 +27,8 @@ from nakabandi.shared.types import Id, Paise, SimTime, paise_from_inr, to_sim_ti
 from nakabandi.shared.uow import UnitOfWork
 
 __all__ = [
+    "Base",
+    "SIM_CLOCK_EPOCH",
     "Clock",
     "SimClock",
     "SystemClock",
@@ -52,4 +56,5 @@ __all__ = [
     "paise_from_inr",
     "to_sim_time",
     "UnitOfWork",
+    "SqlAlchemyUnitOfWork",
 ]

@@ -43,6 +43,10 @@ extend-exclude = ["node_modules"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "TID"]
+# B008: FastAPI's Depends()/Header() must be called in an argument default; that is the
+# framework's own dependency-injection pattern (every router across every step uses it), not
+# the mutable-default-argument bug the rule targets elsewhere.
+ignore = ["B008"]
 
 # DOC 2 §2.6: no wall-clock reads outside the Clock implementations. AP-10 / DOC 3 LC-2.
 [tool.ruff.lint.flake8-tidy-imports.banned-api]

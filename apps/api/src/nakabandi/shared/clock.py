@@ -15,6 +15,13 @@ from nakabandi.shared.types import SimTime
 
 logger = structlog.get_logger(__name__)
 
+SIM_CLOCK_EPOCH: SimTime = datetime(1970, 1, 1, tzinfo=UTC)
+"""A SimClock's boot value before any batch or tick has been ingested. Any real scenario's
+sim_time, however far in the past it is dated, is still later than this, so the first ingest
+always advances the clock forward; seeding from wall-clock `now` instead would silently freeze
+a SimClock whenever demo/seed data is dated earlier than the moment the process happens to boot
+(advance_to is monotonic and ignores an earlier target)."""
+
 
 class Clock(Protocol):
     def now(self) -> SimTime: ...
