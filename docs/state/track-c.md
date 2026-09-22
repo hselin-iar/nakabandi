@@ -1,5 +1,5 @@
 # TRACK C — Web & Bank Simulator
-OWNER:            Web dev + coding agent
+OWNER:            Priyam (priyamraj201-art)
 CURRENT_STEP:     C1 — Web Scaffold & Shell
 LAST_COMPLETED:   None
 STATUS:           ACTIVE
@@ -11,4 +11,4 @@ Update it after every completed step and before ending a session.
 
 ## Learnings
 One line per entry, newest last: [Step] — what was found (a gotcha, a rejected approach and why, a decision not in the docs).
-None yet.
+[C-onboarding] — machine confirmed green: node 24.18.0, uv 0.12.17, python 3.11.16; npm run ci passed.
