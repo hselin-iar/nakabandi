@@ -1,5 +1,5 @@
 # TRACK C — Web & Bank Simulator
-OWNER:            Web dev (Priyam) + coding agent
+OWNER:            Priyam (priyamraj201-art) + coding agent
 CURRENT_STEP:     C1 — Web Scaffold & Shell
 LAST_COMPLETED:   None
 STATUS:           ACTIVE
