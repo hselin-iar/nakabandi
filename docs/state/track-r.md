@@ -1,5 +1,5 @@
 # TRACK R — Research Agent Tasks
-OWNER:            Research agent, run by the Designer
+OWNER:            Research agent, operated by Abhinay
 CURRENT_STEP:     R1 — Geo Sources & Licences (R1–R4 in any order, in parallel)
 LAST_COMPLETED:   None
 STATUS:           ACTIVE

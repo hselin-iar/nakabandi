@@ -14,11 +14,11 @@ Status lives in each track's own file, so parallel branches never collide. You w
 
 | TRACK | OWNER | STATE FILE |
 |-------|-------|------------|
-| A — Platform & Integration | Systems lead + coding agent (Integration Owner) | docs/state/track-a.md |
-| B — Algorithms & Simulator | Algo dev + coding agent | docs/state/track-b.md |
-| C — Web & Bank Simulator | Web dev + coding agent | docs/state/track-c.md |
+| A — Platform & Integration | Systems lead (Nilesh) + coding agent (Integration Owner) | docs/state/track-a.md |
+| B — Algorithms & Simulator | Algo dev (Yash) + coding agent | docs/state/track-b.md |
+| C — Web & Bank Simulator | Web dev (Priyam) + coding agent | docs/state/track-c.md |
 | D — Design, Content & Data Curation | Designer (human) | docs/state/track-d.md |
-| R — Research Agent Tasks | Research agent, run by the Designer | docs/state/track-r.md |
+| R — Research Agent Tasks | Research agent (operated by Abhinay) | docs/state/track-r.md |
 
 A state file holds CURRENT_STEP, LAST_COMPLETED, STATUS (ACTIVE | RESUMING | BLOCKED | CHECKPOINT), PAUSED_AT,
 NEXT SYNC POINT and that track's Learnings. Update it after every completed step and before ending a session.
