@@ -15,10 +15,10 @@ Status lives in each track's own file, so parallel branches never collide. You w
 | TRACK | OWNER | STATE FILE |
 |-------|-------|------------|
 | A — Platform & Integration | Systems lead + coding agent (Integration Owner) | docs/state/track-a.md |
-| B — Algorithms & Simulator | Algo dev + coding agent | docs/state/track-b.md |
-| C — Web & Bank Simulator | Web dev + coding agent | docs/state/track-c.md |
-| D — Design, Content & Data Curation | Designer (human) | docs/state/track-d.md |
-| R — Research Agent Tasks | Research agent, run by the Designer | docs/state/track-r.md |
+| B — Algorithms & Simulator | Algo dev (YashMishra9) + coding agent | docs/state/track-b.md |
+| C — Web & Bank Simulator | Priyam (priyamraj201-art) + coding agent | docs/state/track-c.md |
+| D — Design, Content & Data Curation | Abhinay (abhinay905) | docs/state/track-d.md |
+| R — Research Agent Tasks | Research agent, run by Abhinay (abhinay905) | docs/state/track-r.md |
 
 A state file holds CURRENT_STEP, LAST_COMPLETED, STATUS (ACTIVE | RESUMING | BLOCKED | CHECKPOINT), PAUSED_AT,
 NEXT SYNC POINT and that track's Learnings. Update it after every completed step and before ending a session.
@@ -295,3 +295,4 @@ Cross-track learnings only, appended by the Integration Owner (per-track ones go
 One line each: `[Track/Step] — what was found`. Architecture corrections go through the Contract Change Process.
 
 [A1→B7] — evaluation/oracle_client.py has no import-linter contract yet; when B7 creates it, add a contract so only `evaluation` may import it (Integration Owner edits .importlinter).
+[A1] — four-machine evidence waived as a gate for Track A because teammates had not yet accepted invites; each teammate must pass their own npm run ci before their first step.

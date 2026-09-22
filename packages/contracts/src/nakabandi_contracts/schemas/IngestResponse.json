@@ -1,0 +1,55 @@
+{
+  "$defs": {
+    "RejectedItem": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "index": {
+          "title": "Index",
+          "type": "integer"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "code",
+        "message"
+      ],
+      "title": "RejectedItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The `Response (all)` shape in LC-1: shared by every ingestion endpoint.",
+  "properties": {
+    "accepted": {
+      "title": "Accepted",
+      "type": "integer"
+    },
+    "rejected": {
+      "items": {
+        "$ref": "#/$defs/RejectedItem"
+      },
+      "title": "Rejected",
+      "type": "array"
+    },
+    "sim_time": {
+      "format": "date-time",
+      "title": "Sim Time",
+      "type": "string"
+    }
+  },
+  "required": [
+    "accepted",
+    "rejected",
+    "sim_time"
+  ],
+  "title": "IngestResponse",
+  "type": "object"
+}
