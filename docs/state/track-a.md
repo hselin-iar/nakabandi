@@ -1,10 +1,10 @@
 # TRACK A — Platform & Integration
 OWNER:            Systems lead + coding agent (Integration Owner)
-CURRENT_STEP:     A2 — Shared Kernel & Contracts
-LAST_COMPLETED:   A1 — Repo Scaffold & Guardrails. Evidence: green CI run https://github.com/hselin-iar/nakabandi/actions/runs/35639465047 (pull_request; the push run is .../35639464810), head 6338620; import-linter failure proven locally in the working tree: "nakabandi.graph.domain is not allowed to import sqlalchemy: nakabandi.graph.domain._tmp_violation -> sqlalchemy (l.1)", then green again after removing the file; machine confirmations 1/4 (Integration Owner's machine) with 3 pending. The four-machine line was waived as a gate by the Integration Owner; each teammate's own `npm run ci` is their onboarding gate.
-STATUS:           CHECKPOINT
-PAUSED_AT:        A2 Done When holds and `npm run ci` is green (uncommitted, staged in the working tree); this is SYNC 1 (DOC4 §4.1a), which gates Track B's B1-B4 schema validation and Track C's C1 typed client. Waiting on the Systems lead to send the packages/contracts/src/nakabandi_contracts/schemas folder link to Track B and Track C owners and confirm Sync 1 before this is committed or A3 begins.
-NEXT SYNC POINT:  SYNC 1, after A2 (DOC4 §4.1a) — REACHED, awaiting confirmation (see PAUSED_AT)
+CURRENT_STEP:     A3 — Storage, Intake & Registry
+LAST_COMPLETED:   A2 — Shared Kernel & Contracts. Evidence: `npm run ci` green (18/18 import-linter contracts kept, 64 pytest passed, web lint/typecheck/test/build green); `npm run types` clean (schema regeneration produces no diff). SYNC 1 (DOC4 §4.1a) confirmed by the Systems lead in-session on 2026-09-23: packages/contracts/src/nakabandi_contracts/schemas validates a hand-written sample payload for every LC-1 shape (test_schemas.py, 21/21 passed: schema-matches-model, sample-validates-against-model, and sample-validates-against-committed-schema for all six top-level shapes, plus three negative-path tests).
+STATUS:           ACTIVE
+PAUSED_AT:        (none)
+NEXT SYNC POINT:  SYNC 2, after Track B Step B1 and Track A Step A3 (DOC4 §4.1a) — not yet reached
 
 STATUS is one of ACTIVE | RESUMING | BLOCKED | CHECKPOINT. Only this track's owner (and its agent) edits this file.
 Update it after every completed step and before ending a session.
