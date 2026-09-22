@@ -11,4 +11,4 @@ Update it after every completed step and before ending a session.
 
 ## Learnings
 One line per entry, newest last: [Step] — what was found (a gotcha, a rejected approach and why, a decision not in the docs).
-None yet.
+[B-onboarding] — machine confirmed green: node v24.18.0, uv 0.12.17, python 3.11.9 (venv), npm 11.16.0; npm run ci passed (17 import-linter contracts kept, 14 pytest passed, vite build OK). uv.exe placed at C:\Users\luffy\.local\bin and added to user PATH permanently.
