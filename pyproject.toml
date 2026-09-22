@@ -33,6 +33,7 @@ dev = [
     "fastapi",
     "httpx",
     "requests",
+    "jsonschema>=4.26.0",
 ]
 
 [tool.ruff]
@@ -61,4 +62,4 @@ include = ["apps", "packages"]
 exclude = ["**/node_modules"]
 
 [tool.pytest.ini_options]
-testpaths = ["apps/api/tests"]
+testpaths = ["apps/api/tests", "packages/contracts/src/nakabandi_contracts/tests"]

@@ -295,3 +295,4 @@ Cross-track learnings only, appended by the Integration Owner (per-track ones go
 One line each: `[Track/Step] — what was found`. Architecture corrections go through the Contract Change Process.
 
 [A1→B7] — evaluation/oracle_client.py has no import-linter contract yet; when B7 creates it, add a contract so only `evaluation` may import it (Integration Owner edits .importlinter).
+[A1] — four-machine evidence waived as a gate for Track A because teammates had not yet accepted invites; each teammate must pass their own npm run ci before their first step.

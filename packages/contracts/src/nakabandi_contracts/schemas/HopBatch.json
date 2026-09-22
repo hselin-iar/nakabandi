@@ -1,0 +1,114 @@
+{
+  "$defs": {
+    "AccountIn": {
+      "additionalProperties": false,
+      "properties": {
+        "account_ref": {
+          "title": "Account Ref",
+          "type": "string"
+        },
+        "bank_id": {
+          "title": "Bank Id",
+          "type": "string"
+        },
+        "home_location_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Home Location Id"
+        }
+      },
+      "required": [
+        "account_ref",
+        "bank_id"
+      ],
+      "title": "AccountIn",
+      "type": "object"
+    },
+    "HopIn": {
+      "additionalProperties": false,
+      "properties": {
+        "amount_paise": {
+          "exclusiveMinimum": 0,
+          "title": "Amount Paise",
+          "type": "integer"
+        },
+        "complaint_external_ref": {
+          "title": "Complaint External Ref",
+          "type": "string"
+        },
+        "event_at": {
+          "format": "date-time",
+          "title": "Event At",
+          "type": "string"
+        },
+        "from_account": {
+          "$ref": "#/$defs/AccountIn"
+        },
+        "layer": {
+          "maximum": 12,
+          "minimum": 1,
+          "title": "Layer",
+          "type": "integer"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "to_account": {
+          "$ref": "#/$defs/AccountIn"
+        }
+      },
+      "required": [
+        "complaint_external_ref",
+        "from_account",
+        "to_account",
+        "amount_paise",
+        "layer",
+        "event_at",
+        "observed_at"
+      ],
+      "title": "HopIn",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "batch_id": {
+      "title": "Batch Id",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/HopIn"
+      },
+      "maxItems": 500,
+      "title": "Items",
+      "type": "array"
+    },
+    "sim_time": {
+      "format": "date-time",
+      "title": "Sim Time",
+      "type": "string"
+    }
+  },
+  "required": [
+    "batch_id",
+    "idempotency_key",
+    "sim_time",
+    "items"
+  ],
+  "title": "HopBatch",
+  "type": "object"
+}
