@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     policy_path: Path = Field(default=Path("config/policy.yaml"))
     service_api_key: str = Field(validation_alias="API_SERVICE_KEY")
     database_url: str = Field(default="sqlite:///nakabandi.db", validation_alias="DATABASE_URL")
+    jwt_secret: str = Field(validation_alias="JWT_SECRET")
 
 
 def get_settings() -> Settings:

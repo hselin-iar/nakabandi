@@ -25,6 +25,7 @@ dev = [
     "ruff",
     "pyright",
     "pytest",
+    "hypothesis",
     "import-linter",
     "pre-commit",
     # Installed only so import-linter can resolve the external packages that the

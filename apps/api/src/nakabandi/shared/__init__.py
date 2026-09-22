@@ -18,7 +18,7 @@ from nakabandi.shared.errors import (
 )
 from nakabandi.shared.events import DomainEvent, EventBus, HandlerError
 from nakabandi.shared.ids import new_id
-from nakabandi.shared.infrastructure.db import Base
+from nakabandi.shared.infrastructure.db import Base, UTCDateTime
 from nakabandi.shared.infrastructure.uow import SqlAlchemyUnitOfWork
 from nakabandi.shared.messages import message_for
 from nakabandi.shared.policy import Policy, PolicyLoadError
@@ -28,6 +28,7 @@ from nakabandi.shared.uow import UnitOfWork
 
 __all__ = [
     "Base",
+    "UTCDateTime",
     "SIM_CLOCK_EPOCH",
     "Clock",
     "SimClock",

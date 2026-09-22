@@ -6,15 +6,12 @@ code; a record with observed_at later than the clock is invisible to as_of reads
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-import pytest
 from fastapi.testclient import TestClient
 from nakabandi.intake.infrastructure.models import ComplaintModel
 from nakabandi.intake.infrastructure.repositories import SqlComplaintRepo
-from nakabandi.main import create_app
 from nakabandi.shared import SqlAlchemyUnitOfWork
 from nakabandi.shared.infrastructure.db import create_sqlite_engine, make_session_factory
 from sqlalchemy import select
@@ -24,20 +21,6 @@ FIXTURE = json.loads(
 )
 SERVICE_KEY = "test-only-service-key"
 HEADERS = {"X-Nakabandi-Service-Key": SERVICE_KEY}
-
-
-@pytest.fixture
-def db_url(tmp_path: Path) -> str:
-    return f"sqlite:///{tmp_path / 'test.db'}"
-
-
-@pytest.fixture
-def client(db_url: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
-    monkeypatch.setenv("API_SERVICE_KEY", SERVICE_KEY)
-    monkeypatch.setenv("DATABASE_URL", db_url)
-    app = create_app()
-    with TestClient(app) as c:
-        yield c
 
 
 def _post_all_fixture_batches(client: TestClient) -> dict[str, Any]:

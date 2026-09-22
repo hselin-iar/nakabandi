@@ -5,10 +5,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import JSON, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nakabandi.shared import Base
+from nakabandi.shared import Base, UTCDateTime
 
 
 class AccountModel(Base):
@@ -20,9 +20,7 @@ class AccountModel(Base):
     bank_id: Mapped[str] = mapped_column(String, nullable=False)
     home_location_id: Mapped[str | None] = mapped_column(String, nullable=True)
     home_district_id: Mapped[str | None] = mapped_column(String, nullable=True)
-    first_seen_observed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    first_seen_observed_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
 
 
 class ComplaintModel(Base):
@@ -34,11 +32,9 @@ class ComplaintModel(Base):
     category: Mapped[str] = mapped_column(String, nullable=False, index=True)
     amount_paise: Mapped[int] = mapped_column(Integer, nullable=False)
     victim_district_id: Mapped[str] = mapped_column(String, nullable=False)
-    credited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    reported_event_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    observed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
-    )
+    credited_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    reported_event_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, index=True)
     layer1_account_id: Mapped[str] = mapped_column(
         String, ForeignKey("accounts.id"), nullable=False, index=True
     )
@@ -60,8 +56,8 @@ class FundHopModel(Base):
     )
     amount_paise: Mapped[int] = mapped_column(Integer, nullable=False)
     layer: Mapped[int] = mapped_column(Integer, nullable=False)
-    event_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    event_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
 
 
 class CashOutObservationModel(Base):
@@ -74,10 +70,8 @@ class CashOutObservationModel(Base):
     location_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
     channel: Mapped[str] = mapped_column(String, nullable=False)
     amount_paise: Mapped[int] = mapped_column(Integer, nullable=False)
-    event_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    observed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
-    )
+    event_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, index=True)
     source: Mapped[str] = mapped_column(String, nullable=False)
 
 
@@ -90,6 +84,6 @@ class IngestBatchModel(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     idempotency_key: Mapped[str] = mapped_column(String, nullable=False, index=True)
     source: Mapped[str] = mapped_column(String, nullable=False)
-    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     row_counts: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     response: Mapped[dict | None] = mapped_column(JSON, nullable=True)
