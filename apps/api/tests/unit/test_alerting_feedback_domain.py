@@ -207,3 +207,41 @@ def test_review_queue_is_most_uncertain_first_then_severity_then_age() -> None:
     ordered = order_review_queue([a, c, d, e, b])
 
     assert [x.id for x in ordered] == ["b", "d", "c", "e", "a"]
+
+
+# ---------------------------------------------------------------------------
+# Severity bands are calibrated to the score's real range (they were once 0.8 / 0.6 / 0.35, which
+# made every alert with a real amount CRITICAL)
+# ---------------------------------------------------------------------------
+
+
+def test_severity_bands_spread_realistic_alerts_across_all_four_levels() -> None:
+    from collections import Counter
+
+    from nakabandi.alerting.domain.severity import severity
+    from nakabandi_contracts.enums import Verdict
+
+    grid = [
+        severity(confidence, amount_paise, verdict, POLICY)
+        for confidence in (0.3, 0.5, 0.7, 0.9)
+        for amount_paise in (1_000_000, 10_000_000, 100_000_000)  # INR 10k, 1 lakh, 10 lakh
+        for verdict in (Verdict.MARGINAL, Verdict.INTERCEPTABLE)
+    ]
+    counts = Counter(grid)
+
+    assert set(counts) == {Severity.LOW, Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL}
+    assert counts[Severity.CRITICAL] < len(grid) / 2  # not "everything is critical" again
+
+
+def test_severity_rises_with_confidence_amount_and_interceptability() -> None:
+    from nakabandi.alerting.domain.severity import severity
+    from nakabandi_contracts.enums import Verdict
+
+    order = [Severity.LOW, Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL]
+
+    def rank(c: float, a: int, v: Verdict) -> int:
+        return order.index(severity(c, a, v, POLICY))
+
+    assert rank(0.9, 10**7, Verdict.INTERCEPTABLE) >= rank(0.3, 10**7, Verdict.INTERCEPTABLE)
+    assert rank(0.6, 10**8, Verdict.INTERCEPTABLE) >= rank(0.6, 10**6, Verdict.INTERCEPTABLE)
+    assert rank(0.6, 10**7, Verdict.INTERCEPTABLE) >= rank(0.6, 10**7, Verdict.MARGINAL)

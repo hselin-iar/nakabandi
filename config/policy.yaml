@@ -55,10 +55,17 @@ lien:
 
 alerting:
   floor_confidence: 0.2
+  # Severity is a band of score = confidence x ln(1 + amount_paise) x max(P_interception, floor)
+  # (DOC3 M4). The score is NOT a 0-1 quantity: ln(1 + paise) is 13.8 at INR 10,000 and 20.7 at
+  # INR 1 crore, and P is 0.3 (marginal / the floor) or 0.7 (interceptable), so real scores run
+  # from about 1.2 to 14.5. The bands below split that range so a typical alert (confidence 0.5,
+  # INR 2 lakh, interceptable: 0.5 x 16.8 x 0.7 = 5.9) is HIGH, a sure one on a large amount is
+  # CRITICAL, and a doubtful one on a small amount is LOW. Placeholders (see the header): recheck
+  # against the score distribution the evaluation harness sees on real forecasts.
   severity_bands:
-    critical: 0.8
-    high: 0.6
-    medium: 0.35
+    critical: 9.0
+    high: 5.0
+    medium: 2.5
   budget_per_shift: 40
   shift_hours: 8
   exploration_share: 0.05

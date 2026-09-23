@@ -205,3 +205,98 @@ class SqlClusterRepo(ClusterRepo):
             )
             .prefix_with("OR REPLACE")
         )
+
+    def record_location_observation(
+        self,
+        cluster_id: Id,
+        location_id: Id,
+        cell_id: Id,
+        district_id: Id,
+        amount_paise: int,
+        observed_at: SimTime,
+    ) -> None:
+        row = self._s.execute(
+            sa.select(cluster_location_stats).where(
+                cluster_location_stats.c.cluster_id == cluster_id,
+                cluster_location_stats.c.location_id == location_id,
+            )
+        ).one_or_none()
+        if row is None:
+            self._s.execute(
+                sa.insert(cluster_location_stats).values(
+                    cluster_id=cluster_id,
+                    location_id=location_id,
+                    cell_id=cell_id,
+                    district_id=district_id,
+                    observation_count=1,
+                    total_paise=amount_paise,
+                    last_observed_at=observed_at,
+                )
+            )
+            return
+        # SQLite hands datetimes back naive; they are UTC (LC-2), so compare like with like.
+        previous = row.last_observed_at
+        if previous.tzinfo is None:
+            previous = previous.replace(tzinfo=UTC)
+        self._s.execute(
+            sa.update(cluster_location_stats)
+            .where(
+                cluster_location_stats.c.cluster_id == cluster_id,
+                cluster_location_stats.c.location_id == location_id,
+            )
+            .values(
+                observation_count=row.observation_count + 1,
+                total_paise=int(row.total_paise) + amount_paise,
+                last_observed_at=max(previous, observed_at),
+            )
+        )
+
+    def move_location_stats(self, from_cluster_id: Id, into_cluster_id: Id) -> None:
+        rows = self._s.execute(
+            sa.select(cluster_location_stats).where(
+                cluster_location_stats.c.cluster_id == from_cluster_id
+            )
+        ).all()
+        for row in rows:
+            last = row.last_observed_at
+            if last.tzinfo is None:
+                last = last.replace(tzinfo=UTC)
+            existing = self._s.execute(
+                sa.select(cluster_location_stats).where(
+                    cluster_location_stats.c.cluster_id == into_cluster_id,
+                    cluster_location_stats.c.location_id == row.location_id,
+                )
+            ).one_or_none()
+            if existing is None:
+                self._s.execute(
+                    sa.insert(cluster_location_stats).values(
+                        cluster_id=into_cluster_id,
+                        location_id=row.location_id,
+                        cell_id=row.cell_id,
+                        district_id=row.district_id,
+                        observation_count=row.observation_count,
+                        total_paise=int(row.total_paise),
+                        last_observed_at=last,
+                    )
+                )
+            else:
+                theirs = existing.last_observed_at
+                if theirs.tzinfo is None:
+                    theirs = theirs.replace(tzinfo=UTC)
+                self._s.execute(
+                    sa.update(cluster_location_stats)
+                    .where(
+                        cluster_location_stats.c.cluster_id == into_cluster_id,
+                        cluster_location_stats.c.location_id == row.location_id,
+                    )
+                    .values(
+                        observation_count=existing.observation_count + row.observation_count,
+                        total_paise=int(existing.total_paise) + int(row.total_paise),
+                        last_observed_at=max(theirs, last),
+                    )
+                )
+        self._s.execute(
+            sa.delete(cluster_location_stats).where(
+                cluster_location_stats.c.cluster_id == from_cluster_id
+            )
+        )

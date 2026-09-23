@@ -42,7 +42,9 @@ def get_ingest_service(
     assert uow.session is not None
     # The bus is per unit of work, so an ObservationIngested subscriber (ReconcileOutcome)
     # writes on this request's own session.
-    return IngestService(uow.session, clock, request.app.state.event_bus_factory(uow.session))
+    bus = request.app.state.event_bus_factory(uow.session)
+    hooks = request.app.state.ingest_hooks_factory(uow.session, bus)
+    return IngestService(uow.session, clock, bus, hooks)
 
 
 @router.post("/registry")

@@ -96,6 +96,7 @@ class EnqueueDeliveries:
         self,
         *,
         alert_id: Id,
+        account_id: Id,
         bank_id: str,
         account_ref: str,
         complaint_ref: str,
@@ -128,7 +129,9 @@ class EnqueueDeliveries:
             recipient=f"bank:{bank_id}",
             body=body,
             payload=payload,
-            idempotency_key=f"alert_notice:{alert_id}:{bank_id}:{masked}",
+            # keyed by the ACCOUNT, not its masked ref: two accounts of one bank can share their
+            # last four digits (or be shorter than four), and the key must stay unique
+            idempotency_key=f"alert_notice:{alert_id}:{account_id}",
         )
 
     def _add(

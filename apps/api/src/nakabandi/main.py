@@ -40,14 +40,26 @@ from nakabandi.audit.interfaces.routers import router as audit_router
 from nakabandi.forecast.infrastructure.repositories import metadata as forecast_metadata
 from nakabandi.geo import LocationScopeLookup
 from nakabandi.geo.interfaces.routers import router as geo_router
-from nakabandi.intake import LienContextLookup
+from nakabandi.graph import CashOutFact, ClusterService
+from nakabandi.graph.infrastructure.repositories import SqlClusterRepo
+from nakabandi.graph.infrastructure.repositories import metadata as graph_metadata
+from nakabandi.intake import IngestHooks, LienContextLookup
+from nakabandi.intake.infrastructure.repositories import SqlComplaintRepo
 from nakabandi.intake.interfaces.routers import router as intake_router
 from nakabandi.interception import Interceptor
-from nakabandi.interception.infrastructure.repositories import SqlAssessmentRepo, SqlUnitRepo
+from nakabandi.interception.infrastructure.repositories import (
+    SqlAssessmentRepo,
+    SqlUnitRepo,
+    intercept_assessments,
+)
+from nakabandi.live_pipeline import RegistryCache, build_pipeline
+from nakabandi.pipeline import RetryUnprocessed
 from nakabandi.shared import (
     SIM_CLOCK_EPOCH,
+    ClusterMerged,
     DomainError,
     EventBus,
+    ObservationIngested,
     Policy,
     Scheduler,
     SimClock,
@@ -63,8 +75,9 @@ from nakabandi.shared.infrastructure.db import (
 )
 from nakabandi.shared.logging import configure_logging
 from nakabandi.wiring import (
-    ConfirmedCashOutPending,
+    AlertDetailSourceAdapter,
     GeoCatalogAdapter,
+    GraphConfirmedCashOut,
     ObservationSourceAdapter,
     ProjectionSourceAdapter,
 )
@@ -98,6 +111,7 @@ def _role_permissions(policy: Policy) -> Mapping[Role, Set[Permission]]:
 
 OUTBOX_POLL_S = 1.0  # how often the in-process outbox worker looks for due deliveries
 TIMER_POLL_S = 1.0  # how often the timer driver fires timers that are due at the sim time
+RETRY_EVERY_TICKS = 300  # RetryUnprocessed runs every 5 minutes (DOC 3 M2)
 
 
 def create_app() -> FastAPI:
@@ -110,8 +124,13 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         engine = create_sqlite_engine(settings.database_url)
         create_all(engine)
-        # forecast's tables sit on their own MetaData (Track B), which create_all does not see
+        # forecast's, graph's and interception's tables sit on MetaData of their own (Track B),
+        # which create_all does not see. Of interception's only intercept_assessments is created:
+        # its other table ("units") would clash with geo's units table of the same name (geo owns
+        # units, LC-10; see wiring.GeoUnitRepo).
         forecast_metadata.create_all(engine)
+        graph_metadata.create_all(engine)
+        intercept_assessments.create(engine, checkfirst=True)
         app.state.session_factory = make_session_factory(engine)
         app.state.clock = SimClock(start=SIM_CLOCK_EPOCH)
         app.state.token_issuer = JwtTokenIssuer(settings.jwt_secret)
@@ -138,22 +157,113 @@ def create_app() -> FastAPI:
                 ),
             ).register_projectors(bus)
 
-        def register_reconcile(bus: EventBus, session: Session) -> None:
-            """ReconcileOutcome listens for ingested cash-outs (DOC 3 M4 on_observation)."""
-            AlertService(
+        def alert_service_for(session: Session, bus: EventBus | None = None) -> AlertService:
+            """THE way an AlertService is built for a unit of work (routes, the pipeline and the
+            bus subscribers all use it), so they can never drift apart."""
+            return AlertService(
                 session=session,
                 clock=app.state.clock,
                 policy=policy,
                 scheduler=app.state.scheduler,
                 role_permissions=app.state.role_permissions,
                 sse_hub=app.state.sse_hub,
+                lien_context=LienContextLookup(session),
+                validate_lien=app.state.validate_lien_factory(session),
+                scope_lookup=LocationScopeLookup(session),
                 observations=ObservationSourceAdapter(session),
-                bus=bus,
-            ).register_subscribers(bus)
+                confirmed=GraphConfirmedCashOut(session, app.state.event_bus_factory),
+                detail_source=AlertDetailSourceAdapter(session),
+                bus=bus if bus is not None else app.state.event_bus_factory(session),
+            )
 
-        app.state.bus_registrars = [register_analytics, register_reconcile]
+        app.state.alert_service_factory = alert_service_for
+        app.state.registry_cache = RegistryCache()
+
+        def register_reconcile(bus: EventBus, session: Session) -> None:
+            """ReconcileOutcome listens for ingested cash-outs (DOC 3 M4 on_observation)."""
+            alert_service_for(session, bus).register_subscribers(bus)
+
+        def register_graph(bus: EventBus, session: Session) -> None:
+            """Keep each cluster's location affinity current as cash-outs are observed, and
+            re-key alerts when clusters merge (ClusterMerged, DOC 3 M4 edge case)."""
+            cluster = ClusterService(SqlClusterRepo(session), bus)
+            intake = LienContextLookup(session)
+
+            def on_observations(event: ObservationIngested) -> None:
+                registry = app.state.registry_cache.get(session)
+                facts = []
+                for obs in intake.observation_summaries(event.observation_ids):
+                    loc = registry.by_id.get(obs.location_id)
+                    if loc is not None and obs.observed_at is not None:
+                        facts.append(
+                            CashOutFact(
+                                account_id=obs.account_id,
+                                location_id=loc.id,
+                                cell_id=loc.cell_id,
+                                district_id=loc.district_id,
+                                amount_paise=obs.amount_paise,
+                                observed_at=obs.observed_at,
+                            )
+                        )
+                cluster.apply_cashouts(facts, app.state.clock.now())
+
+            def on_merge(event: ClusterMerged) -> None:
+                alert_service_for(session, bus).on_cluster_merged(event.from_id, event.into_id)
+
+            def safe(handler):  # noqa: ANN001, ANN202
+                """A subscriber is fan-out: if it fails it is logged and the publisher (graph's
+                resolve, intake's ingest) carries on. graph publishes unguarded, so one failing
+                subscriber would otherwise fail the whole stage."""
+
+                def guarded(event):  # noqa: ANN001, ANN202
+                    try:
+                        handler(event)
+                    except Exception:
+                        logger.exception("event.subscriber.failed", handler=handler.__name__)
+
+                return guarded
+
+            bus.subscribe(ObservationIngested, safe(on_observations))  # type: ignore[arg-type]
+            bus.subscribe(ClusterMerged, safe(on_merge))  # type: ignore[arg-type]
+
+        app.state.bus_registrars = [register_analytics, register_reconcile, register_graph]
         app.state.observation_source_factory = ObservationSourceAdapter
-        app.state.confirmed_cashout = ConfirmedCashOutPending()  # swap for graph.apply_confirmed
+
+        def pipeline_for(session: Session, bus: EventBus):  # noqa: ANN202
+            return build_pipeline(
+                session,
+                policy=policy,
+                bus=bus,
+                registry_cache=app.state.registry_cache,
+                alert_service=alert_service_for(session, bus),
+            )
+
+        app.state.pipeline_factory = pipeline_for
+
+        def ingest_hooks_for(session: Session, bus: EventBus) -> IngestHooks:
+            """The chain is CALLED after an ingest, explicitly (DOC 2 §2.1), on the request's own
+            session: a posted complaint yields its forecast and alert in the same request."""
+
+            def on_complaints(ids: list[str]) -> None:
+                pipeline = pipeline_for(session, bus)
+                for complaint_id in ids:
+                    pipeline.run(complaint_id, app.state.clock.now())
+
+            def on_hops(complaint_ids: list[str]) -> None:
+                """Transfers that arrive after their complaint may join clusters, and a bigger
+                cluster changes the forecast: re-run the chain for those complaints (DOC 3 M2
+                RefreshOpenAlerts: "new hops may have changed the picture"). The alert merges."""
+                pipeline = pipeline_for(session, bus)
+                for complaint_id in complaint_ids:
+                    pipeline.run(complaint_id, app.state.clock.now(), refresh=True)
+
+            return IngestHooks(
+                on_complaints=on_complaints,
+                on_hops=on_hops,
+                on_registry=app.state.registry_cache.invalidate,
+            )
+
+        app.state.ingest_hooks_factory = ingest_hooks_for
 
         def event_bus_for(session: Session) -> EventBus:
             bus = EventBus()
@@ -181,14 +291,9 @@ def create_app() -> FastAPI:
             """One DeliverOutbox pass on its own unit of work (DOC 3 M4 run_once, wall clock)."""
             with SqlAlchemyUnitOfWork(app.state.session_factory) as uow:
                 assert uow.session is not None
-                sent = AlertService(
-                    session=uow.session,
-                    clock=app.state.clock,
-                    policy=policy,
-                    scheduler=app.state.scheduler,
-                    role_permissions=app.state.role_permissions,
-                    sse_hub=app.state.sse_hub,
-                ).deliver_outbox(app.state.outbox_channels, SystemClock().now())
+                sent = alert_service_for(uow.session).deliver_outbox(
+                    app.state.outbox_channels, SystemClock().now()
+                )
                 uow.commit()
             return sent
 
@@ -199,24 +304,37 @@ def create_app() -> FastAPI:
             session that is open (DOC 3 M4 RebuildTimers; the tick re-registers before firing)."""
             with SqlAlchemyUnitOfWork(app.state.session_factory) as uow:
                 assert uow.session is not None
-                fired = AlertService(
-                    session=uow.session,
-                    clock=app.state.clock,
-                    policy=policy,
-                    scheduler=app.state.scheduler,
-                    role_permissions=app.state.role_permissions,
-                    sse_hub=app.state.sse_hub,
-                ).fire_due_timers()
+                fired = alert_service_for(uow.session).fire_due_timers()
                 uow.commit()
             return fired
 
         app.state.run_timers_once = run_timers_once
 
+        def run_retry_once() -> int:
+            """RetryUnprocessed (DOC 3 M2): every complaint a failed stage left `unprocessed` goes
+            through the chain again, on its own unit of work. Returns how many now succeeded."""
+            with SqlAlchemyUnitOfWork(app.state.session_factory) as uow:
+                assert uow.session is not None
+                bus = app.state.event_bus_factory(uow.session)
+                pipeline = pipeline_for(uow.session, bus)
+                results = RetryUnprocessed(
+                    SqlComplaintRepo(uow.session),
+                    pipeline,  # type: ignore[arg-type]
+                ).run(app.state.clock.now())
+                uow.commit()
+            return sum(1 for r in results if r.ok)
+
+        app.state.run_retry_once = run_retry_once
+
         async def timer_worker() -> None:
+            ticks = 0
             while True:
                 await asyncio.sleep(TIMER_POLL_S)
+                ticks += 1
                 try:
                     await asyncio.to_thread(run_timers_once)
+                    if ticks % RETRY_EVERY_TICKS == 0:
+                        await asyncio.to_thread(run_retry_once)
                 except Exception:  # one bad tick must not stop the driver
                     logger.exception("timers.worker.tick_failed")
 
@@ -242,14 +360,13 @@ def create_app() -> FastAPI:
         # Rebuild alerting timers from any existing open alerts (DOC 3 M4 RebuildTimers)
         with SqlAlchemyUnitOfWork(app.state.session_factory) as uow:
             assert uow.session is not None
-            AlertService(
-                session=uow.session,
-                clock=app.state.clock,
-                policy=policy,
-                scheduler=app.state.scheduler,
-                role_permissions=app.state.role_permissions,
-                sse_hub=app.state.sse_hub,
-            ).rebuild_timers()
+            alert_service_for(uow.session).rebuild_timers()
+
+        # Complaints a crash left unprocessed are retried at boot (DOC 3 M2)
+        try:
+            run_retry_once()
+        except Exception:
+            logger.exception("retry.boot.failed")
 
         yield
 

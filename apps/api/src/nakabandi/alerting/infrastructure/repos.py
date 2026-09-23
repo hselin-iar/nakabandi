@@ -394,6 +394,20 @@ class SqlActionRepo:
             if (r.params or {}).get("complaint_id") == complaint_id
         )
 
+    def active_hold_totals_by_account(self, complaint_id: str) -> dict[str, int]:
+        """Paise already proposed for hold, per account, for one complaint (pending + applied)."""
+        rows = self._session.query(ActionModel).filter(
+            ActionModel.type == ActionType.REQUEST_HOLD.value,
+            ActionModel.status.in_([ActionStatus.PENDING.value, ActionStatus.APPLIED.value]),
+        )
+        totals: dict[str, int] = {}
+        for r in rows:
+            params = r.params or {}
+            if params.get("complaint_id") == complaint_id and params.get("account_id"):
+                account = str(params["account_id"])
+                totals[account] = totals.get(account, 0) + int(params.get("proposed_paise", 0))
+        return totals
+
     def list_active_holds(self) -> list[Action]:
         """Hold requests the bank has not rejected or released: their lien-review timer is live."""
         rows = self._session.query(ActionModel).filter(

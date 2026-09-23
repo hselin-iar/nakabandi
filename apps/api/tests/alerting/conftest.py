@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from nakabandi.intake import IngestHooks
 from nakabandi.main import create_app
 
 SERVICE_KEY = "test-only-service-key"
@@ -25,6 +26,9 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClie
     monkeypatch.setenv("JWT_SECRET", "test-only-jwt-secret-at-least-32-bytes-long")
     monkeypatch.setenv("WEBHOOK_SECRET", WEBHOOK_SECRET)
     with TestClient(create_app()) as c:
+        # These tests build their alerts by hand; without this the complaints below would be run
+        # through the live chain and add alerts of their own. (The live chain has its own tests.)
+        c.app.state.ingest_hooks_factory = lambda _session, _bus: IngestHooks()  # type: ignore[attr-defined]
         for key in ("registry", "complaints", "hops"):
             r = c.post(
                 f"/api/v1/ingest/{key}",

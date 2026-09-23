@@ -90,7 +90,8 @@ class RaiseOrMergeAlert:
             # Skip non-qualifying assessments (DOC 3 M4)
             if assessment.ladder_level == LadderLevel.NONE:
                 continue
-            if assessment.confidence < floor:
+            confidence = self._confidence(forecast, assessment)
+            if confidence < floor:
                 continue
 
             dk = dedup_key(
@@ -119,8 +120,9 @@ class RaiseOrMergeAlert:
                 window_end = now + timedelta(minutes=dedup_window_min)
                 existing.merge(
                     forecast_id=forecast.id,
-                    confidence=assessment.confidence,
+                    confidence=confidence,
                     window_end=window_end,
+                    expires_at=window_end + timedelta(minutes=expire_grace_min),
                     entry=entry,
                 )
                 self._repo.save(existing)
@@ -134,7 +136,7 @@ class RaiseOrMergeAlert:
                 expires_at = window_end + timedelta(minutes=expire_grace_min)
                 amount = self._amount(forecast)
                 sev = severity(
-                    confidence=assessment.confidence,
+                    confidence=confidence,
                     amount_paise=amount,
                     verdict=assessment.verdict,
                     policy=self._policy,
@@ -157,12 +159,14 @@ class RaiseOrMergeAlert:
                 new_alert = Alert(
                     id=alert_id,
                     cluster_ref=forecast.cluster_id,
-                    target_kind=assessment.target.kind,
+                    target_kind=(scope.kind if scope is not None and scope.kind else None)
+                    or assessment.target.kind,
                     target_id=assessment.target.id,
-                    target_name=getattr(assessment.target, "name", ""),
+                    target_name=getattr(assessment.target, "name", None)
+                    or (scope.name if scope is not None and scope.name else assessment.target.id),
                     dedup_key=dk,
                     severity=sev,
-                    confidence=assessment.confidence,
+                    confidence=confidence,
                     status=AlertStatus.OPEN,
                     ladder_level=assessment.ladder_level,
                     is_deferred=False,
@@ -178,7 +182,7 @@ class RaiseOrMergeAlert:
                     scope_district_id=scope.district_id if scope is not None else None,
                     scope_bank_id=scope.bank_id if scope is not None else None,
                     priority=compute_priority(
-                        assessment.confidence,
+                        confidence,
                         amount,
                         self._interception_probability(assessment),
                     ),
@@ -218,6 +222,23 @@ class RaiseOrMergeAlert:
         )
 
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _confidence(forecast: Any, assessment: Any) -> float:
+        """How sure we are about THIS target: the forecast's probability that the cluster's next
+        cash-out is at it (LC-4 item.prob, location level). An InterceptAssessment carries no
+        confidence of its own, and the forecast's overall confidence is the district level's,
+        near 1.0 for every target, which would make every alert look equally certain. A caller
+        that supplies a confidence per assessment still wins."""
+        own = getattr(assessment, "confidence", None)
+        if own is not None:
+            return float(own)
+        level = getattr(forecast, "levels", {}).get("location")
+        if level is not None and not level.abstained:
+            for item in level.items:
+                if item.id == assessment.target.id:
+                    return float(item.prob)
+        return float(getattr(forecast, "confidence", 0.0))
 
     def _amount(self, forecast: Any) -> int:
         """The complaint's amount. A Forecast does not carry it (it belongs to the complaint), so

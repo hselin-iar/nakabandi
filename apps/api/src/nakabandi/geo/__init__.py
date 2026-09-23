@@ -27,7 +27,7 @@ from nakabandi.geo.application.queries import (
     QueryRegions,
     parse_bbox,
 )
-from nakabandi.geo.domain.entities import Cell, Location, Region
+from nakabandi.geo.domain.entities import Cell, Location, Region, Unit
 from nakabandi.geo.domain.grid import cell_id_for
 from nakabandi.geo.domain.spatial import GeoPoint, NearestResult, SpatialIndex
 from nakabandi.geo.infrastructure.repositories import (
@@ -46,6 +46,7 @@ __all__ = [
     "Region",
     "Cell",
     "Location",
+    "Unit",
     "parse_bbox",
     "LocationScope",
     "LocationScopeLookup",
@@ -113,6 +114,10 @@ class GeoService:
 
     def regions(self, scope: GeoScope | None = None) -> list[Region]:
         return QueryRegions(self._read()).run(scope or GeoScope())
+
+    def units(self) -> list[Unit]:
+        """Every response unit in the registry (interception reads them through this)."""
+        return self._read().all_units()
 
     def cells(self) -> list[Cell]:
         return self._read().all_cells()

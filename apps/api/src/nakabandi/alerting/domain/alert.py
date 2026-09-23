@@ -117,6 +117,25 @@ class Alert:
         self.status = new_status
         self.timeline.append(entry)
 
+    def close_as_merged(self, entry: TimelineEntry) -> None:
+        """Close an alert that a cluster merge made a duplicate (DOC 3 M4 edge case: "close the
+        newer as closed(reason=merged)"). This is NOT an ordinary transition: the table lets only a
+        worked (acknowledged or actioned) alert close, but a duplicate is closed whatever its
+        state, as long as it is not already finished."""
+        if self.status not in (
+            AlertStatus.OPEN,
+            AlertStatus.ESCALATED,
+            AlertStatus.ACKNOWLEDGED,
+            AlertStatus.ACTIONED,
+        ):
+            raise Conflict(
+                "INVALID_TRANSITION",
+                f"Cannot merge-close an alert that is {self.status.value!r}",
+                details=[{"from": self.status.value, "to": AlertStatus.CLOSED.value}],
+            )
+        self.status = AlertStatus.CLOSED
+        self.timeline.append(entry)
+
     # ------------------------------------------------------------------
     # Merge (DOC 3 M4 RaiseOrMergeAlert: keep earlier created_at, update
     # confidence and window_end if the new values extend/improve them)
@@ -129,10 +148,14 @@ class Alert:
         confidence: float,
         window_end: SimTime,
         entry: TimelineEntry,
+        expires_at: SimTime | None = None,
     ) -> None:
-        """Merge a new forecast into an open alert (confidence rises / window extends)."""
+        """Merge a new forecast into an open alert (confidence rises / window extends). When the
+        window extends, expiry moves with it: no alert may expire before its own window ends."""
         self.forecast_id = forecast_id
         self.confidence = max(self.confidence, confidence)
         if window_end > self.window_end:
             self.window_end = window_end
+            if expires_at is not None and expires_at > self.expires_at:
+                self.expires_at = expires_at
         self.timeline.append(entry)

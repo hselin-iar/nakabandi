@@ -2,10 +2,8 @@
 (unit tests, plus the end-to-end paths here); the same seed gives the same exploration picks
 (unit); deferred alerts remain reachable under Backlog; officer feedback (MarkOutcome).
 
-NOT covered, and why: "a confirmed hit changes the next forecast on a fixture".
-graph.apply_confirmed does not exist yet (Track B, DOC 4 A10 STUB/MOCK STRATEGY), so the
-officer's confirmation is proven to REACH the port (with the right cluster, location and time)
-and nothing more.
+The confirmed-hit path is proven here down to graph's affinity table, and against the real chain in
+tests/integration/test_live_chain.py (a confirmed hit changes the next forecast).
 """
 
 from __future__ import annotations
@@ -74,6 +72,20 @@ def _outcomes(client: TestClient, alert_id: str) -> list[tuple[str, str]]:
 def _timeline(client: TestClient, alert_id: str) -> list[str]:
     _login(client, "i4c_analyst")
     return [t["text_code"] for t in client.get(f"/api/v1/alerts/{alert_id}").json()["timeline"]]
+
+
+def _graph_stats(client: TestClient, cluster_id: str) -> list[tuple[str, int]]:
+    """The cluster's cash-out affinity as graph holds it: (location, observations)."""
+    from datetime import UTC
+
+    from nakabandi.graph.infrastructure.repositories import SqlClusterRepo
+
+    with _uow(client) as uow:
+        assert uow.session is not None
+        stats = SqlClusterRepo(uow.session).get_location_stats(
+            cluster_id, datetime(2100, 1, 1, tzinfo=UTC)
+        )
+    return sorted((s.location_id, s.observation_count) for s in stats)
 
 
 def _advance_to(client: TestClient, t: datetime) -> None:
@@ -216,7 +228,6 @@ def _mark(client: TestClient, alert_id: str, **body: object):  # noqa: ANN202
 
 
 def test_an_officer_marks_a_hit_with_a_location_and_the_graph_is_told(client: TestClient) -> None:
-    confirmed = client.app.state.confirmed_cashout  # type: ignore[attr-defined]
     alert_id = _new_alert(client, "loc-1")
     _login(client, "state_investigator")
     assert client.post(f"/api/v1/alerts/{alert_id}/acknowledge").status_code == 200
@@ -227,9 +238,8 @@ def test_an_officer_marks_a_hit_with_a_location_and_the_graph_is_told(client: Te
     body = r.json()
     assert (body["result"], body["source"], body["alert_id"]) == ("hit", "officer", alert_id)
     assert _outcomes(client, alert_id) == [("hit", "officer")]
-    # the officer's confirmed location reached graph.apply_confirmed's port, with the cluster
-    ((cluster, location, at),) = confirmed.calls
-    assert (cluster, location) == ("cluster-1", "loc-2") and at is not None
+    # the officer's confirmed location is now part of the cluster's affinity in graph
+    assert _graph_stats(client, "cluster-1") == [("loc-2", 1)]
     # audited, and the worked alert is closed
     assert any(a.action == "outcome.marked" for a in _rows(client, AuditEntryModel))
     assert client.get(f"/api/v1/alerts/{alert_id}").json()["status"] == "closed"
@@ -246,7 +256,7 @@ def test_a_repeated_mark_is_idempotent(client: TestClient) -> None:
     assert (first.status_code, again.status_code, other.status_code) == (201, 200, 201)
     assert again.json()["id"] == first.json()["id"]
     assert len(_outcomes(client, alert_id)) == 2  # the repeat added no row
-    assert len(client.app.state.confirmed_cashout.calls) == 1  # type: ignore[attr-defined]
+    assert _graph_stats(client, "cluster-1") == [("loc-2", 1)]  # the repeat did not count twice
 
 
 def test_bank_nodal_cannot_mark_an_outcome(client: TestClient) -> None:
@@ -277,7 +287,7 @@ def test_a_location_outside_the_registry_is_a_422(client: TestClient) -> None:
 
     assert r.status_code == 422 and r.json()["error"]["code"] == "OUTCOME_LOCATION_UNKNOWN"
     assert _outcomes(client, alert_id) == []
-    assert client.app.state.confirmed_cashout.calls == []  # type: ignore[attr-defined]
+    assert _graph_stats(client, "cluster-1") == []
 
 
 def test_invalid_results_and_a_location_on_a_miss_are_422(client: TestClient) -> None:

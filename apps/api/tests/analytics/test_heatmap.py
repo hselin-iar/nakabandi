@@ -40,6 +40,7 @@ from nakabandi.forecast import Forecast, LevelForecast, TimingForecast
 from nakabandi.forecast.domain.types import RankedItem
 from nakabandi.forecast.infrastructure.repositories import SqlForecastRepo
 from nakabandi.geo import LocationScopeLookup
+from nakabandi.intake import IngestHooks
 from nakabandi.intake.infrastructure.models import ComplaintModel
 from nakabandi.main import create_app
 from nakabandi.shared import ForecastGenerated, SqlAlchemyUnitOfWork, new_id
@@ -149,6 +150,8 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClie
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'heat.db'}")
     monkeypatch.setenv("JWT_SECRET", "test-only-jwt-secret-at-least-32-bytes-long")
     with TestClient(create_app()) as c:
+        # The golden run drives forecasts and alerts by hand; keep the live chain out of it.
+        c.app.state.ingest_hooks_factory = lambda _session, _bus: IngestHooks()  # type: ignore[attr-defined]
         for path, body in (("registry", REGISTRY), ("complaints", COMPLAINTS)):
             r = c.post(f"/api/v1/ingest/{path}", json=body, headers=SERVICE_HEADERS)
             assert r.status_code == 200 and not r.json().get("rejected"), r.text

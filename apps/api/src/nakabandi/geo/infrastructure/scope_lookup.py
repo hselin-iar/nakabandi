@@ -16,6 +16,9 @@ class LocationScope:
     state_id: str | None
     district_id: str
     bank_id: str
+    cell_id: str | None = None
+    kind: str | None = None  # ATM | BRANCH | AGENT
+    name: str | None = None
 
 
 class LocationScopeLookup:
@@ -31,4 +34,7 @@ class LocationScopeLookup:
             state_id=district.parent_id if district is not None else None,
             district_id=location.district_id,
             bank_id=location.bank_id,
+            cell_id=location.cell_id,
+            kind=location.kind,
+            name=location.display_name,
         )

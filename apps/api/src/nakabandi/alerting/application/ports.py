@@ -168,3 +168,16 @@ class LienValidator(Protocol):
 
 class TemplateRenderer(Protocol):
     def render(self, kind: str, locale: str, **params: str) -> str: ...
+
+
+class AlertDetailSource(Protocol):
+    """Where AlertDetail's `forecast` and `interception` (LC-4) come from: other modules' data,
+    read by main.py's wiring through their facades (alerting may not read their tables, LC-10)."""
+
+    def forecast(self, forecast_id: Id) -> Any | None:
+        """The forecast an alert last merged (an LC-4 Forecast), or None."""
+        ...
+
+    def assessments(self, forecast_id: Id) -> list[Any]:
+        """The interception assessments made for that forecast (LC-4 InterceptAssessment)."""
+        ...

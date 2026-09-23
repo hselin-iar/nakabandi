@@ -16,21 +16,8 @@ def get_uow(request: Request) -> SqlAlchemyUnitOfWork:
 
 
 def build_service(request: Request, session: Session) -> AlertService:
-    state = request.app.state
-    return AlertService(
-        session=session,
-        clock=state.clock,
-        policy=state.policy,
-        scheduler=state.scheduler,
-        role_permissions=state.role_permissions,
-        sse_hub=state.sse_hub,
-        lien_context=state.lien_context_factory(session),
-        validate_lien=state.validate_lien_factory(session),
-        scope_lookup=state.scope_lookup_factory(session),
-        observations=state.observation_source_factory(session),
-        confirmed=state.confirmed_cashout,
-        bus=state.event_bus_factory(session),
-    )
+    """The alert service for this request's session, built the one way main.py builds it."""
+    return request.app.state.alert_service_factory(session)
 
 
 def require_service_key(

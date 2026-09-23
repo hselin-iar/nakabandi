@@ -33,6 +33,7 @@ from nakabandi.alerting.application.bank_callback import (
 from nakabandi.alerting.application.feedback import MarkOutcome, ReviewQueue
 from nakabandi.alerting.application.outbox import DeliverOutbox, EnqueueDeliveries
 from nakabandi.alerting.application.ports import (
+    AlertDetailSource,
     ConfirmedCashOutPort,
     LienContext,
     LienContextPort,
@@ -96,6 +97,7 @@ __all__ = [
     "ObservationSource",
     "ObservedCashOut",
     "ConfirmedCashOutPort",
+    "AlertDetailSource",
     "Outcome",
     "Action",
     "Delivery",
@@ -124,6 +126,7 @@ class AlertService:
         scope_lookup: TargetScopePort | None = None,
         observations: ObservationSource | None = None,
         confirmed: ConfirmedCashOutPort | None = None,
+        detail_source: AlertDetailSource | None = None,
         bus: EventBus | None = None,
         now_wall: Callable[[], datetime] = SystemClock().now,
     ) -> None:
@@ -143,6 +146,7 @@ class AlertService:
 
         self._review = ReviewLien(self._repo, self._action_repo, clock, scheduler)
         self._lien_context = lien_context
+        self._detail_source = detail_source
         self._outcome_repo = SqlOutcomeRepo(session)
         self._reconcile = ReconcileOutcome(
             self._repo,
@@ -241,6 +245,7 @@ class AlertService:
         for traced in self._lien_context.traced_accounts(alert.complaint_id):
             self._enqueue.enqueue_alert_notice(
                 alert_id=alert.id,
+                account_id=traced.account_id,
                 bank_id=traced.bank_id,
                 account_ref=traced.account_ref,
                 complaint_ref=complaint_ref,
@@ -364,8 +369,25 @@ class AlertService:
     def count_dead_deliveries(self) -> int:
         return self._delivery_repo.count_dead()
 
+    def active_hold_totals(self, complaint_id: Id) -> dict[Id, int]:
+        """Proposed-for-hold paise per account for a complaint (interception needs it so a new
+        lien proposal never exceeds what is still holdable)."""
+        return self._action_repo.active_hold_totals_by_account(complaint_id)
+
     def list_actions(self, alert_id: Id) -> list[Action]:
         return self._action_repo.list_for_alert(alert_id)
+
+    def forecast_for(self, alert: Alert) -> object | None:
+        """The forecast behind an alert (LC-4 AlertDetail.forecast), if a source is wired."""
+        if self._detail_source is None:
+            return None
+        return self._detail_source.forecast(alert.forecast_id)
+
+    def assessments_for(self, alert: Alert) -> list[object]:
+        """The interception assessments behind an alert (LC-4 AlertDetail.interception)."""
+        if self._detail_source is None:
+            return []
+        return self._detail_source.assessments(alert.forecast_id)
 
     def list_deliveries_for_alert(self, alert_id: Id) -> list[Delivery]:
         return self._delivery_repo.list_for_alert(alert_id)
@@ -448,28 +470,25 @@ class AlertService:
     def on_cluster_merged(self, from_cluster_id: str, into_cluster_id: str) -> None:
         """Re-key dedup_keys when two clusters merge (ClusterMerged event).
 
-        Finds open alerts belonging to from_cluster_id, updates their cluster_ref
-        and dedup_key to use into_cluster_id. If two open alerts now share the same
-        dedup_key, closes the newer one as merged (DOC 3 M4 edge case).
-        """
-        from nakabandi_contracts.enums import AlertStatus
-
+        Open alerts of the absorbed cluster move to the surviving one. Alerts are then compared
+        against the survivor's OWN open alerts too: if two now share a dedup_key, the newer is
+        closed as merged into the older (DOC 3 M4 edge case)."""
         from nakabandi.alerting.domain.alert import TimelineEntry
-        from nakabandi.alerting.domain.dedup import dedup_key as mk_dk
         from nakabandi.shared import new_id
 
         now = self._clock.now()
-        open_alerts = [a for a in self._repo.list_open() if a.cluster_ref == from_cluster_id]
+        involved = [
+            a for a in self._repo.list_open() if a.cluster_ref in (from_cluster_id, into_cluster_id)
+        ]
+        seen_keys: dict[str, Alert] = {}  # new dedup_key -> the older alert that keeps it
 
-        seen_keys: dict[str, Alert] = {}  # new_dedup_key -> first (older) alert
-
-        for alert in sorted(open_alerts, key=lambda a: a.created_at):
-            new_dk = mk_dk(into_cluster_id, alert.target_kind, alert.target_id)
+        for alert in sorted(involved, key=lambda a: (a.created_at, a.id)):
+            # dedup_key is "<cluster>:<kind>:<target>"; keep the kind exactly as it was created
+            new_dk = f"{into_cluster_id}:{alert.dedup_key.split(':', 1)[1]}"
             alert.cluster_ref = into_cluster_id
             alert.dedup_key = new_dk
 
             if new_dk in seen_keys:
-                # Collision: close this (newer) alert as merged into the older one
                 entry = TimelineEntry(
                     id=new_id(),
                     alert_id=alert.id,
@@ -479,7 +498,7 @@ class AlertService:
                     text_code="alert.cluster_merged_close",
                     text_params={"into": seen_keys[new_dk].id},
                 )
-                alert.transition(AlertStatus.CLOSED, entry)
+                alert.close_as_merged(entry)
             else:
                 seen_keys[new_dk] = alert
 

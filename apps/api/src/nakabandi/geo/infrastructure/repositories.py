@@ -219,6 +219,20 @@ class SqlGeoReadRepo:
         q = q.order_by(LocationModel.id).limit(limit)
         return [_location(r) for r in self._session.scalars(q)]
 
+    def all_units(self) -> list[Unit]:
+        return [
+            Unit(
+                id=r.id,
+                kind=r.kind,
+                district_id=r.district_id,
+                lat=r.lat,
+                lon=r.lon,
+                status=r.status,
+                speed_profile=r.speed_profile,
+            )
+            for r in self._session.scalars(select(UnitModel).order_by(UnitModel.id))
+        ]
+
     def all_location_points(self) -> list[GeoPoint]:
         return [
             GeoPoint(id=r.id, lat=r.lat, lon=r.lon)

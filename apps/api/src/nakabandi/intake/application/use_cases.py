@@ -13,6 +13,9 @@ TickAdvanced) is deferred to Step A6 (Pipeline v0 & Golden Test), the first cons
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
+
 import structlog
 from nakabandi_contracts.ingest import (
     CashOutObservationBatch,
@@ -60,6 +63,30 @@ def _replay_if_seen(batch_repo: BatchRepo, idempotency_key: str) -> IngestRespon
 logger = structlog.get_logger(__name__)
 
 
+@dataclass(slots=True)
+class IngestHooks:
+    """Explicit orchestration points after an ingest (DOC 2 §2.1: the chain is called, not
+    inferred from events). main.py supplies them; intake never imports what they call.
+
+    on_complaints: ids of complaints newly stored by a batch (not duplicates, not replays)
+    on_hops:       ids of the complaints a hop batch added transfers to
+    on_registry:   the registry snapshot changed (caches built from it are stale)
+    A failing hook is logged and never fails an ingest that already stored its rows."""
+
+    on_complaints: Callable[[list[str]], None] | None = None
+    on_hops: Callable[[list[str]], None] | None = None
+    on_registry: Callable[[], None] | None = None
+
+
+def _run_hook(name: str, hook: Callable[..., None] | None, *args: object) -> None:
+    if hook is None:
+        return
+    try:
+        hook(*args)
+    except Exception:
+        logger.exception("intake.hook.failed", hook=name)
+
+
 def _record_batch(
     batch_repo: BatchRepo,
     *,
@@ -87,11 +114,13 @@ class IngestComplaints:
         account_repo: AccountRepo,
         batch_repo: BatchRepo,
         clock: SimClock,
+        hooks: IngestHooks | None = None,
     ) -> None:
         self._complaints = complaint_repo
         self._accounts = account_repo
         self._batches = batch_repo
         self._clock = clock
+        self._hooks = hooks or IngestHooks()
 
     def run(self, batch: ComplaintBatch) -> IngestResponse:
         replayed = _replay_if_seen(self._batches, batch.idempotency_key)
@@ -99,6 +128,7 @@ class IngestComplaints:
             return replayed
 
         accepted = 0
+        new_ids: list[str] = []
         rejected: list[RejectedItem] = []
         for index, item in enumerate(batch.items):
             try:
@@ -112,9 +142,10 @@ class IngestComplaints:
                     home_location_id=item.layer1_account.home_location_id,
                     observed_at=item.observed_at,
                 )
+                complaint_id = new_id()
                 self._complaints.add(
                     Complaint(
-                        id=new_id(),
+                        id=complaint_id,
                         external_ref=item.external_ref,
                         category=item.category.value,
                         amount_paise=item.amount_paise,
@@ -126,6 +157,7 @@ class IngestComplaints:
                     )
                 )
                 accepted += 1
+                new_ids.append(complaint_id)
             except DomainError as exc:
                 rejected.append(RejectedItem(index=index, code=exc.code, message=exc.message))
 
@@ -138,6 +170,8 @@ class IngestComplaints:
             received_at=self._clock.now(),
             response=response,
         )
+        if new_ids:
+            _run_hook("on_complaints", self._hooks.on_complaints, new_ids)
         return response
 
 
@@ -149,12 +183,14 @@ class IngestHops:
         complaint_repo: ComplaintRepo,
         batch_repo: BatchRepo,
         clock: SimClock,
+        hooks: IngestHooks | None = None,
     ) -> None:
         self._hops = hop_repo
         self._accounts = account_repo
         self._complaints = complaint_repo
         self._batches = batch_repo
         self._clock = clock
+        self._hooks = hooks or IngestHooks()
 
     def run(self, batch: HopBatch) -> IngestResponse:
         replayed = _replay_if_seen(self._batches, batch.idempotency_key)
@@ -162,6 +198,7 @@ class IngestHops:
             return replayed
 
         accepted = 0
+        touched: dict[str, None] = {}  # complaint ids, in first-seen order
         rejected: list[RejectedItem] = []
         for index, item in enumerate(batch.items):
             try:
@@ -196,6 +233,7 @@ class IngestHops:
                     )
                 )
                 accepted += 1
+                touched[complaint.id] = None
             except DomainError as exc:
                 rejected.append(RejectedItem(index=index, code=exc.code, message=exc.message))
 
@@ -208,6 +246,8 @@ class IngestHops:
             received_at=self._clock.now(),
             response=response,
         )
+        if touched:
+            _run_hook("on_hops", self._hooks.on_hops, list(touched))
         return response
 
 
@@ -289,10 +329,17 @@ class IngestObservations:
 
 
 class IngestRegistry:
-    def __init__(self, geo: GeoService, batch_repo: BatchRepo, clock: SimClock) -> None:
+    def __init__(
+        self,
+        geo: GeoService,
+        batch_repo: BatchRepo,
+        clock: SimClock,
+        hooks: IngestHooks | None = None,
+    ) -> None:
         self._geo = geo
         self._batches = batch_repo
         self._clock = clock
+        self._hooks = hooks or IngestHooks()
 
     def run(self, update: RegistryUpdate) -> IngestResponse:
         idempotency_key = f"registry:{update.version}"
@@ -321,6 +368,7 @@ class IngestRegistry:
             received_at=self._clock.now(),
             response=response,
         )
+        _run_hook("on_registry", self._hooks.on_registry)
         return response
 
 

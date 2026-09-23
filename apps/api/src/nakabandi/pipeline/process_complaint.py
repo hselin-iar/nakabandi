@@ -38,6 +38,10 @@ class _ComplaintRepo(Protocol):
 
     def get_by_id(self, complaint_id: Id) -> Any | None: ...
 
+    def accounts_of(self, complaint_id: Id) -> list[Id]:
+        """Every account the complaint's money reached (layer 1 plus each hop's ends)."""
+        ...
+
     def mark_processed(self, complaint_id: Id) -> None: ...
 
     def mark_unprocessed(self, complaint_id: Id, *, failed_stage: str) -> None: ...
@@ -134,7 +138,10 @@ class ProcessComplaint:
         self._intercept = interceptor
         self._alerts = alert_service
 
-    def run(self, complaint_id: Id, now: SimTime) -> ProcessResult:
+    def run(self, complaint_id: Id, now: SimTime, *, refresh: bool = False) -> ProcessResult:
+        """`refresh=True` re-runs the chain for a complaint already forecast (new hops joined its
+        cluster): the alert merges as usual, but ForecastGenerated is NOT published again, so the
+        analytics read model counts one forecast per complaint."""
         log = logger.bind(complaint_id=complaint_id)
 
         # ------------------------------------------------------------------
@@ -149,7 +156,9 @@ class ProcessComplaint:
         # Stage 1: graph.resolve
         # ------------------------------------------------------------------
         try:
-            resolution = self._cluster.resolve([complaint.layer1_account_id], now)
+            resolution = self._cluster.resolve(
+                self._complaints.accounts_of(complaint_id) or [complaint.layer1_account_id], now
+            )
             cluster_id = resolution.cluster_id
         except Exception:
             log.exception("pipeline.stage.graph_resolve.failed")
@@ -180,7 +189,8 @@ class ProcessComplaint:
         if forecast.stale:
             log.info("pipeline.forecast.stale", complaint_id=complaint_id)
             self._complaints.mark_processed(complaint_id)
-            self._publish_forecast(forecast, complaint_id, now)
+            if not refresh:
+                self._publish_forecast(forecast, complaint_id, now)
             return ProcessResult(complaint_id, ok=True, alert_id=None)
 
         # ------------------------------------------------------------------
@@ -207,7 +217,8 @@ class ProcessComplaint:
         # All stages succeeded
         # ------------------------------------------------------------------
         self._complaints.mark_processed(complaint_id)
-        self._publish_forecast(forecast, complaint_id, now)
+        if not refresh:
+            self._publish_forecast(forecast, complaint_id, now)
         log.info(
             "pipeline.complaint.processed",
             alert_id=getattr(alert_result, "alert_id", None),

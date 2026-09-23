@@ -4,6 +4,7 @@ request's session, so a projector reads what the publisher just wrote."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC
 
 import structlog
@@ -20,8 +21,12 @@ from nakabandi.analytics import (
     GeoCatalog,
 )
 from nakabandi.forecast.infrastructure.repositories import SqlForecastRepo
-from nakabandi.geo import GeoService
+from nakabandi.geo import GeoService, LocationScopeLookup
+from nakabandi.graph import ClusterService
+from nakabandi.graph.infrastructure.repositories import SqlClusterRepo
 from nakabandi.intake import LienContextLookup
+from nakabandi.interception.infrastructure.repositories import SqlAssessmentRepo
+from nakabandi.shared import EventBus
 
 logger = structlog.get_logger(__name__)
 
@@ -133,23 +138,40 @@ class ObservationSourceAdapter:
         ]
 
 
-class ConfirmedCashOutPending:
-    """alerting.ConfirmedCashOutPort until Track B's graph ships `apply_confirmed` (DOC 4 A10
-    STUB/MOCK STRATEGY: "stub it with a recording fake and swap at the next merge").
+class AlertDetailSourceAdapter:
+    """alerting.AlertDetailSource over the forecast and interception modules."""
 
-    It is deliberately NOT silent: it says so in the log and reports False, and MarkOutcome logs
-    that the confirmation reached the outcome row but not the graph. SWAP POINT: the merge that
-    brings graph.apply_confirmed; replace this class with an adapter over that facade."""
+    def __init__(self, session: Session) -> None:
+        self._forecasts = SqlForecastRepo(session)
+        self._assessments = SqlAssessmentRepo(session)
 
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, str, object]] = []  # a recording fake, for tests
+    def forecast(self, forecast_id: str) -> object | None:
+        return self._forecasts.get_by_id(forecast_id)
+
+    def assessments(self, forecast_id: str) -> list[object]:
+        return list(self._assessments.get_by_forecast(forecast_id))
+
+
+class GraphConfirmedCashOut:
+    """alerting.ConfirmedCashOutPort over graph.apply_confirmed (DOC 3 S3): an officer-confirmed
+    cash-out location becomes an observation at `at` in the cluster's affinity, so the NEXT forecast
+    for that cluster sees it immediately, without waiting for a lagged bank report."""
+
+    def __init__(self, session: Session, bus_factory: Callable[[Session], EventBus]) -> None:
+        self._session = session
+        self._bus_factory = bus_factory
 
     def apply_confirmed(self, cluster_id: str, location_id: str, at: object) -> bool:
-        self.calls.append((cluster_id, location_id, at))
-        logger.warning(
-            "graph.apply_confirmed is not available yet; the officer's confirmation was recorded "
-            "on the outcome only",
-            cluster_id=cluster_id,
-            location_id=location_id,
+        where = LocationScopeLookup(self._session).for_location(location_id)
+        if where is None or where.cell_id is None:
+            return False
+        ClusterService(
+            SqlClusterRepo(self._session), self._bus_factory(self._session)
+        ).apply_confirmed(
+            cluster_id,
+            location_id,
+            where.cell_id,
+            where.district_id,
+            at,  # type: ignore[arg-type]
         )
-        return False
+        return True
