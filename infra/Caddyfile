@@ -1,0 +1,25 @@
+# One HTTPS origin (DOC 2 §2.2 hosted topology). CADDY_DOMAIN unset (or "localhost", the
+# offline-laptop backup path, §2.7) uses Caddy's internal certificate automatically — no
+# internet or real DNS required.
+{$CADDY_DOMAIN:localhost} {
+	encode gzip
+
+	# world-sim's oracle API and world.db are never routed here (DOC 2 hosted topology note) —
+	# only /sim-control/*, and only after the demo_operator role check below.
+	handle /sim-control/* {
+		forward_auth api:8000 {
+			uri /api/v1/auth/check?role=demo_operator
+		}
+		reverse_proxy world-sim:8100
+	}
+
+	handle /bank/* {
+		reverse_proxy bank-sim:4000
+	}
+
+	# Everything else, including / and /api/*: the api container disambiguates SPA static
+	# files from /api/v1/* itself (nakabandi/main.py).
+	handle {
+		reverse_proxy api:8000
+	}
+}

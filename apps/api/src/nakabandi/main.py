@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from nakabandi_contracts.enums import Permission, Role
 
 from nakabandi.access import AccessService
@@ -90,6 +91,18 @@ def create_app() -> FastAPI:
     app.include_router(intake_router, prefix="/api/v1")
     app.include_router(access_router, prefix="/api/v1")
     app.include_router(audit_router, prefix="/api/v1")
+
+    @app.get("/api/v1/system/health")
+    def health() -> dict[str, str]:
+        return {"status": "ok"}
+
+    # The built SPA (DOC 2 hosted topology: "/ -> api container, SPA static files"). Registered
+    # last so /api/v1/* above always matches first; Settings.static_dir is unset outside the
+    # Docker image (Dockerfile.api builds apps/web and sets STATIC_DIR), so local dev and tests
+    # never try to mount a directory that does not exist.
+    if settings.static_dir is not None and settings.static_dir.is_dir():
+        app.mount("/", StaticFiles(directory=settings.static_dir, html=True), name="spa")
+
     return app
 
 

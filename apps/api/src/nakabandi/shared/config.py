@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     service_api_key: str = Field(validation_alias="API_SERVICE_KEY")
     database_url: str = Field(default="sqlite:///nakabandi.db", validation_alias="DATABASE_URL")
     jwt_secret: str = Field(validation_alias="JWT_SECRET")
+    static_dir: Path | None = Field(default=None, validation_alias="STATIC_DIR")
+    """The built SPA's directory (DOC 4 Step A5: "api container, SPA static files"). Unset
+    outside the Docker image, where Dockerfile.api builds apps/web and sets it."""
 
 
 def get_settings() -> Settings:

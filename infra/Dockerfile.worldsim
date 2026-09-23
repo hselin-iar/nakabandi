@@ -1,0 +1,26 @@
+# Placeholder for apps/world-sim (DOC 4 Step A5: "world-sim (placeholder)") until Track B builds
+# the real control/oracle API (Steps B1, B5). Self-contained: does NOT copy from apps/world-sim,
+# which is Track B's own directory (DOC 4 §4.1b Ownership Map) — Track B develops it in
+# isolation and swaps this file wholesale when the real image is ready.
+FROM python:3.11-slim
+WORKDIR /app
+RUN cat <<'PY' > placeholder.py
+import http.server
+import json
+
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps({"status": "placeholder", "service": "world-sim"}).encode())
+
+    def log_message(self, *args: object) -> None:
+        pass
+
+
+http.server.HTTPServer(("0.0.0.0", 8100), Handler).serve_forever()
+PY
+EXPOSE 8100
+CMD ["python", "placeholder.py"]

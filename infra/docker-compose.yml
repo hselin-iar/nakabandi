@@ -1,0 +1,65 @@
+# DOC 2 §2.2 hosted topology, and the offline-laptop backup path (§2.7): the same file for both.
+# Secrets come from infra/.env (copy infra/.env.example, DOC 4 §4.4); never baked into an image.
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    env_file: ./.env
+    environment:
+      DATABASE_URL: sqlite:////data/nakabandi.db
+    volumes:
+      - api-data:/data
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/system/health')",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  world-sim:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.worldsim
+    expose:
+      - "8100"
+    restart: unless-stopped
+
+  bank-sim:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.banksim
+    expose:
+      - "4000"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - api
+      - world-sim
+      - bank-sim
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CADDY_DOMAIN: ${CADDY_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
+volumes:
+  api-data:
+  caddy-data:
+  caddy-config:
