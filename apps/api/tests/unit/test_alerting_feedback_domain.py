@@ -245,3 +245,67 @@ def test_severity_rises_with_confidence_amount_and_interceptability() -> None:
     assert rank(0.9, 10**7, Verdict.INTERCEPTABLE) >= rank(0.3, 10**7, Verdict.INTERCEPTABLE)
     assert rank(0.6, 10**8, Verdict.INTERCEPTABLE) >= rank(0.6, 10**6, Verdict.INTERCEPTABLE)
     assert rank(0.6, 10**7, Verdict.INTERCEPTABLE) >= rank(0.6, 10**7, Verdict.MARGINAL)
+
+
+# ---------------------------------------------------------------------------
+# Bank callbacks at the SAME sim time (found in the Sync 5 joint run)
+# ---------------------------------------------------------------------------
+
+
+def _hold_action(at: datetime = T0):  # noqa: ANN202
+    from nakabandi.alerting.domain.action import Action, ActionStatus
+    from nakabandi_contracts.enums import ActionType
+
+    return Action(
+        id="a1",
+        alert_id="al",
+        type=ActionType.REQUEST_HOLD,
+        actor_user_id="u",
+        actor_role="i4c_analyst",
+        reason=None,
+        params={},
+        status=ActionStatus.PENDING,
+        at=at,
+        status_at=at,
+    )
+
+
+def test_a_first_callback_at_the_creation_sim_time_is_accepted() -> None:
+    """bank-sim's fallback sim time is the latest webhook's: the moment the hold was created."""
+    from nakabandi.alerting.domain.action import ActionStatus
+
+    action = _hold_action()
+
+    assert action.apply_callback(ActionStatus.APPLIED, T0, 1_400_000, None) is True
+    assert (action.status, action.applied_amount_paise) == (ActionStatus.APPLIED, 1_400_000)
+
+
+def test_apply_then_release_at_one_sim_time_are_both_accepted_in_that_order() -> None:
+    from nakabandi.alerting.domain.action import ActionStatus
+
+    action = _hold_action()
+
+    assert action.apply_callback(ActionStatus.APPLIED, T0, 1_000, None)
+    assert action.apply_callback(ActionStatus.RELEASED, T0, None, None)
+    assert action.status is ActionStatus.RELEASED
+
+
+def test_at_one_sim_time_a_step_backwards_or_a_duplicate_is_ignored() -> None:
+    from nakabandi.alerting.domain.action import ActionStatus
+
+    action = _hold_action()
+    action.apply_callback(ActionStatus.APPLIED, T0, 1_000, None)
+    action.apply_callback(ActionStatus.RELEASED, T0, None, None)
+
+    assert action.apply_callback(ActionStatus.APPLIED, T0, 1_000, None) is False  # backwards
+    assert action.apply_callback(ActionStatus.RELEASED, T0, None, None) is False  # duplicate
+    assert action.status is ActionStatus.RELEASED
+
+
+def test_an_older_callback_is_still_ignored_whatever_its_status() -> None:
+    from nakabandi.alerting.domain.action import ActionStatus
+
+    action = _hold_action(T0 + timedelta(hours=2))
+
+    assert action.apply_callback(ActionStatus.RELEASED, T0, None, None) is False
+    assert action.status is ActionStatus.PENDING

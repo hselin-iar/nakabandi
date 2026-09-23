@@ -846,3 +846,17 @@ def test_no_review_is_noted_for_a_hold_the_bank_rejected(client: TestClient) -> 
     client.app.state.run_timers_once()  # type: ignore[attr-defined]
 
     assert "alert.hold.review_due" not in _timeline_codes(client, alert_id)
+
+
+def test_callback_accepts_the_service_key_as_a_header_or_a_bearer_token(client: TestClient) -> None:
+    body = {"request_id": "nope", "status": "rejected", "at_sim": "2026-01-15T11:00:00Z"}
+    url = "/api/v1/integrations/bank/callbacks"
+
+    # authenticated either way: the request then fails on the unknown request_id (404), not 401
+    assert client.post(url, json=body, headers=SERVICE_HEADERS).status_code == 404
+    bearer = {"Authorization": f"Bearer {SERVICE_HEADERS['X-Nakabandi-Service-Key']}"}
+    assert client.post(url, json=body, headers=bearer).status_code == 404
+
+    assert client.post(url, json=body).status_code == 401
+    assert client.post(url, json=body, headers={"Authorization": "Bearer wrong"}).status_code == 401
+    assert client.post(url, json=body, headers={"Authorization": "Basic abc"}).status_code == 401

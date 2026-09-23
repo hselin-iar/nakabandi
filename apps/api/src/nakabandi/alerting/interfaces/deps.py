@@ -22,11 +22,17 @@ def build_service(request: Request, session: Session) -> AlertService:
 
 def require_service_key(
     x_nakabandi_service_key: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
     settings: Settings = Depends(get_settings),
 ) -> None:
-    """Machine clients (bank-sim) authenticate with the shared service key, the same header the
-    /ingest/* routes use (intake/interfaces/deps.py)."""
-    if x_nakabandi_service_key is None or not secrets.compare_digest(
-        x_nakabandi_service_key, settings.service_api_key
-    ):
-        raise Unauthenticated("SERVICE_KEY_INVALID", "a valid X-Nakabandi-Service-Key is required")
+    """Machine clients (bank-sim) authenticate with the shared service key, sent either as the
+    X-Nakabandi-Service-Key header (what /ingest/* uses, intake/interfaces/deps.py) or as
+    `Authorization: Bearer <key>` (what apps/bank-sim's callback sends). LC-6 says only "service
+    key", so both are accepted; either way the same secret, compared in constant time."""
+    key = x_nakabandi_service_key
+    if key is None and authorization and authorization.startswith("Bearer "):
+        key = authorization[len("Bearer ") :].strip()
+    if key is None or not secrets.compare_digest(key, settings.service_api_key):
+        raise Unauthenticated(
+            "SERVICE_KEY_INVALID", "a valid service key (header or Bearer token) is required"
+        )

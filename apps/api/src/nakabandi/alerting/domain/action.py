@@ -25,6 +25,14 @@ class ActionStatus(StrEnum):
     RELEASED = "released"
 
 
+_PROGRESS = {
+    ActionStatus.PENDING: 0,
+    ActionStatus.RECORDED: 0,
+    ActionStatus.APPLIED: 1,
+    ActionStatus.REJECTED: 1,
+    ActionStatus.RELEASED: 2,
+}
+
 _PERMISSION_FOR: dict[ActionType, Permission] = {
     ActionType.ACKNOWLEDGE: Permission.ACKNOWLEDGE,
     ActionType.REQUEST_HOLD: Permission.REQUEST_HOLD,
@@ -65,9 +73,18 @@ class Action:
         applied_amount_paise: int | None,
         note: str | None,
     ) -> bool:
-        """Latest status wins if its sim time is strictly newer (DOC 3 M4 edge case: "Bank
-        callback arrives twice or out of order"). Returns False when the callback is ignored."""
-        if at_sim <= self.status_at:
+        """Latest status wins (DOC 3 M4 edge case: "Bank callback arrives twice or out of order").
+
+        A callback is newer if its sim time is later than the last one held. At the SAME sim time
+        the order is settled by how far the request has progressed (pending, then applied or
+        rejected, then released): a forward step is accepted, a duplicate or a step backwards is
+        ignored. This matters in practice: the bank's fallback sim time is the latest webhook's, so
+        an operator who acts straight away reports the very instant the hold was created, and an
+        apply followed at once by a release share one sim time too. Returns False when ignored."""
+        newer = at_sim > self.status_at or (
+            at_sim == self.status_at and _PROGRESS[status] > _PROGRESS[self.status]
+        )
+        if not newer:
             return False
         self.status = status
         self.status_at = at_sim
