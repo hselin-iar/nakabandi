@@ -1,10 +1,10 @@
 # TRACK B — Algorithms & Simulator
 OWNER:            Algo dev + coding agent
-CURRENT_STEP:     B6 — Forecast v1
-LAST_COMPLETED:   B5 — Live Runner & Control API (Sync 7 confirmed by track owner)
-STATUS:           ACTIVE
+CURRENT_STEP:     B7 — Evaluation Harness
+LAST_COMPLETED:   B6 — Forecast v1
+STATUS:           CHECKPOINT
 PAUSED_AT:        none
-NEXT SYNC POINT:  SYNC 7 — after B5 (live runner) and A5; gates C8 demo console (DOC4 §4.1a)
+NEXT SYNC POINT:  SYNC 8 — after B7 (evaluation harness) and A9; gates final analytics (DOC4 §4.1a)
 
 STATUS is one of ACTIVE | RESUMING | BLOCKED | CHECKPOINT. Only this track's owner (and its agent) edits this file.
 Update it after every completed step and before ending a session.
@@ -84,3 +84,22 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 - [x] compute_footprint: centroid within bounding box; weighted; top-N ordered (6 tests)
 - [x] `npm run ci` green — 123/123 passed, 18 contracts kept, 0 pyright errors
 - [x] Committed on feat/track-b at a3c264b; pushed to origin
+
+## B6 Done When Evidence
+- [x] T1 — 500 complaints × 5 candidates trained in < 30s (actual: ~2s); 7-day world well within 5-min gate
+- [x] T2 — EM recovers planted 70/30 fast/slow mixture within ±0.15 weight tolerance
+- [x] T3 — Leakage: future observed_at > as_of not visible in PointInTimeStats snapshot
+- [x] T4 — Calibration: brier_after ≤ brier_before; reliability curve (fraction_of_positives, mean_predicted_value) produced
+- [x] T5 — Missing model files → load_scorer() returns None → GenerateForecast._using_fallback=True → model_versions.scorer='fallback' (banner)
+- [x] T6 — PointInTimeStats.snapshot_at enforces strict as-of boundary (5 tests)
+- [x] T7 — TrainingSetBuilder: time-ordered split; data_hash deterministic (4 tests)
+- [x] T8 — features_to_array: shape (n,13), float64, channel label-encoded (3 tests)
+- [x] T9 — novelty(0, p) == 1.0; novelty(1000, p) < 0.01; monotone decreasing
+- [x] T10 — DistrictPrior: Laplace-smoothed weights sum to 1; top_districts ordered; unknown → 0
+- [x] 354/354 pytest passed, 18/18 import-linter contracts KEPT, 0 pyright errors
+- [x] Committed feat/track-b at 6fb9520; pushed to origin
+
+[B6] — application layer must never import infrastructure directly; injected via ModelStorePort (ABC) — ModelStore(ModelStorePort) satisfies the contract; TrainModels receives ModelStorePort.
+[B6] — novelty() is a forecast-domain concern, not a graph-domain concern; placed in forecast/domain/novelty.py to avoid facade-forecast contract violation.
+[B6] — scikit-learn and joblib were not in the venv; added via `uv add scikit-learn joblib` (sklearn 1.9.1, joblib 1.6.0).
+[B6] — `FeatureRow(**dict[str, Any])` fails pyright type-checking; construct with explicit field references float(d["key"]) instead.
