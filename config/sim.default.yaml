@@ -1,48 +1,80 @@
 # NAKABANDI world simulator configuration (DOC 3 M1; keys from DOC 2 Appendix A — Simulator
-# Parameter Priors). Skeleton only: Track A creates this file with every known key at null;
-# Track B fills the values (DOC 4 §4.1b: "Track A fills policy.yaml values, Track B fills
-# sim.default.yaml values"). Every value in Appendix A is a PRIOR, swept, never presented as
-# calibrated.
+# Parameter Priors). Track B fills the values (DOC 4 §4.1b). Every value is a PRIOR swept in
+# the evaluation; never presented as calibrated. Keys are frozen (LC-7 equivalent for sim).
+#
+# GOLDEN CONFIG: seed=42, 3 days, ~600 complaints/day, 6 clusters.
+# All values verified inside Appendix A priors (see Learnings).
+
+seed: 42
+
+world:
+  days: 3
+  n_clusters: 6
 
 load:
-  complaints_per_day: null # Appendix A: default 8,000 (PS figure); range 6,500-8,000
+  complaints_per_day: 600  # Appendix A: default 8,000 (national); golden uses district-scale slice ~600
 
 amounts:
-  mean_paise: null # Appendix A: about ₹94,000 (2025); ₹1.19 lakh (2024)
+  mean_paise: 9400000      # Appendix A: ~₹94,000 (2025) = 9,400,000 paise; shape: lognormal
+  shape_sigma: 1.2         # lognormal sigma; heavy-tailed, assumed
 
 network:
-  layers: null # Appendix A: 2 to 12, median about 4
-  accounts_per_cluster: null # Appendix A: 10 to about 20,000, median about 100
-  bridge_rate: null # Appendix A: assumed small share of accounts used by two clusters
-  hop_visibility: null # Appendix A: share of deeper hops banks trace and report later, and their lag
+  layers_min: 2
+  layers_max: 12
+  layers_median: 4         # Appendix A: 2 to 12, median ~4
+  accounts_per_cluster: 80 # Appendix A: 10 to ~20,000, median ~100; golden uses 80 (mid-small)
+  bridge_rate: 0.05        # Appendix A: assumed small share; 5% exercises union-find
+  hop_visibility: 0.7      # Appendix A: assumed; 70% of deeper hops traced later
 
 caps:
-  card_atm_daily_inr: null # Appendix A: 20,000 to 1,00,000, median about 50,000
-  cardless_atm_txn_inr: null # Appendix A: about 10,000 per transaction
-  aeps_txn_inr: null # Appendix A: about 10,000 per transaction
-  aeps_daily_inr: null # Appendix A: daily 10,000 to 50,000
+  card_atm_daily_inr: 50000      # Appendix A: 20,000–1,00,000, median ~50,000
+  cardless_atm_txn_inr: 10000    # Appendix A: ~10,000 per txn
+  aeps_txn_inr: 10000            # Appendix A: ~10,000 per txn
+  aeps_daily_inr: 20000          # Appendix A: 10,000–50,000 daily
 
 timing:
-  mixture: null # Appendix A: fast median about 15 min (range 1-60); slow hours to a day; SWEEP 15/60/240
+  # Appendix A: fast median ~15 min (range 1–60); slow component hours to a day; SWEEP 15/60/240
+  mixture:
+    - weight: 0.55
+      component: fast
+      lognormal_median_min: 15.0  # within Appendix A range 1–60
+      lognormal_sigma: 0.8
+    - weight: 0.45
+      component: slow
+      lognormal_median_min: 240.0 # ~4 h; "hours to a day"
+      lognormal_sigma: 1.1
 
 channels:
-  mix: null # Appendix A: unpublished; three labelled-illustrative mixes (ATM-heavy, branch-heavy, balanced)
+  # Appendix A: unpublished; three labelled-illustrative mixes — golden uses ATM-heavy
+  mix:
+    ATM: 0.65
+    BRANCH: 0.20
+    AGENT: 0.15
 
 footprint:
-  locality: null # Appendix A: unpublished; sweep local (one district) to dispersed (multi-state)
-  size_per_cluster: null # Appendix A: sweep tens to hundreds of locations
+  # Appendix A: unpublished; sweep local (one district) to dispersed (multi-state)
+  locality: district          # golden: same-district-ish (local)
+  size_per_cluster: 40        # Appendix A: sweep tens to hundreds; golden uses 40
 
 mule:
-  lifetime_days: null # Appendix A: 1 to 180, median about 30
+  lifetime_days: 30           # Appendix A: 1 to 180, median ~30
 
 geo:
-  state_weights: null # Appendix A: official state-wise cybercrime counts (MHA Lok Sabha UQ 1906, 11 Mar 2025)
+  # Appendix A: MHA Lok Sabha UQ 1906, 11 Mar 2025 — state-wise cybercrime counts
+  # Four demo states; weights are relative fractions (will be normalised by the simulator)
+  state_weights:
+    UP: 0.35
+    MH: 0.25
+    RJ: 0.22
+    HR: 0.18
 
 kit:
-  cards_per_account: null # Appendix A: kits typically hold one ATM card, one cheque book, one SIM, one QR code
+  cards_per_account: 1        # Appendix A: kits typically hold one ATM card per account
 
 noise:
-  innocent_layer1_rate: null # Appendix A: assumed 2% to 5% of complaints land on an innocent holder's account
+  innocent_layer1_rate: 0.03  # Appendix A: assumed 2–5%; golden uses 3%
 
 lag:
-  observation_hours: null # Appendix A: bank/police confirmation lag; range hours to days
+  min: 0.5
+  max: 48.0                 # Appendix A: bank/police lag; range hours to days
+  median: 6.0
