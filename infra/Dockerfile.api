@@ -1,0 +1,32 @@
+# NAKABANDI API image (DOC 2 §2.2 hosted topology): serves both the API and the built SPA's
+# static files at one origin. Build context is the repo root (docker compose sets it below),
+# since this needs both apps/api and apps/web as inputs.
+
+# --- Stage 1: build the SPA ---
+FROM node:24-alpine AS web-builder
+WORKDIR /repo
+COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/package.json
+RUN npm ci
+COPY apps/web/ apps/web/
+RUN npm run build --workspace apps/web
+
+# --- Stage 2: the API, with the built SPA copied in as static files ---
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+WORKDIR /repo
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1
+
+COPY pyproject.toml uv.lock ./
+COPY packages/contracts/ packages/contracts/
+COPY apps/api/ apps/api/
+# Not built or run here, only present so uv recognises the workspace (root pyproject.toml lists
+# it as a member); apps/world-sim/ is Track B's own directory (DOC 4 §4.1b Ownership Map).
+COPY apps/world-sim/ apps/world-sim/
+RUN uv sync --frozen --no-dev --package nakabandi-api
+
+COPY config/ config/
+COPY --from=web-builder /repo/apps/web/dist static/
+
+ENV STATIC_DIR=/repo/static
+EXPOSE 8000
+CMD ["uv", "run", "uvicorn", "nakabandi.main:app", "--app-dir", "apps/api/src", "--host", "0.0.0.0", "--port", "8000"]

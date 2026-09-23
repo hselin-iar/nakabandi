@@ -13,7 +13,7 @@
     "ci:web": "npm run lint --workspace apps/web && npm run typecheck --workspace apps/web && npm run test --workspace apps/web && npm run build --workspace apps/web",
     "ci:bank-sim": "npm run typecheck --workspace apps/bank-sim && npm run test --workspace apps/bank-sim",
     "types": "uv run python scripts/gen_contract_schemas.py && git diff --stat --exit-code packages/contracts/src/nakabandi_contracts/schemas",
-    "seed": "node scripts/not-yet.mjs seed",
+    "seed": "uv run python scripts/seed.py",
     "reset": "node scripts/not-yet.mjs reset",
     "sweep": "node scripts/not-yet.mjs sweep"
   }

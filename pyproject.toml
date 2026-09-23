@@ -25,6 +25,7 @@ dev = [
     "ruff",
     "pyright",
     "pytest",
+    "hypothesis",
     "import-linter",
     "pre-commit",
     # Installed only so import-linter can resolve the external packages that the
@@ -43,6 +44,10 @@ extend-exclude = ["node_modules"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "TID"]
+# B008: FastAPI's Depends()/Header() must be called in an argument default; that is the
+# framework's own dependency-injection pattern (every router across every step uses it), not
+# the mutable-default-argument bug the rule targets elsewhere.
+ignore = ["B008"]
 
 # DOC 2 §2.6: no wall-clock reads outside the Clock implementations. AP-10 / DOC 3 LC-2.
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
@@ -62,4 +67,4 @@ include = ["apps", "packages"]
 exclude = ["**/node_modules"]
 
 [tool.pytest.ini_options]
-testpaths = ["apps/api/tests", "packages/contracts/src/nakabandi_contracts/tests"]
+testpaths = ["apps/api/tests", "packages/contracts/src/nakabandi_contracts/tests", "apps/world-sim/tests"]

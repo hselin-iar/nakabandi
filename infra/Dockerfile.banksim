@@ -1,0 +1,17 @@
+# Placeholder for apps/bank-sim (DOC 4 Step A5: "bank-sim (placeholder)") until Track C builds
+# the real Express console (Step C2). Self-contained: does NOT copy from apps/bank-sim, which is
+# Track C's own directory (DOC 4 §4.1b Ownership Map) — Track C develops it in isolation and
+# swaps this file wholesale when the real image is ready.
+FROM node:24-alpine
+WORKDIR /app
+RUN cat <<'JS' > placeholder.js
+const http = require("http");
+http
+  .createServer((_req, res) => {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "placeholder", service: "bank-sim" }));
+  })
+  .listen(4000, "0.0.0.0");
+JS
+EXPOSE 4000
+CMD ["node", "placeholder.js"]
