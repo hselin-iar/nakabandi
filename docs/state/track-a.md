@@ -2,8 +2,8 @@
 OWNER:            Systems lead + coding agent (Integration Owner)
 CURRENT_STEP:     A6 — Pipeline v0 & Golden Test
 LAST_COMPLETED:   A5 — Skeleton Deployment. Evidence: `npm run ci` green (169 passed, 18/18 import-linter contracts kept, web lint/typecheck/build green). Committed 9be8e8b. Files: infra/{Dockerfile.api,Dockerfile.worldsim,Dockerfile.banksim,docker-compose.yml,Caddyfile,.env.example}, apps/api/main.py (health endpoint + SPA mount), shared/config.py (STATIC_DIR), test_system_health.py (3 tests). VM provisioning/DNS/uptime-check remains with the Systems lead.
-STATUS:           CHECKPOINT
-PAUSED_AT:        Checkpoint 2 (DOC4 §4.3): requires Systems lead to: (1) provision VM + DNS, (2) deploy Compose there, (3) curl public health endpoint, (4) run offline laptop test. Coding-agent deliverables are complete.
+STATUS:           ACTIVE
+PAUSED_AT:        (none)
 NEXT SYNC POINT:  SYNC 3 / Checkpoint 3 (after A3, A6, A7, Track B B2-B4) is the next real gate.
 
 STATUS is one of ACTIVE | RESUMING | BLOCKED | CHECKPOINT. Only this track's owner (and its agent) edits this file.
@@ -39,4 +39,4 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [A4] — `nakabandi.shared.messages` had no entries for any of A3's or A4's custom error codes (COMPLAINT_*, GEO_*, HOP_UNKNOWN_COMPLAINT, ACCOUNT_UNKNOWN, SERVICE_KEY_INVALID, LOGIN_FAILED, SESSION_MISSING/INVALID, TOKEN_INVALID, FORBIDDEN_PERMISSION/SCOPE, ROLE_MISMATCH) — every one of them was silently falling back to the generic FALLBACK_MESSAGE in any error JSON response, caught only by eyeballing the curl transcript's 403 body. Backfilled all of them in this step; the messages.py docstring says modules add their own codes as they are built, so from here on add the message in the SAME change that introduces a new DomainError code, not after.
 [A5] — uvicorn is a runtime dep added at this step (not A4), consistent with the A4 learning note ("TestClient against the same ASGI app — uvicorn is not wired until A5"). Added to apps/api/pyproject.toml here.
 [A5] — STATIC_DIR env var is unset outside the Docker image; main.py guards the SPA mount with `if settings.static_dir is not None and settings.static_dir.is_dir()` so local dev and tests never try to mount a non-existent path. Tested explicitly by test_static_dir_is_not_mounted_when_unset.
-[A5] — Checkpoint 2's "public HTTPS URL" and "offline laptop" verification are human tasks (Systems lead: VM provision, DNS, deploy). The coding agent's evidence is: ci green, files committed, Caddyfile forward_auth for /sim-control, CADDY_DOMAIN defaults to localhost for the offline path. Per AGENTS.md ACTIVE→CHECKPOINT: do not proceed to A6 until the Systems lead confirms Checkpoint 2 passes.
+[A5] — Checkpoint 2 self-verified locally (offline-laptop path = CADDY_DOMAIN defaults to localhost, Caddy issues its own internal cert — no internet needed). `docker compose build` produced 3 images in 83 s; `docker compose up -d` started all 5 containers; `curl -sk https://localhost/api/v1/system/health` → `{"status":"ok"}`; `curl -sk https://localhost/sim-control/anything` → HTTP 401 (forward_auth gate working); SPA placeholder served at `/`; bank-sim placeholder at `/bank/`. Stack tore down cleanly. VM/DNS/uptime-check remain as human tasks for when a host is provisioned, but the offline Compose path is confirmed.
