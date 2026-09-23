@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Request <%= request.request_id.slice(0,12) %>… — NAKABANDI Bank Console</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+    header { background: #1e2130; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2d3748; }
+    header h1 { font-size: 1.1rem; font-weight: 700; color: #63b3ed; }
+    main { max-width: 900px; margin: 0 auto; padding: 2rem; }
+    .back { font-size: 0.85rem; color: #63b3ed; text-decoration: none; }
+    .badge { display: inline-block; padding: 0.2em 0.6em; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .badge-pending  { background: #744210; color: #fbd38d; }
+    .badge-applied  { background: #1a4731; color: #68d391; }
+    .badge-rejected { background: #63171b; color: #fc8181; }
+    .badge-released { background: #1a365d; color: #90cdf4; }
+    .section-title { font-size: 0.9rem; font-weight: 700; color: #718096; margin: 1.5rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    dl.kv { display: grid; grid-template-columns: 200px 1fr; gap: 0.4rem 1rem; font-size: 0.85rem; background: #1e2130; border-radius: 6px; padding: 1rem; }
+    dt { color: #a0aec0; }
+    dd { font-family: monospace; word-break: break-all; }
+    .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
+    .btn { padding: 0.45rem 1rem; border: none; border-radius: 5px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+    .btn-green  { background: #276749; color: #fff; }
+    .btn-red    { background: #9b2c2c; color: #fff; }
+    .btn-blue   { background: #2b4c7e; color: #fff; }
+    input[type=number] { padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid #4a5568; background: #0f1117; color: #e2e8f0; font-size: 0.85rem; width: 140px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.82rem; }
+    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #2d3748; }
+    th { color: #718096; font-weight: 600; }
+    .hint { font-size: 0.75rem; color: #718096; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>NAKABANDI · Bank Console</h1>
+    <span style="font-size:0.8rem;color:#718096">
+      <form style="display:inline" method="POST" action="/console/logout">
+        <button class="btn" style="font-size:0.75rem;padding:0.2rem 0.6rem;background:#2d3748;color:#e2e8f0">Logout</button>
+      </form>
+    </span>
+  </header>
+  <main>
+    <a class="back" href="/console">← All Requests</a>
+
+    <h2 style="margin-top:1rem;font-size:1rem">
+      Request <code style="font-size:0.95rem"><%= request.request_id %></code>
+      &nbsp;<span class="badge badge-<%= request.status %>"><%= request.status %></span>
+    </h2>
+
+    <!-- Body fields -->
+    <p class="section-title">Webhook Body</p>
+    <dl class="kv">
+      <dt>kind</dt><dd><%= body.kind %></dd>
+      <dt>request_id</dt><dd><%= body.request_id %></dd>
+      <dt>alert_ref</dt><dd><%= body.alert_ref %></dd>
+      <dt>bank_id</dt><dd><%= body.bank_id %></dd>
+      <dt>account_ref</dt><dd><%= body.account_ref %></dd>
+      <dt>complaint_ref</dt><dd><%= body.complaint_ref %></dd>
+      <dt>sim_time</dt><dd><%= body.sim_time %></dd>
+      <% if (body.kind === 'hold_request') { %>
+        <dt>disputed_amount</dt><dd>₹<%= (body.disputed_amount_paise / 100).toFixed(2) %> (<%= body.disputed_amount_paise %> paise)</dd>
+        <dt>proposed_lien</dt><dd>₹<%= (body.proposed_lien_paise / 100).toFixed(2) %> (<%= body.proposed_lien_paise %> paise)</dd>
+        <dt>expires_at_sim</dt><dd><%= body.expires_at_sim %></dd>
+        <dt>review_at_sim</dt><dd><%= body.review_at_sim %></dd>
+        <dt>requested_by_role</dt><dd><%= body.requested_by_role %></dd>
+      <% } %>
+    </dl>
+
+    <!-- Lien info (if any) -->
+    <% if (lien) { %>
+      <p class="section-title">Applied Lien</p>
+      <dl class="kv">
+        <dt>applied_paise</dt><dd><%= lien.applied_paise %> (₹<%= (lien.applied_paise / 100).toFixed(2) %>)</dd>
+        <dt>applied_at_sim</dt><dd><%= lien.applied_at_sim %></dd>
+        <dt>expires_at_sim</dt><dd><%= lien.expires_at_sim %></dd>
+        <dt>released</dt><dd><%= lien.released ? 'Yes' : 'No' %></dd>
+      </dl>
+    <% } %>
+
+    <!-- Actions -->
+    <% if (request.status === 'pending' && body.kind === 'hold_request') { %>
+      <p class="section-title">Actions</p>
+      <div class="actions">
+        <form method="POST" action="/console/requests/<%= request.request_id %>/apply">
+          <label class="hint" for="apply-amount">Amount to apply (paise, max <%= body.proposed_lien_paise %>)</label><br/>
+          <input id="apply-amount" type="number" name="applied_amount_paise"
+                 min="1" max="<%= body.proposed_lien_paise %>"
+                 value="<%= body.proposed_lien_paise %>" required />
+          &nbsp;<button class="btn btn-green" type="submit">Apply Lien</button>
+        </form>
+        <form method="POST" action="/console/requests/<%= request.request_id %>/reject">
+          <button class="btn btn-red" type="submit">Reject</button>
+        </form>
+      </div>
+    <% } else if (request.status === 'applied' && lien && !lien.released) { %>
+      <p class="section-title">Actions</p>
+      <form method="POST" action="/console/requests/<%= request.request_id %>/release">
+        <button class="btn btn-blue" type="submit">Release Lien</button>
+      </form>
+    <% } %>
+
+    <!-- Callback history -->
+    <p class="section-title">Callback History</p>
+    <% if (callbackHistory.length === 0) { %>
+      <p class="hint">No callbacks sent yet.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr><th>Status</th><th>Sent At</th><th>Success</th><th>Attempts</th></tr>
+        </thead>
+        <tbody>
+          <% callbackHistory.forEach(cb => { %>
+            <tr>
+              <td><%= cb.status %></td>
+              <td><%= cb.sent_at.replace('T',' ').slice(0,19) %></td>
+              <td><%= cb.success ? '✓' : '✗ (pending)' %></td>
+              <td><%= cb.attempts %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </main>
+</body>
+</html>
