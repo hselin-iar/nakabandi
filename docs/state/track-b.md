@@ -1,8 +1,8 @@
 # TRACK B — Algorithms & Simulator
 OWNER:            Algo dev + coding agent
-CURRENT_STEP:     B8 — Simulator v1 Realism
-LAST_COMPLETED:   B7 — Evaluation Harness
-STATUS:           ACTIVE
+CURRENT_STEP:     B9 — Sweeps & Result Pack
+LAST_COMPLETED:   B8 — Simulator v1 Realism
+STATUS:           CHECKPOINT
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 8 — after B7 (evaluation harness) and A9; gates final analytics (DOC4 §4.1a)
 
@@ -122,3 +122,29 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [B7] — evaluation must not import nakabandi.pipeline (existing 'no module imports pipeline' contract); _build_pipeline returns None stub; real wiring injected from main.py at compose time.
 [B7] — evaluation must not import nakabandi.intake.infrastructure (facade contract); _bootstrap_tables creates only eval tables; intake tables are created by main.py before passing the DB to evaluation.
 [B7] — _generate_world_headless() returns [] stub (compose stack not yet wired); run_experiment() short-circuits to ok/empty-rows when both batches are empty — harness tested structurally without a running world-sim.
+
+## B8 Done When Evidence
+- [x] T1  — Caps never exceeded: 10,000-sample property test on split_under_caps (ATM channel)
+- [x] T2  — Total preserved: 1,000-sample property test, sum(splits)==total_paise
+- [x] T3  — Ledger completeness: every leaf key in sim.default.yaml appears once, no dupes
+- [x] T4  — Timing components in ledger: all 4 sub-keys per mixture component
+- [x] T5  — Geo state weights in ledger: UP, MH, RJ, HR each have a row
+- [x] T6  — Channel mix in ledger: ATM, BRANCH, AGENT each have a row
+- [x] T7  — compare_to_public never raises (even on 1.0 cpd vs 6600 anchor)
+- [x] T8  — MISMATCH when cpd=1 vs anchor=6600; MATCH when cpd=6600
+- [x] T9  — NO_ANCHOR status when anchors dict is empty
+- [x] T10 — Report Markdown has '# Public Anchor Check Report' header and status column
+- [x] T11 — to_dict() structure correct; n_matches + n_mismatches + n_no_anchor == len(items)
+- [x] T12 — Ledger JSON valid; 'rows' key present; count matches
+- [x] T13 — Ledger Markdown has '# Assumption Ledger' and '| key |' header
+- [x] T14 — All tags are in {verified, derived, assumed, swept}
+- [x] T15 — Ledger build does not affect World.step RNG (golden hash unchanged)
+- [x] 409/409 pytest passed, 19/19 import-linter contracts KEPT, 0 pyright errors
+- [x] Committed feat/track-b at 6c4cbcf; pushed to origin
+
+[B8] — SimConfig classmethod is from_yaml(), not load(); always use from_yaml() in worldsim CLI and tests.
+[B8] — PowerShell Set-Content adds BOM; prefer ruff format to strip BOM.
+[B8] — split_under_caps signature: (total_paise, accounts: list[Account], caps: CapsConfig, channel, rng).
+[B8] — Path(__file__).parents[4] needed from apps/world-sim/tests/unit/ to reach repo root.
+[B8] — compare_to_public uses +-30pct relative tolerance for amounts/volume and +-0.10 abs for state weights.
+[B8] — Core realism features were already wired in B1; B8 adds ledger audit trail only.
