@@ -43,7 +43,11 @@ class AlertModel(Base):
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     forecast_id: Mapped[str] = mapped_column(String, nullable=False)
+    complaint_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
     masked: Mapped[bool] = mapped_column(nullable=False, default=False)
+    scope_state_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    scope_district_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    scope_bank_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
 
 
 class AlertTimelineModel(Base):

@@ -8,6 +8,7 @@ callbacks (LC-6): pending -> applied | rejected, applied -> released. Every othe
 
 from __future__ import annotations
 
+from collections.abc import Set
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -35,6 +36,11 @@ _PERMISSION_FOR: dict[ActionType, Permission] = {
 
 def permission_for(action_type: ActionType) -> Permission:
     return _PERMISSION_FOR[action_type]
+
+
+def allowed_actions(permissions: Set[Permission]) -> list[ActionType]:
+    """Action types a role holding `permissions` may record (LC-4 allowed_actions)."""
+    return [t for t in ActionType if permission_for(t) in permissions]
 
 
 @dataclass(slots=True)

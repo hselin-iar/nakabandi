@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     sms_provider_key: str | None = None
     outbox_worker_enabled: bool = True
     """Run the in-process outbox worker (DOC 2 §2.2). Tests turn it off and call run_once."""
+    timer_worker_enabled: bool = True
+    """Run the in-process timer driver (escalation, expiry, lien review; DOC 2 §2.2). Tests turn it
+    off and drive `AlertService.fire_due_timers` themselves."""
     static_dir: Path | None = Field(default=None, validation_alias="STATIC_DIR")
     """The built SPA's directory (DOC 4 Step A5: "api container, SPA static files"). Unset
     outside the Docker image, where Dockerfile.api builds apps/web and sets it."""

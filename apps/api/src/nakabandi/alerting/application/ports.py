@@ -51,6 +51,7 @@ class ActionRepo(Protocol):
     def get_by_id(self, action_id: Id) -> Any | None: ...
     def list_for_alert(self, alert_id: Id) -> list[Any]: ...
     def active_hold_total_for_complaint(self, complaint_id: Id) -> int: ...
+    def list_active_holds(self) -> list[Any]: ...
     def add(self, action: Any) -> None: ...
     def save(self, action: Any) -> None: ...
 
@@ -60,6 +61,7 @@ class DeliveryRepo(Protocol):
     def save(self, delivery: Any) -> None: ...
     def get_by_id(self, delivery_id: Id) -> Any | None: ...
     def list_due(self, now_wall: Any, limit: int = 50) -> list[Any]: ...
+    def list_for_alert(self, alert_id: Id) -> list[Any]: ...
 
 
 class NotificationChannel(Protocol):
@@ -73,7 +75,7 @@ class NotificationChannel(Protocol):
 @dataclass(frozen=True, slots=True)
 class LienContext:
     """Everything RecordAction needs to re-validate a hold request, none of which alerting owns
-    (LC-10): the complaint anchor, the traced accounts and the disputed amount come from intake."""
+    (LC-10): the traced accounts and the disputed amount come from intake (see LienContextPort)."""
 
     complaint_id: Id
     complaint_ref: str
@@ -84,9 +86,23 @@ class LienContext:
 
 
 class LienContextPort(Protocol):
-    def for_account(self, account_id: Id) -> LienContext | None:
-        """The complaint an account was traced from, or None if the account is unknown or was
-        traced from no complaint."""
+    """Answers, from intake, questions about the complaint an alert is anchored to."""
+
+    def for_account(self, complaint_id: Id, account_id: Id) -> Any | None:
+        """The trace of one account within one complaint (an intake AccountTrace), or None if
+        that complaint's money never reached the account."""
+        ...
+
+    def complaint_ref(self, complaint_id: Id) -> str | None: ...
+
+    def traced_accounts(self, complaint_id: Id) -> list[Any]:
+        """Every account the complaint reached: objects with bank_id and account_ref."""
+        ...
+
+
+class TargetScopePort(Protocol):
+    def for_location(self, location_id: Id) -> Any | None:
+        """The state/district/bank a location belongs to (a geo LocationScope), or None."""
         ...
 
 

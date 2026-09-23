@@ -1,12 +1,11 @@
-"""Answers alerting.RecordAction's question "which complaint was this account traced from, and how
-much of it is disputed here?" (DOC 3 M4 RecordAction step 3). Alerting may not read intake's
-tables (LC-10), so it asks through this facade-exported lookup."""
+"""Answers alerting's questions about the complaint an alert is anchored to (DOC 3 M4). Alerting
+may not read intake's tables (LC-10), so it asks through this facade-exported lookup."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from nakabandi.intake.infrastructure.models import AccountModel, ComplaintModel, FundHopModel
@@ -22,45 +21,37 @@ class AccountTrace:
     disputed_paise: int
 
 
+@dataclass(frozen=True, slots=True)
+class TracedAccount:
+    bank_id: str
+    account_ref: str
+
+
 class LienContextLookup:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def for_account(self, account_id: str) -> AccountTrace | None:
-        """The most recently observed complaint whose money reached this account: as its first
-        layer account (the victim's own transfer, complaint.amount_paise) and/or through hops."""
+    def for_account(self, complaint_id: str, account_id: str) -> AccountTrace | None:
+        """The trace of `account_id` within ONE complaint: None unless that complaint's money
+        reached the account (as its layer-1 account and/or through hops)."""
         account = self._session.get(AccountModel, account_id)
-        if account is None:
+        complaint = self._session.get(ComplaintModel, complaint_id)
+        if account is None or complaint is None:
             return None
-        complaint = self._session.scalars(
-            select(ComplaintModel)
-            .where(
-                or_(
-                    ComplaintModel.layer1_account_id == account_id,
-                    ComplaintModel.id.in_(
-                        select(FundHopModel.complaint_id).where(
-                            FundHopModel.to_account_id == account_id
-                        )
-                    ),
-                )
-            )
-            .order_by(ComplaintModel.observed_at.desc())
-            .limit(1)
-        ).first()
-        if complaint is None:
-            return None
-
         hops = list(
             self._session.scalars(
                 select(FundHopModel).where(FundHopModel.complaint_id == complaint.id)
             )
         )
+        is_layer1 = complaint.layer1_account_id == account_id
+        if not is_layer1 and not any(h.to_account_id == account_id for h in hops):
+            return None
         traced = {complaint.layer1_account_id}
         for hop in hops:
             traced.add(hop.from_account_id)
             traced.add(hop.to_account_id)
         disputed = sum(h.amount_paise for h in hops if h.to_account_id == account_id)
-        if complaint.layer1_account_id == account_id:
+        if is_layer1:
             disputed += complaint.amount_paise
         return AccountTrace(
             complaint_id=complaint.id,
@@ -69,4 +60,24 @@ class LienContextLookup:
             bank_id=account.bank_id,
             traced_accounts=sorted(traced),
             disputed_paise=disputed,
+        )
+
+    def complaint_ref(self, complaint_id: str) -> str | None:
+        complaint = self._session.get(ComplaintModel, complaint_id)
+        return complaint.external_ref if complaint is not None else None
+
+    def traced_accounts(self, complaint_id: str) -> list[TracedAccount]:
+        """Every account the complaint's money reached, for the bank-facing informational notice."""
+        complaint = self._session.get(ComplaintModel, complaint_id)
+        if complaint is None:
+            return []
+        ids = {complaint.layer1_account_id}
+        for hop in self._session.scalars(
+            select(FundHopModel).where(FundHopModel.complaint_id == complaint_id)
+        ):
+            ids.add(hop.to_account_id)
+        accounts = self._session.scalars(select(AccountModel).where(AccountModel.id.in_(ids)))
+        return sorted(
+            (TracedAccount(bank_id=a.bank_id, account_ref=a.account_ref) for a in accounts),
+            key=lambda t: (t.bank_id, t.account_ref),
         )

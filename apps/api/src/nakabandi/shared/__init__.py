@@ -17,6 +17,7 @@ from nakabandi.shared.errors import (
     ValidationFailed,
 )
 from nakabandi.shared.events import (
+    ActionRecorded,
     ClusterMerged,
     ClusterUpdated,
     DomainEvent,
@@ -50,6 +51,7 @@ __all__ = [
     "Unauthenticated",
     "ValidationFailed",
     "DomainEvent",
+    "ActionRecorded",
     "EventBus",
     "HandlerError",
     "ClusterMerged",

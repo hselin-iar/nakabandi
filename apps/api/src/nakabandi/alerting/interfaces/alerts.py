@@ -10,9 +10,11 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
 from nakabandi.access import Principal, get_principal
-from nakabandi.alerting import AlertService
+from nakabandi.alerting.domain.action import Action
 from nakabandi.alerting.domain.alert import Alert
-from nakabandi.shared import NotFound, SqlAlchemyUnitOfWork
+from nakabandi.alerting.domain.delivery import Delivery
+from nakabandi.alerting.interfaces.actions import ActionModel, action_view
+from nakabandi.alerting.interfaces.deps import build_service, get_uow
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
@@ -47,8 +49,21 @@ class TimelineEntryModel(BaseModel):
     text_params: dict
 
 
+class DeliveryModel(BaseModel):
+    """LC-4 AlertDetail.deliveries: { channel, status, attempts, sent_at?, rendered_body? }."""
+
+    channel: str
+    status: str
+    attempts: int
+    sent_at: str | None
+    rendered_body: str | None
+
+
 class AlertDetailModel(AlertSummaryModel):
     timeline: list[TimelineEntryModel]
+    deliveries: list[DeliveryModel]
+    actions: list[ActionModel]
+    allowed_actions: list[str]
 
 
 class PageModel(BaseModel):
@@ -59,10 +74,6 @@ class PageModel(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _get_uow(request: Request) -> SqlAlchemyUnitOfWork:
-    return SqlAlchemyUnitOfWork(request.app.state.session_factory)
 
 
 def _summary(alert: Alert) -> AlertSummaryModel:
@@ -84,7 +95,12 @@ def _summary(alert: Alert) -> AlertSummaryModel:
     )
 
 
-def _detail(alert: Alert) -> AlertDetailModel:
+def _detail(
+    alert: Alert,
+    deliveries: list[Delivery],
+    actions: list[Action],
+    allowed_actions: list[str],
+) -> AlertDetailModel:
     tl = [
         TimelineEntryModel(
             at=e.at.isoformat(),
@@ -96,7 +112,22 @@ def _detail(alert: Alert) -> AlertDetailModel:
         for e in alert.timeline
     ]
     s = _summary(alert)
-    return AlertDetailModel(**s.model_dump(), timeline=tl)
+    return AlertDetailModel(
+        **s.model_dump(),
+        timeline=tl,
+        deliveries=[
+            DeliveryModel(
+                channel=d.channel.value,
+                status=d.status.value,
+                attempts=d.attempts,
+                sent_at=d.sent_at.isoformat() if d.sent_at else None,
+                rendered_body=d.rendered_body,
+            )
+            for d in deliveries
+        ],
+        actions=[action_view(a) for a in actions],
+        allowed_actions=allowed_actions,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -113,23 +144,22 @@ def list_alerts(
     principal: Principal = Depends(get_principal),
 ) -> PageModel:
     """GET /api/v1/alerts — paginated; filtered by principal scope (LC-4 Page<AlertSummary>)."""
-    with _get_uow(request) as uow:
+    with get_uow(request) as uow:
         assert uow.session is not None
-        svc = AlertService(
-            session=uow.session,
-            clock=request.app.state.clock,
-            policy=request.app.state.policy,
-            scheduler=request.app.state.scheduler,
-            role_permissions=request.app.state.role_permissions,
-            sse_hub=request.app.state.sse_hub,
-        )
+        svc = build_service(request, uow.session)
         alerts, next_cursor = svc.list_alerts(
-            principal=principal,
-            status=status,
-            cursor=cursor,
-            limit=min(limit, 200),
+            principal, status=status, cursor=cursor, limit=min(limit, 200)
         )
     return PageModel(items=[_summary(a) for a in alerts], next_cursor=next_cursor)
+
+
+def _detail_for(svc, principal: Principal, alert: Alert) -> AlertDetailModel:  # noqa: ANN001
+    return _detail(
+        alert,
+        svc.list_deliveries_for_alert(alert.id),
+        svc.list_actions(alert.id),
+        svc.allowed_actions(principal, alert),
+    )
 
 
 @router.get("/{alert_id}", response_model=AlertDetailModel)
@@ -138,21 +168,12 @@ def get_alert(
     request: Request,
     principal: Principal = Depends(get_principal),
 ) -> AlertDetailModel:
-    """GET /api/v1/alerts/{id} — returns AlertDetail (LC-4)."""
-    with _get_uow(request) as uow:
+    """GET /api/v1/alerts/{id} — AlertDetail (LC-4); 403 outside the principal's scope."""
+    with get_uow(request) as uow:
         assert uow.session is not None
-        svc = AlertService(
-            session=uow.session,
-            clock=request.app.state.clock,
-            policy=request.app.state.policy,
-            scheduler=request.app.state.scheduler,
-            role_permissions=request.app.state.role_permissions,
-            sse_hub=request.app.state.sse_hub,
-        )
-        alert = svc.get_alert(alert_id)
-    if alert is None:
-        raise NotFound("ALERT_NOT_FOUND", f"Alert {alert_id!r} not found")
-    return _detail(alert)
+        svc = build_service(request, uow.session)
+        alert = svc.get_alert_for(principal, alert_id)
+        return _detail_for(svc, principal, alert)
 
 
 @router.post("/{alert_id}/acknowledge", response_model=AlertDetailModel)
@@ -162,16 +183,9 @@ def acknowledge_alert(
     principal: Principal = Depends(get_principal),
 ) -> AlertDetailModel:
     """POST /api/v1/alerts/{id}/acknowledge — transitions to acknowledged."""
-    with _get_uow(request) as uow:
+    with get_uow(request) as uow:
         assert uow.session is not None
-        svc = AlertService(
-            session=uow.session,
-            clock=request.app.state.clock,
-            policy=request.app.state.policy,
-            scheduler=request.app.state.scheduler,
-            role_permissions=request.app.state.role_permissions,
-            sse_hub=request.app.state.sse_hub,
-        )
+        svc = build_service(request, uow.session)
         alert = svc.acknowledge(principal, alert_id)
         uow.commit()
-    return _detail(alert)
+        return _detail_for(svc, principal, alert)

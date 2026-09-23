@@ -59,7 +59,11 @@ def _model_to_alert(row: AlertModel, timeline_rows: list[AlertTimelineModel]) ->
         expires_at=to_sim_time(row.expires_at),
         created_at=to_sim_time(row.created_at),
         forecast_id=row.forecast_id,
+        complaint_id=row.complaint_id,
         masked=row.masked,
+        scope_state_id=row.scope_state_id,
+        scope_district_id=row.scope_district_id,
+        scope_bank_id=row.scope_bank_id,
         timeline=timeline,
     )
 
@@ -83,7 +87,11 @@ def _alert_to_model(alert: Alert) -> AlertModel:
         expires_at=alert.expires_at,
         created_at=alert.created_at,
         forecast_id=alert.forecast_id,
+        complaint_id=alert.complaint_id,
         masked=alert.masked,
+        scope_state_id=alert.scope_state_id,
+        scope_district_id=alert.scope_district_id,
+        scope_bank_id=alert.scope_bank_id,
     )
 
 
@@ -155,8 +163,13 @@ class SqlAlertRepo:
         q = self._session.query(AlertModel)
         if status is not None:
             q = q.filter(AlertModel.status == status)
-        # Scope filtering: bank_id on alerts not yet available in A7
-        # (target_id is a location, not a bank). Full scope lands at Sync 4.
+        # Same precedence as access.authorize's scope check: bank, then district, then state.
+        if bank_id is not None:
+            q = q.filter(AlertModel.scope_bank_id == bank_id)
+        elif district_id is not None:
+            q = q.filter(AlertModel.scope_district_id == district_id)
+        elif state_id is not None:
+            q = q.filter(AlertModel.scope_state_id == state_id)
         if cursor is not None:
             from datetime import datetime
 
@@ -281,6 +294,14 @@ class SqlActionRepo:
             if (r.params or {}).get("complaint_id") == complaint_id
         )
 
+    def list_active_holds(self) -> list[Action]:
+        """Hold requests the bank has not rejected or released: their lien-review timer is live."""
+        rows = self._session.query(ActionModel).filter(
+            ActionModel.type == ActionType.REQUEST_HOLD.value,
+            ActionModel.status.in_([ActionStatus.PENDING.value, ActionStatus.APPLIED.value]),
+        )
+        return [_action_from_row(r) for r in rows]
+
     def add(self, action: Action) -> None:
         self._session.add(
             ActionModel(
@@ -392,6 +413,14 @@ class SqlDeliveryRepo:
         )
         return [_delivery_from_row(r) for r in rows]
 
+    def list_for_alert(self, alert_id: str) -> list[Delivery]:
+        rows = (
+            self._session.query(DeliveryModel)
+            .filter_by(alert_id=alert_id)
+            .order_by(DeliveryModel.created_at)
+        )
+        return [_delivery_from_row(r) for r in rows]
+
     def list_page(
         self,
         *,
@@ -399,9 +428,24 @@ class SqlDeliveryRepo:
         channel: str | None = None,
         cursor: str | None = None,
         limit: int = 50,
+        state_id: str | None = None,
+        district_id: str | None = None,
+        bank_id: str | None = None,
     ) -> tuple[list[Delivery], str | None]:
-        """Newest first. The cursor is the last seen created_at ISO string."""
+        """Newest first, restricted to the alerts a principal's scope can see (same precedence
+        as SqlAlertRepo.list_by_scope). The cursor is the last seen created_at ISO string."""
         q = self._session.query(DeliveryModel)
+        visible = self._session.query(AlertModel.id)
+        if bank_id is not None:
+            visible = visible.filter(AlertModel.scope_bank_id == bank_id)
+        elif district_id is not None:
+            visible = visible.filter(AlertModel.scope_district_id == district_id)
+        elif state_id is not None:
+            visible = visible.filter(AlertModel.scope_state_id == state_id)
+        else:
+            visible = None
+        if visible is not None:
+            q = q.filter(DeliveryModel.alert_id.in_(visible))
         if status is not None:
             q = q.filter(DeliveryModel.status == status)
         if channel is not None:

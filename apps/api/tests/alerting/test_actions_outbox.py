@@ -25,9 +25,11 @@ from nakabandi.alerting.domain.delivery import (
 from nakabandi.alerting.domain.messages import DeliveryResult
 from nakabandi.alerting.domain.signing import sign, verify, within_window
 from nakabandi.alerting.infrastructure.channels.webhook_bank import BankWebhook
-from nakabandi.alerting.infrastructure.models import ActionModel, DeliveryModel
+from nakabandi.alerting.infrastructure.models import ActionModel, AlertModel, DeliveryModel
 from nakabandi.audit.infrastructure.models import AuditEntryModel
-from nakabandi.intake.infrastructure.models import AccountModel
+from nakabandi.geo import LocationScope, LocationScopeLookup
+from nakabandi.intake import LienContextLookup
+from nakabandi.intake.infrastructure.models import AccountModel, ComplaintModel
 from nakabandi.main import create_app
 from nakabandi.shared import SqlAlchemyUnitOfWork, SystemClock
 from sqlalchemy import select
@@ -79,7 +81,27 @@ def _uow(client: TestClient) -> SqlAlchemyUnitOfWork:
     return SqlAlchemyUnitOfWork(client.app.state.session_factory)  # type: ignore[attr-defined]
 
 
-def _service(client: TestClient, session) -> AlertService:  # noqa: ANN001
+DEMO_SCOPE = LocationScope(state_id="demo-state-1", district_id="demo-district-1", bank_id="bank-1")
+"""Where the demo state investigator / district officer's placeholder scopes (A4) point."""
+
+
+class FixedScope:
+    """A TargetScopePort answering the same scope for every location."""
+
+    def __init__(self, scope: LocationScope | None) -> None:
+        self._scope = scope
+
+    def for_location(self, location_id: str) -> LocationScope | None:
+        return self._scope
+
+
+def _service(
+    client: TestClient,
+    session,  # noqa: ANN001
+    *,
+    scope_lookup=None,  # noqa: ANN001
+    lien_context=None,  # noqa: ANN001
+) -> AlertService:
     st = client.app.state  # type: ignore[attr-defined]
     return AlertService(
         session=session,
@@ -88,17 +110,44 @@ def _service(client: TestClient, session) -> AlertService:  # noqa: ANN001
         scheduler=st.scheduler,
         role_permissions=st.role_permissions,
         sse_hub=st.sse_hub,
+        scope_lookup=scope_lookup,
+        lien_context=lien_context,
+        bus=st.event_bus,
     )
 
 
-def _new_alert(client: TestClient, target_id: str = "loc-1") -> str:
-    from alerting.test_use_cases import FakeTarget
-
+def _complaint_id(client: TestClient, ref: str) -> str:
     with _uow(client) as uow:
         assert uow.session is not None
-        result = _service(client, uow.session).raise_or_merge(
-            FakeForecast(), [FakeAssessment(target=FakeTarget(id=target_id))]
+        return uow.session.scalars(
+            select(ComplaintModel.id).where(ComplaintModel.external_ref == ref)
+        ).one()
+
+
+def _new_alert(
+    client: TestClient,
+    target_id: str = "loc-1",
+    *,
+    complaint_ref: str = "c1",
+    scope: LocationScope | None = DEMO_SCOPE,
+    notify: bool = False,
+    real_scope: bool = False,
+) -> str:
+    """An alert anchored to a complaint. `scope` is what the location resolves to (the demo
+    users' placeholder scope by default); `real_scope` uses the real geo lookup instead;
+    `notify` also wires intake so the bank notices are queued."""
+    from alerting.test_use_cases import FakeTarget
+
+    forecast = FakeForecast(complaint_id=_complaint_id(client, complaint_ref))
+    with _uow(client) as uow:
+        assert uow.session is not None
+        svc = _service(
+            client,
+            uow.session,
+            scope_lookup=LocationScopeLookup(uow.session) if real_scope else FixedScope(scope),
+            lien_context=LienContextLookup(uow.session) if notify else None,
         )
+        result = svc.raise_or_merge(forecast, [FakeAssessment(target=FakeTarget(id=target_id))])
         uow.commit()
     assert result.alert_id is not None
     return result.alert_id
@@ -190,6 +239,7 @@ def test_bank_nodal_is_denied_and_the_denial_is_audited(client: TestClient) -> N
     assert _rows(client, DeliveryModel) == []
     denied = [a for a in _rows(client, AuditEntryModel) if a.action == "action.denied"]
     assert len(denied) == 1 and denied[0].actor_role == "bank_nodal"
+    _login(client, "i4c_analyst")
     assert client.get(f"/api/v1/alerts/{alert_id}").json()["status"] == "open"
 
 
@@ -558,3 +608,257 @@ def test_a_wrong_secret_is_rejected_by_the_receiver_and_the_delivery_fails(
     d = _rows(client, DeliveryModel)[0]
     assert (d.status, d.last_error) == ("failed", "bank responded 401")
     assert received[0]["signature_valid"] is False
+
+
+# ---------------------------------------------------------------------------
+# The complaint anchor
+# ---------------------------------------------------------------------------
+
+
+def test_alert_carries_its_complaint_anchor_and_its_scope(client: TestClient) -> None:
+    alert_id = _new_alert(client, real_scope=True)
+
+    (row,) = [a for a in _rows(client, AlertModel) if a.id == alert_id]
+    assert row.complaint_id == _complaint_id(client, "c1")
+    # loc-1 sits in district d1 of state st-up and belongs to bank-1 (the mini registry)
+    assert (row.scope_state_id, row.scope_district_id, row.scope_bank_id) == (
+        "st-up",
+        "d1",
+        "bank-1",
+    )
+
+
+def test_a_merge_keeps_the_original_complaint_anchor(client: TestClient) -> None:
+    first = _new_alert(client, complaint_ref="c1")
+    second = _new_alert(client, complaint_ref="c2")  # same cluster + target: merges into `first`
+
+    assert second == first
+    (row,) = [a for a in _rows(client, AlertModel) if a.id == first]
+    assert row.complaint_id == _complaint_id(client, "c1")
+
+
+def test_hold_on_an_account_traced_from_another_complaint_is_rejected(client: TestClient) -> None:
+    alert_id = _new_alert(client, complaint_ref="c1")  # ACC-6 was traced from c2, not c1
+    _login(client, "state_investigator")
+
+    r = _hold(client, alert_id, "ACC-6", 100_000)
+
+    assert r.status_code == 422 and r.json()["error"]["code"] == "LIEN_INVALID"
+    assert _rows(client, ActionModel) == []
+
+
+# ---------------------------------------------------------------------------
+# Scope enforcement
+# ---------------------------------------------------------------------------
+
+
+def test_real_geo_scope_hides_the_alert_from_a_principal_scoped_elsewhere(
+    client: TestClient,
+) -> None:
+    alert_id = _new_alert(client, real_scope=True)  # st-up / d1 / bank-1
+
+    _login(client, "i4c_analyst")  # unrestricted
+    assert client.get(f"/api/v1/alerts/{alert_id}").status_code == 200
+    assert [a["id"] for a in client.get("/api/v1/alerts").json()["items"]] == [alert_id]
+
+    _login(client, "state_investigator")  # placeholder scope demo-state-1: not st-up
+    assert client.get("/api/v1/alerts").json()["items"] == []
+    r = client.get(f"/api/v1/alerts/{alert_id}")
+    assert r.status_code == 403 and r.json()["error"]["code"] == "FORBIDDEN_SCOPE"
+
+
+def test_an_alert_with_unknown_scope_is_visible_only_to_unrestricted_principals(
+    client: TestClient,
+) -> None:
+    alert_id = _new_alert(client, scope=None)
+
+    _login(client, "state_investigator")
+    assert client.get(f"/api/v1/alerts/{alert_id}").status_code == 403
+    _login(client, "i4c_analyst")
+    assert client.get(f"/api/v1/alerts/{alert_id}").status_code == 200
+
+
+def test_list_is_filtered_to_the_district_officers_district(client: TestClient) -> None:
+    mine = _new_alert(client, "loc-1", scope=DEMO_SCOPE)
+    other = LocationScope(state_id="demo-state-1", district_id="elsewhere", bank_id="bank-1")
+    _new_alert(client, "loc-2", scope=other)
+    _login(client, "district_officer")
+
+    assert [a["id"] for a in client.get("/api/v1/alerts").json()["items"]] == [mine]
+
+
+def test_acknowledge_and_actions_outside_scope_are_forbidden(client: TestClient) -> None:
+    elsewhere = LocationScope(state_id="other-state", district_id="d", bank_id="bank-1")
+    alert_id = _new_alert(client, scope=elsewhere)
+    _login(client, "state_investigator")  # scoped to demo-state-1
+
+    ack = client.post(f"/api/v1/alerts/{alert_id}/acknowledge")
+    assert ack.status_code == 403 and ack.json()["error"]["code"] == "FORBIDDEN_SCOPE"
+
+    act = _hold(client, alert_id, "ACC-5", 100_000)
+    assert act.status_code == 403 and act.json()["error"]["code"] == "FORBIDDEN_SCOPE"
+    assert _rows(client, ActionModel) == []
+    denied = [a for a in _rows(client, AuditEntryModel) if a.action == "action.denied"]
+    assert len(denied) == 1  # the scope denial is audited too, and survived the 403
+
+
+def test_outbox_view_only_shows_deliveries_of_alerts_in_scope(client: TestClient) -> None:
+    mine = _new_alert(client, "loc-1", scope=DEMO_SCOPE)
+    theirs = _new_alert(
+        client,
+        "loc-2",
+        scope=LocationScope(state_id="demo-state-1", district_id="d2", bank_id="bank-9"),
+    )
+    _login(client, "state_investigator")
+    assert _hold(client, mine, "ACC-5", 100_000).status_code == 201
+    assert _hold(client, theirs, "ACC-1", 100_000).status_code == 201
+
+    _login(client, "i4c_analyst")
+    assert {i["alert_id"] for i in client.get("/api/v1/outbox").json()["items"]} == {mine, theirs}
+    _login(client, "district_officer")  # scoped to demo-district-1
+    assert {i["alert_id"] for i in client.get("/api/v1/outbox").json()["items"]} == {mine}
+
+
+def test_stream_events_are_filtered_by_principal_scope() -> None:
+    from nakabandi.access import Principal, Scope
+    from nakabandi.alerting.infrastructure.channels.sse_hub import SseEvent
+    from nakabandi.alerting.interfaces.stream import event_visible
+    from nakabandi_contracts.enums import Permission, Role
+
+    perms = {Role.DISTRICT_OFFICER: frozenset({Permission.VIEW_ALERTS})}
+    officer = Principal("u", Role.DISTRICT_OFFICER, Scope(district_id="d1"), "Officer")
+
+    def event(district: str | None, alert_id: str | None = "a") -> SseEvent:
+        return SseEvent(
+            name="alert.updated", data={}, alert_id=alert_id, scope_district_id=district
+        )
+
+    assert event_visible(officer, event("d1"), perms)
+    assert not event_visible(officer, event("d2"), perms)
+    assert not event_visible(officer, event(None), perms)  # unknown scope: fail closed
+    assert event_visible(officer, event(None, alert_id=None), perms)  # heat.version, sim.time
+
+
+# ---------------------------------------------------------------------------
+# AlertDetail: deliveries, actions, allowed_actions (LC-4)
+# ---------------------------------------------------------------------------
+
+
+def test_alert_detail_lists_deliveries_actions_and_allowed_actions(client: TestClient) -> None:
+    alert_id = _new_alert(client)
+    _login(client, "state_investigator")
+
+    before = client.get(f"/api/v1/alerts/{alert_id}").json()
+    assert "request_hold" in before["allowed_actions"] and before["actions"] == []
+
+    assert _hold(client, alert_id, "ACC-5", 400_000).status_code == 201
+    after = client.get(f"/api/v1/alerts/{alert_id}").json()
+
+    assert after["status"] == "actioned" and after["allowed_actions"] == []
+    assert [a["type"] for a in after["actions"]] == ["request_hold"]
+    (delivery,) = after["deliveries"]
+    assert set(delivery) == {"channel", "status", "attempts", "sent_at", "rendered_body"}
+    assert delivery["channel"] == "webhook" and "ACC-5" not in delivery["rendered_body"]
+
+
+# ---------------------------------------------------------------------------
+# alert_notice on creation
+# ---------------------------------------------------------------------------
+
+
+def test_creating_an_alert_queues_one_masked_notice_per_traced_account(client: TestClient) -> None:
+    alert_id = _new_alert(client, notify=True)  # c1 reached ACC-1 (bank-1) and ACC-5 (bank-2)
+
+    rows = [d for d in _rows(client, DeliveryModel) if d.alert_id == alert_id]
+    assert {d.recipient for d in rows} == {"bank:bank-1", "bank:bank-2"}
+    for d in rows:
+        assert d.webhook_kind == "alert_notice" and d.action_id is None
+        assert d.payload["account_ref"].startswith("****")  # LC-6: masked on the wire
+        assert d.payload["complaint_ref"] == "c1"
+        assert "ACC-" not in d.rendered_body
+
+    # a merge is not a new alert: no second round of notices
+    _new_alert(client, complaint_ref="c2", notify=True)
+    assert len([d for d in _rows(client, DeliveryModel) if d.alert_id == alert_id]) == 2
+
+
+# ---------------------------------------------------------------------------
+# ActionRecorded (LC-3)
+# ---------------------------------------------------------------------------
+
+
+def test_record_action_publishes_action_recorded_and_survives_a_failing_subscriber(
+    client: TestClient,
+) -> None:
+    from nakabandi.shared import ActionRecorded
+
+    bus = client.app.state.event_bus  # type: ignore[attr-defined]
+    seen: list[ActionRecorded] = []
+
+    def boom(_event: object) -> None:
+        raise RuntimeError("subscriber down")
+
+    bus.subscribe(ActionRecorded, boom)
+    bus.subscribe(ActionRecorded, lambda e: seen.append(e))  # type: ignore[arg-type]
+
+    alert_id = _new_alert(client)
+    _login(client, "state_investigator")
+    r = _hold(client, alert_id, "ACC-5", 100_000)
+
+    assert r.status_code == 201  # the human's action stands even though a subscriber failed
+    assert [(e.action_id, e.alert_id) for e in seen] == [(r.json()["id"], alert_id)]
+
+
+# ---------------------------------------------------------------------------
+# Timers: the driver, and the lien-review timer
+# ---------------------------------------------------------------------------
+
+
+def _advance(client: TestClient, delta: timedelta) -> None:
+    clock = client.app.state.clock  # type: ignore[attr-defined]
+    clock.advance_to(clock.now() + delta)
+
+
+def _timeline_codes(client: TestClient, alert_id: str) -> list[str]:
+    _login(client, "i4c_analyst")
+    return [t["text_code"] for t in client.get(f"/api/v1/alerts/{alert_id}").json()["timeline"]]
+
+
+def test_timer_driver_escalates_an_unattended_alert(client: TestClient) -> None:
+    alert_id = _new_alert(client)
+    assert client.app.state.run_timers_once() == 0  # type: ignore[attr-defined]  # nothing due
+
+    _advance(client, timedelta(minutes=31))  # policy alerting.escalate_after_min = 30
+    assert client.app.state.run_timers_once() == 1  # type: ignore[attr-defined]
+
+    _login(client, "i4c_analyst")
+    assert client.get(f"/api/v1/alerts/{alert_id}").json()["status"] == "escalated"
+
+
+def test_lien_review_timer_notes_the_review_once_and_an_actioned_alert_does_not_expire(
+    client: TestClient,
+) -> None:
+    alert_id, request_id = _pending_hold(client)
+    run = client.app.state.run_timers_once  # type: ignore[attr-defined]
+
+    _advance(client, timedelta(hours=2))  # past the alert's expiry, before the review (24 h)
+    run()
+    assert "alert.hold.review_due" not in _timeline_codes(client, alert_id)
+    _login(client, "i4c_analyst")
+    assert client.get(f"/api/v1/alerts/{alert_id}").json()["status"] == "actioned"
+
+    _advance(client, timedelta(hours=23))  # now past review_at (policy lien.review_hours = 24)
+    run()
+    run()  # a second tick must not repeat the note
+    assert _timeline_codes(client, alert_id).count("alert.hold.review_due") == 1
+    assert request_id
+
+
+def test_no_review_is_noted_for_a_hold_the_bank_rejected(client: TestClient) -> None:
+    alert_id, request_id = _pending_hold(client)
+    assert _callback(client, request_id, "rejected", "2026-01-15T12:00:00Z").json()["applied"]
+
+    _advance(client, timedelta(hours=30))
+    client.app.state.run_timers_once()  # type: ignore[attr-defined]
+
+    assert "alert.hold.review_due" not in _timeline_codes(client, alert_id)

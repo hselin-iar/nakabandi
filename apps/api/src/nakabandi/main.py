@@ -33,6 +33,7 @@ from nakabandi.alerting.interfaces.integrations import router as integrations_ro
 from nakabandi.alerting.interfaces.outbox_view import router as outbox_router
 from nakabandi.alerting.interfaces.stream import router as stream_router
 from nakabandi.audit.interfaces.routers import router as audit_router
+from nakabandi.geo import LocationScopeLookup
 from nakabandi.intake import LienContextLookup
 from nakabandi.intake.interfaces.routers import router as intake_router
 from nakabandi.interception import Interceptor
@@ -40,6 +41,7 @@ from nakabandi.interception.infrastructure.repositories import SqlAssessmentRepo
 from nakabandi.shared import (
     SIM_CLOCK_EPOCH,
     DomainError,
+    EventBus,
     Policy,
     Scheduler,
     SimClock,
@@ -83,6 +85,7 @@ def _role_permissions(policy: Policy) -> Mapping[Role, Set[Permission]]:
 
 
 OUTBOX_POLL_S = 1.0  # how often the in-process outbox worker looks for due deliveries
+TIMER_POLL_S = 1.0  # how often the timer driver fires timers that are due at the sim time
 
 
 def create_app() -> FastAPI:
@@ -103,7 +106,9 @@ def create_app() -> FastAPI:
         app.state.policy = policy
         app.state.scheduler = Scheduler()
         app.state.sse_hub = SseHub()
+        app.state.event_bus = EventBus()
         app.state.lien_context_factory = LienContextLookup
+        app.state.scope_lookup_factory = LocationScopeLookup
         app.state.validate_lien_factory = lambda session: (
             Interceptor(SqlUnitRepo(session), SqlAssessmentRepo(session), policy).validate_lien
         )
@@ -133,6 +138,34 @@ def create_app() -> FastAPI:
             return sent
 
         app.state.run_outbox_once = run_outbox_once
+
+        def run_timers_once() -> int:
+            """One timer tick on its own unit of work, so every timer it fires is bound to a
+            session that is open (DOC 3 M4 RebuildTimers; the tick re-registers before firing)."""
+            with SqlAlchemyUnitOfWork(app.state.session_factory) as uow:
+                assert uow.session is not None
+                fired = AlertService(
+                    session=uow.session,
+                    clock=app.state.clock,
+                    policy=policy,
+                    scheduler=app.state.scheduler,
+                    role_permissions=app.state.role_permissions,
+                    sse_hub=app.state.sse_hub,
+                ).fire_due_timers()
+                uow.commit()
+            return fired
+
+        app.state.run_timers_once = run_timers_once
+
+        async def timer_worker() -> None:
+            while True:
+                await asyncio.sleep(TIMER_POLL_S)
+                try:
+                    await asyncio.to_thread(run_timers_once)
+                except Exception:  # one bad tick must not stop the driver
+                    logger.exception("timers.worker.tick_failed")
+
+        timers = asyncio.create_task(timer_worker()) if settings.timer_worker_enabled else None
 
         async def outbox_worker() -> None:
             while True:
@@ -165,11 +198,12 @@ def create_app() -> FastAPI:
 
         yield
 
-        # Shutdown: stop the outbox worker, then signal SSE subscribers to close
-        if worker is not None:
-            worker.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await worker
+        # Shutdown: stop the outbox worker and timer driver, then signal SSE subscribers to close
+        for task in (worker, timers):
+            if task is not None:
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
         app.state.sse_hub.close_all()
 
     app = FastAPI(title="NAKABANDI API", version="0.0.0", lifespan=lifespan)

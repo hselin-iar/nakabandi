@@ -2,12 +2,14 @@
 
 Processes a Forecast + list[InterceptAssessment] from the pipeline:
   - For each qualifying target (ladder_level != NONE, confidence >= floor):
-    - Find open alert by dedup_key → merge; else create
+    - Find open alert by dedup_key → merge; else create (the alert is anchored to the
+      complaint of the forecast that raised it, and keeps that anchor when later merges arrive)
   - Apply budget ranking and timer scheduling in the same unit of work.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
@@ -15,7 +17,7 @@ from typing import Any
 import structlog
 from nakabandi_contracts.enums import AlertStatus, LadderLevel
 
-from nakabandi.alerting.application.ports import AlertRepo
+from nakabandi.alerting.application.ports import AlertRepo, TargetScopePort
 from nakabandi.alerting.domain.alert import Alert, TimelineEntry
 from nakabandi.alerting.domain.budget import rank_and_cap
 from nakabandi.alerting.domain.dedup import dedup_key
@@ -49,6 +51,8 @@ class RaiseOrMergeAlert:
         scheduler: Scheduler,
         escalate_fn: Any,  # EscalateAlert.schedule — injected to avoid circular import
         expire_fn: Any,  # ExpireAlert.schedule
+        scope_lookup: TargetScopePort | None = None,
+        on_created: Callable[[Alert], None] | None = None,
     ) -> None:
         self._repo = alert_repo
         self._policy = policy
@@ -56,6 +60,8 @@ class RaiseOrMergeAlert:
         self._scheduler = scheduler
         self._escalate_fn = escalate_fn
         self._expire_fn = expire_fn
+        self._scope_lookup = scope_lookup
+        self._on_created = on_created
 
     def run(self, forecast: Any, assessments: list[Any]) -> AlertResult:
         """Process assessments and raise or merge alerts.
@@ -127,6 +133,11 @@ class RaiseOrMergeAlert:
                     policy=self._policy,
                 )
                 alert_id = new_id()
+                scope = (
+                    self._scope_lookup.for_location(assessment.target.id)
+                    if self._scope_lookup is not None
+                    else None
+                )
                 init_entry = TimelineEntry(
                     id=new_id(),
                     alert_id=alert_id,
@@ -154,7 +165,11 @@ class RaiseOrMergeAlert:
                     expires_at=expires_at,
                     created_at=now,
                     forecast_id=forecast.id,
+                    complaint_id=forecast.complaint_id,
                     masked=False,
+                    scope_state_id=scope.state_id if scope is not None else None,
+                    scope_district_id=scope.district_id if scope is not None else None,
+                    scope_bank_id=scope.bank_id if scope is not None else None,
                     timeline=[init_entry],
                 )
                 self._repo.save(new_alert)
@@ -173,6 +188,8 @@ class RaiseOrMergeAlert:
                 escalate_at = a.window_start + timedelta(minutes=escalate_after_min)
                 self._escalate_fn(a.id, escalate_at)
                 self._expire_fn(a.id, a.expires_at)
+                if self._on_created is not None:
+                    self._on_created(a)
 
         logger.info(
             "alerting.raise_or_merge.done",

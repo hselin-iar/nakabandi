@@ -50,7 +50,7 @@ def list_outbox(
         assert uow.session is not None
         svc = build_service(request, uow.session)
         items, next_cursor = svc.list_deliveries(
-            status=status, channel=channel, cursor=cursor, limit=min(limit, 200)
+            principal, status=status, channel=channel, cursor=cursor, limit=min(limit, 200)
         )
         dead = svc.count_dead_deliveries()
     return OutboxPage(

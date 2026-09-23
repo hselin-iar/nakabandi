@@ -43,6 +43,10 @@ _TRANSITIONS: dict[AlertStatus, set[AlertStatus]] = {
 }
 
 
+# A human may still act on an alert in these states (RecordAction, and what the UI offers).
+ACTIONABLE_STATUSES = frozenset({AlertStatus.OPEN, AlertStatus.ESCALATED, AlertStatus.ACKNOWLEDGED})
+
+
 # ---------------------------------------------------------------------------
 # Timeline entry (pure; mapped to ORM in infrastructure)
 # ---------------------------------------------------------------------------
@@ -83,7 +87,14 @@ class Alert:
     expires_at: SimTime
     created_at: SimTime
     forecast_id: Id  # most-recent forecast that contributed
+    complaint_id: Id  # the complaint anchor: the complaint whose forecast raised this alert
     masked: bool = False
+    # Where the target location sits, copied at raise time so the alert can be filtered by a
+    # principal's scope without reading geo (DOC 2 §2.3 Alert.scope_*; state added because
+    # authorize() compares a state-scoped principal against the resource's state).
+    scope_state_id: str | None = None
+    scope_district_id: str | None = None
+    scope_bank_id: str | None = None
     timeline: list[TimelineEntry] = field(default_factory=list)
 
     # ------------------------------------------------------------------

@@ -24,7 +24,12 @@ class SseEvent:
 
     name: str  # alert.created | alert.updated | sim.time | heat.version
     data: dict
-    alert_id: str | None = None  # used for scope filtering
+    alert_id: str | None = None
+    # The alert's scope, attached at publish time (the hub never touches the database); events
+    # without an alert (heat.version, sim.time) carry none and go to every subscriber.
+    scope_state_id: str | None = None
+    scope_district_id: str | None = None
+    scope_bank_id: str | None = None
 
 
 class SseHub:

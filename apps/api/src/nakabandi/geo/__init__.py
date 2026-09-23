@@ -30,9 +30,12 @@ from nakabandi.geo.infrastructure.repositories import (
     SqlRegionRepo,
     SqlUnitRepo,
 )
+from nakabandi.geo.infrastructure.scope_lookup import LocationScope, LocationScopeLookup
 
 __all__ = [
     "GeoService",
+    "LocationScope",
+    "LocationScopeLookup",
     "ApplyRegistryResult",
     "GeoPoint",
     "NearestResult",

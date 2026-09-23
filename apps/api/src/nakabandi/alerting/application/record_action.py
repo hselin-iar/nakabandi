@@ -7,7 +7,7 @@ action_id.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Set
+from collections.abc import Callable, Mapping, Set
 from dataclasses import dataclass, field
 
 import structlog
@@ -21,22 +21,25 @@ from nakabandi.alerting.application.ports import (
     LienContextPort,
     LienValidator,
 )
+from nakabandi.alerting.application.scope import scope_of
+from nakabandi.alerting.application.timers import ReviewLien
 from nakabandi.alerting.domain.action import Action, ActionStatus, permission_for
-from nakabandi.alerting.domain.alert import Alert, TimelineEntry
+from nakabandi.alerting.domain.alert import ACTIONABLE_STATUSES, Alert, TimelineEntry
 from nakabandi.audit import AuditLog
 from nakabandi.shared import (
+    ActionRecorded,
     Clock,
     Conflict,
+    DomainEvent,
     Forbidden,
     NotFound,
+    Scheduler,
     SimTime,
     ValidationFailed,
     new_id,
 )
 
 logger = structlog.get_logger(__name__)
-
-_ACTIONABLE = frozenset({AlertStatus.OPEN, AlertStatus.ESCALATED, AlertStatus.ACKNOWLEDGED})
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +63,9 @@ class RecordAction:
         role_permissions: Mapping[Role, Set[Permission]],
         lien_context: LienContextPort | None,
         validate_lien: LienValidator | None,
+        scheduler: Scheduler,
+        review: ReviewLien,
+        publish: Callable[[DomainEvent], None],
     ) -> None:
         self._alerts = alert_repo
         self._actions = action_repo
@@ -69,29 +75,31 @@ class RecordAction:
         self._role_perms = role_permissions
         self._lien_context = lien_context
         self._validate_lien = validate_lien
+        self._scheduler = scheduler
+        self._review = review
+        self._publish = publish
 
     def run(self, principal: Principal, alert_id: str, action_in: ActionIn) -> Action:
-        # 1. authorize; a denial is audited before it is re-raised (DOC 3 M4 edge case: "403,
-        #    audited as denied"). The caller commits the unit of work so the entry survives.
+        # 1. authorize the permission, then (once the alert is loaded) its scope. Either denial is
+        #    audited before it is re-raised (DOC 3 M4 edge case: "403, audited as denied"); the
+        #    caller commits the unit of work so the entry survives.
+        permission = permission_for(action_in.type)
         try:
-            authorize(principal, permission_for(action_in.type), self._role_perms)
+            authorize(principal, permission, self._role_perms)
         except Forbidden:
-            self._audit.append(
-                actor_id=principal.user_id,
-                actor_role=principal.role.value,
-                action="action.denied",
-                entity_type="alert",
-                entity_id=alert_id,
-                payload={"type": action_in.type.value},
-                reason=action_in.reason,
-            )
+            self._audit_denied(principal, alert_id, action_in)
             raise
 
-        # 2. load the alert and check its state
+        # 2. load the alert, check its scope and its state
         alert: Alert | None = self._alerts.get_by_id(alert_id)
         if alert is None:
             raise NotFound("ALERT_NOT_FOUND", f"Alert {alert_id!r} not found")
-        if alert.status not in _ACTIONABLE:
+        try:
+            authorize(principal, permission, self._role_perms, scope_of(alert))
+        except Forbidden:
+            self._audit_denied(principal, alert_id, action_in)
+            raise
+        if alert.status not in ACTIONABLE_STATUSES:
             raise Conflict(
                 "INVALID_TRANSITION",
                 f"Cannot record an action on an alert that is {alert.status.value!r}",
@@ -104,7 +112,7 @@ class RecordAction:
         params = dict(action_in.params)
         hold: _HoldRequest | None = None
         if action_in.type is ActionType.REQUEST_HOLD:
-            hold = self._validate_hold(params, now)
+            hold = self._validate_hold(alert, params, now)
             params = {
                 "account_id": hold.account_id,
                 "proposed_paise": hold.proposed_paise,
@@ -112,6 +120,8 @@ class RecordAction:
                 "complaint_ref": hold.complaint_ref,
                 "bank_id": hold.bank_id,
                 "disputed_paise": hold.disputed_paise,
+                "expires_at": hold.expires_at.isoformat(),
+                "review_at": hold.review_at.isoformat(),
             }
         elif action_in.type is ActionType.OVERRIDE and not (action_in.reason or "").strip():
             raise ValidationFailed("ACTION_REASON_REQUIRED", "an override needs a reason")
@@ -162,6 +172,10 @@ class RecordAction:
             ),
         )
         self._alerts.save(alert)
+        if new_status is AlertStatus.ACTIONED:
+            # "expires only if not actioned" (DOC 3 M4 edge case): the timers no longer apply
+            self._scheduler.cancel(f"escalate:{alert.id}")
+            self._scheduler.cancel(f"expire:{alert.id}")
 
         # 7. enqueue the deliveries this action causes
         if hold is not None:
@@ -177,6 +191,18 @@ class RecordAction:
                 review_at_sim=hold.review_at,
                 sim_time=now,
             )
+            self._review.schedule(action.id, hold.review_at)
+
+        # 8. publish ActionRecorded (LC-3: fan-out only; a failing subscriber is logged by the
+        #    bus and must never undo an action a human already took)
+        try:
+            self._publish(
+                ActionRecorded(
+                    event_id=new_id(), occurred_at=now, action_id=action.id, alert_id=alert.id
+                )
+            )
+        except Exception:
+            logger.exception("alerting.action_recorded.publish_failed", action_id=action.id)
 
         logger.info(
             "alerting.action_recorded",
@@ -189,7 +215,18 @@ class RecordAction:
 
     # ------------------------------------------------------------------
 
-    def _validate_hold(self, params: dict, now: SimTime) -> _HoldRequest:
+    def _audit_denied(self, principal: Principal, alert_id: str, action_in: ActionIn) -> None:
+        self._audit.append(
+            actor_id=principal.user_id,
+            actor_role=principal.role.value,
+            action="action.denied",
+            entity_type="alert",
+            entity_id=alert_id,
+            payload={"type": action_in.type.value},
+            reason=action_in.reason,
+        )
+
+    def _validate_hold(self, alert: Alert, params: dict, now: SimTime) -> _HoldRequest:
         """Rebuild the LienProposal through interception.validate_lien; never trust the caller's
         numbers, and never skip the re-validation (DOC 4 A8 drift warning)."""
         account_id = params.get("account_id")
@@ -203,9 +240,13 @@ class RecordAction:
         if self._lien_context is None or self._validate_lien is None:
             raise ValidationFailed("LIEN_INVALID", "hold validation is not wired in this process")
 
-        ctx = self._lien_context.for_account(account_id)
+        # The alert's own complaint anchor: an account traced from some other complaint cannot be
+        # held through this alert (DOC 3 M6: every lien has a complaint anchor).
+        ctx = self._lien_context.for_account(alert.complaint_id, account_id)
         if ctx is None:
-            raise ValidationFailed("LIEN_INVALID", f"{account_id} is not traced from any complaint")
+            raise ValidationFailed(
+                "LIEN_INVALID", f"{account_id} is not traced from this alert's complaint"
+            )
 
         lien = self._validate_lien(
             complaint_id=ctx.complaint_id,
