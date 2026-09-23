@@ -44,6 +44,11 @@ MESSAGES: dict[str, str] = {
     "FORBIDDEN_PERMISSION": "You do not have permission to do this.",
     "FORBIDDEN_SCOPE": "This is outside your assigned scope.",
     "ROLE_MISMATCH": "You do not hold the required role for this action.",
+    # alerting (Step A7)
+    "ALERT_NOT_FOUND": "This alert could not be found.",
+    "INVALID_TRANSITION": "This action is not allowed for the alert's current status.",
+    "FORBIDDEN_ACTION": "You do not have permission to perform this action on this alert.",
+    "LIEN_INVALID": "The proposed hold amount is invalid.",
 }
 
 

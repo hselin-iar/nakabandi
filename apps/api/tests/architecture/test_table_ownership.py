@@ -1,11 +1,12 @@
 """A3/A4 Evidence required: "the table list (matches DOC 3 LC-10 ownership)." Only geo, intake,
-access and audit are built so far; the remaining LC-10 tables land with their owning module's
-step."""
+access, audit and alerting are built so far; the remaining LC-10 tables land with their owning
+module's step."""
 
 from __future__ import annotations
 
 # Importing the model modules registers their tables on the shared Base.metadata.
 import nakabandi.access.infrastructure.models  # noqa: F401
+import nakabandi.alerting.infrastructure.models  # noqa: F401
 import nakabandi.audit.infrastructure.models  # noqa: F401
 import nakabandi.geo.infrastructure.models  # noqa: F401
 import nakabandi.intake.infrastructure.models  # noqa: F401
@@ -28,6 +29,10 @@ EXPECTED_TABLES = {
     "users",
     # audit (LC-10)
     "audit_entries",
+    # alerting (LC-10, Step A7)
+    "alerts",
+    "alert_timeline",
+    "outcomes",
 }
 
 
