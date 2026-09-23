@@ -1,8 +1,8 @@
 # TRACK B — Algorithms & Simulator
 OWNER:            Algo dev + coding agent
-CURRENT_STEP:     B6 — Training Models (Batch)
-LAST_COMPLETED:   B5 — Live Runner & Control API
-STATUS:           CHECKPOINT
+CURRENT_STEP:     B6 — Forecast v1
+LAST_COMPLETED:   B5 — Live Runner & Control API (Sync 7 confirmed by track owner)
+STATUS:           ACTIVE
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 7 — after B5 (live runner) and A5; gates C8 demo console (DOC4 §4.1a)
 

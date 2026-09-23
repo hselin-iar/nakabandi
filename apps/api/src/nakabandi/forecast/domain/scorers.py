@@ -1,17 +1,7 @@
-"""scorers.py — LocationScorer port and HeuristicScorer (DOC 3 M2, B4 v0).
+"""scorers.py — LocationScorer port, HeuristicScorer (B4), HistGradientBoostingScorer (B6).
 
-B4 builds the HeuristicScorer (hand weights from policy).
-B6 will add HistGradientBoostingScorer (the ML model).
-
-HeuristicScorer: a weighted sum over interpretable features.
-  raw_score(row) = Σ weight_i × feature_i  (weights from policy; never hard-coded)
-  Weights are policy.forecast.* — but since the policy model doesn't have heuristic
-  weights yet, we embed them as a fixed structure read from policy via a helper.
-
-Since DOC 4 B4 says "hand weights from policy" and policy.yaml doesn't define
-heuristic weight keys (those are Track A / B calibration), we define the keys inline
-and document they belong in config/policy.yaml for Track A to add later. For now the
-HeuristicScorer reads from a simple dict of default weights that Track B will sweep.
+B4 builds HeuristicScorer (hand weights from policy).
+B6 adds HistGradientBoostingScorer (sklearn HGB + isotonic calibration).
 """
 
 from __future__ import annotations
@@ -52,18 +42,17 @@ class ScorerInfo:
 # ---------------------------------------------------------------------------
 _DEFAULT_WEIGHTS: dict[str, float] = {
     "same_bank": 2.0,
-    "dist_home_km": -0.15,  # penalty per km from home
-    "dist_centroid_km": -0.10,  # penalty per km from centroid
-    "cluster_loc_count": 0.8,  # reward for prior cash-outs at location
-    "cluster_cell_count": 0.4,  # reward for prior cash-outs in cell
-    "recency_days": -0.05,  # penalty for stale history
-    "hour_sin": 0.0,  # neutral; tuned in B6
+    "dist_home_km": -0.15,
+    "dist_centroid_km": -0.10,
+    "cluster_loc_count": 0.8,
+    "cluster_cell_count": 0.4,
+    "recency_days": -0.05,
+    "hour_sin": 0.0,
     "hour_cos": 0.0,
     "amount_log": 0.1,
     "amount_x_dist": -0.05,
-    "activity_index": 1.0,  # registry busyness of location
+    "activity_index": 1.0,
     "cluster_size_log": 0.3,
-    # "channel" is categorical — handled by a separate lookup below
 }
 
 _CHANNEL_BONUS: dict[str, float] = {
@@ -72,14 +61,38 @@ _CHANNEL_BONUS: dict[str, float] = {
     "AGENT": 0.2,
 }
 
+_CHANNEL_CODE: dict[str, float] = {"ATM": 0.0, "BRANCH": 1.0, "AGENT": 2.0}
+
+
+def features_to_array(rows: list[FeatureRow]) -> np.ndarray:
+    """Convert a list of FeatureRow to a (n, 13) float64 matrix.
+
+    Column order is fixed; channel is label-encoded (no one-hot to preserve
+    HGB's native categorical support potential).
+    """
+    n = len(rows)
+    X = np.empty((n, 13), dtype=np.float64)
+    for i, r in enumerate(rows):
+        X[i] = [
+            r.same_bank,
+            r.dist_home_km,
+            r.dist_centroid_km,
+            r.cluster_loc_count,
+            r.cluster_cell_count,
+            r.recency_days,
+            r.hour_sin,
+            r.hour_cos,
+            r.amount_log,
+            r.amount_x_dist,
+            r.activity_index,
+            r.cluster_size_log,
+            _CHANNEL_CODE.get(r.channel, 0.0),
+        ]
+    return X
+
 
 class HeuristicScorer(LocationScorer):
-    """Hand-weighted linear scorer over the FEATURE_REGISTRY.
-
-    Weights are a fixed dict (seeds); Track B calibration sweeps them.
-    Passed to the Forecaster at construction time so they can be swapped
-    without changing any domain logic.
-    """
+    """Hand-weighted linear scorer over the FEATURE_REGISTRY (B4 v0 fallback)."""
 
     def __init__(self, weights: dict[str, float] | None = None) -> None:
         self._w = weights if weights is not None else dict(_DEFAULT_WEIGHTS)
@@ -88,7 +101,6 @@ class HeuristicScorer(LocationScorer):
         return ScorerInfo(name="heuristic_v0", version="0", params=dict(self._w))
 
     def raw_scores(self, rows: list[FeatureRow]) -> np.ndarray:
-        """Compute a weighted linear score for each FeatureRow."""
         scores = np.zeros(len(rows), dtype=float)
         for i, row in enumerate(rows):
             s = (
@@ -110,16 +122,98 @@ class HeuristicScorer(LocationScorer):
         return scores
 
 
+class HistGradientBoostingScorer(LocationScorer):
+    """sklearn HistGradientBoostingClassifier + isotonic calibration (B6 v1).
+
+    Calibration is applied BEFORE normalisation (DOC 3 M2 / DOC 2 §2.2).
+    The calibrator is fitted on the validation slice.
+
+    Fallback: if not yet fitted, delegates to HeuristicScorer (the v0 scorer).
+    The caller (GenerateForecast) labels this in model_versions as 'fallback'.
+    """
+
+    def __init__(self) -> None:
+        from sklearn.ensemble import HistGradientBoostingClassifier
+
+        self._model = HistGradientBoostingClassifier(
+            max_iter=200,
+            learning_rate=0.05,
+            max_depth=4,
+            min_samples_leaf=20,
+            random_state=42,
+        )
+        self._calibrator: Any | None = None
+        self._fitted = False
+        self._fallback = HeuristicScorer()
+
+    @property
+    def is_fitted(self) -> bool:
+        return self._fitted
+
+    def info(self) -> ScorerInfo:
+        return ScorerInfo(
+            name="hgb_v1" if self._fitted else "fallback",
+            version="1",
+            params={"fitted": self._fitted, "calibrated": self._calibrator is not None},
+        )
+
+    def fit(self, train_rows: list[FeatureRow], labels: list[float]) -> None:
+        if not train_rows:
+            return
+        X = features_to_array(train_rows)
+        y = np.asarray(labels, dtype=float)
+        self._model.fit(X, y)
+        self._fitted = True
+
+    def fit_with_calibration(
+        self,
+        train_rows: list[FeatureRow],
+        train_labels: list[float],
+        val_rows: list[FeatureRow],
+        val_labels: list[float],
+    ) -> Any:  # returns CalibrationResult (imported lazily to avoid circular)
+        """Fit model on train, calibrate on val. Returns CalibrationResult."""
+        from sklearn.isotonic import IsotonicRegression
+
+        from nakabandi.forecast.domain.training import CalibrationResult, calibrate_scores
+
+        self.fit(train_rows, train_labels)
+
+        if not val_rows:
+            self._calibrator = IsotonicRegression(out_of_bounds="clip").fit([0, 1], [0, 1])
+            return CalibrationResult(
+                calibrator=self._calibrator,
+                brier_before=0.0,
+                brier_after=0.0,
+                fraction_of_positives=[],
+                mean_predicted_value=[],
+            )
+
+        X_val = features_to_array(val_rows)
+        raw_probs = self._model.predict_proba(X_val)[:, 1]
+        y_val = np.asarray(val_labels, dtype=float)
+        result = calibrate_scores(raw_probs, y_val)
+        self._calibrator = result.calibrator
+        return result
+
+    def raw_scores(self, rows: list[FeatureRow]) -> np.ndarray:
+        """Return calibrated probabilities if fitted, otherwise heuristic fallback."""
+        if not self._fitted:
+            return self._fallback.raw_scores(rows)
+        X = features_to_array(rows)
+        raw = self._model.predict_proba(X)[:, 1]
+        if self._calibrator is not None:
+            return np.asarray(self._calibrator.predict(raw), dtype=float)
+        return raw
+
+
 def score_candidates(
     ctx: ClusterContext,
     candidates: list[Candidate],
     scorer: LocationScorer,
     expected_hour: float = 12.0,
 ) -> tuple[list[FeatureRow], np.ndarray]:
-    """Build feature rows and compute raw scores for all candidates.
-
-    Returns (feature_rows, raw_scores_array).
-    """
+    """Build feature rows and compute raw scores for all candidates."""
     rows = [build_features(ctx, cand, expected_hour) for cand in candidates]
     scores = scorer.raw_scores(rows)
     return rows, scores
