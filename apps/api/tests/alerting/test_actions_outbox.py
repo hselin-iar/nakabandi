@@ -112,7 +112,7 @@ def _service(
         sse_hub=st.sse_hub,
         scope_lookup=scope_lookup,
         lien_context=lien_context,
-        bus=st.event_bus,
+        bus=st.event_bus_factory(session),
     )
 
 
@@ -792,14 +792,16 @@ def test_record_action_publishes_action_recorded_and_survives_a_failing_subscrib
 ) -> None:
     from nakabandi.shared import ActionRecorded
 
-    bus = client.app.state.event_bus  # type: ignore[attr-defined]
     seen: list[ActionRecorded] = []
 
     def boom(_event: object) -> None:
         raise RuntimeError("subscriber down")
 
-    bus.subscribe(ActionRecorded, boom)
-    bus.subscribe(ActionRecorded, lambda e: seen.append(e))  # type: ignore[arg-type]
+    def register(bus, _session) -> None:  # noqa: ANN001  (the bus is built per unit of work)
+        bus.subscribe(ActionRecorded, boom)
+        bus.subscribe(ActionRecorded, lambda e: seen.append(e))
+
+    client.app.state.bus_registrars.append(register)  # type: ignore[attr-defined]
 
     alert_id = _new_alert(client)
     _login(client, "state_investigator")

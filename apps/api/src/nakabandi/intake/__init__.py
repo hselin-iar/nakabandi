@@ -27,6 +27,7 @@ from nakabandi.intake.application.use_cases import (
 )
 from nakabandi.intake.infrastructure.lien_lookup import (
     AccountTrace,
+    ComplaintSummary,
     LienContextLookup,
     TracedAccount,
 )
@@ -39,7 +40,13 @@ from nakabandi.intake.infrastructure.repositories import (
 )
 from nakabandi.shared import SimClock
 
-__all__ = ["IngestService", "LienContextLookup", "AccountTrace", "TracedAccount"]
+__all__ = [
+    "IngestService",
+    "LienContextLookup",
+    "AccountTrace",
+    "ComplaintSummary",
+    "TracedAccount",
+]
 
 
 class IngestService:

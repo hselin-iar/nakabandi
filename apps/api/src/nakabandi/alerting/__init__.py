@@ -19,6 +19,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Set
 from datetime import datetime
 
+import structlog
 from nakabandi_contracts.enums import Permission, Role
 from sqlalchemy.orm import Session
 
@@ -58,6 +59,7 @@ from nakabandi.alerting.infrastructure.repos import (
 )
 from nakabandi.audit import AuditLog
 from nakabandi.shared import (
+    AlertRaised,
     Clock,
     EventBus,
     Id,
@@ -65,7 +67,10 @@ from nakabandi.shared import (
     Policy,
     Scheduler,
     SystemClock,
+    new_id,
 )
+
+logger = structlog.get_logger(__name__)
 
 __all__ = [
     "AlertService",
@@ -115,6 +120,7 @@ class AlertService:
         self._scheduler = scheduler
         self._role_permissions = role_permissions
         self._hub = sse_hub
+        self._bus = bus if bus is not None else EventBus()
 
         # Build timer use cases (they share the same repo/clock/scheduler)
         self._escalate = EscalateAlert(self._repo, clock, scheduler)
@@ -156,7 +162,7 @@ class AlertService:
             validate_lien=validate_lien,
             scheduler=scheduler,
             review=self._review,
-            publish=bus.publish if bus is not None else (lambda _event: None),
+            publish=self._bus.publish,
         )
         self._bank_callback = HandleBankCallback(self._action_repo, self._repo, audit, clock)
 
@@ -167,10 +173,20 @@ class AlertService:
     def raise_or_merge(self, forecast: object, assessments: list[object]) -> AlertResult:
         result = self._raise_or_merge.run(forecast, assessments)
         # Publish alert.created SSE for each newly raised alert
+        created = set(result.created_ids)
         for aid in result.alert_ids:
             self._publish_alert_event(
-                "alert.created" if result.created else "alert.updated", aid, version=1
+                "alert.created" if aid in created else "alert.updated", aid, version=1
             )
+        # LC-3 fan-out (the analytics projector listens): a failing subscriber is logged by the
+        # bus and must not undo an alert that was already raised.
+        for aid in result.created_ids:
+            try:
+                self._bus.publish(
+                    AlertRaised(event_id=new_id(), occurred_at=self._clock.now(), alert_id=aid)
+                )
+            except Exception:
+                logger.exception("alerting.alert_raised.publish_failed", alert_id=aid)
         return result
 
     def _notify_banks(self, alert: Alert) -> None:

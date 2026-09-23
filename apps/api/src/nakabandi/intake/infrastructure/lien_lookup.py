@@ -27,6 +27,12 @@ class TracedAccount:
     account_ref: str
 
 
+@dataclass(frozen=True, slots=True)
+class ComplaintSummary:
+    category: str
+    amount_paise: int
+
+
 class LienContextLookup:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -61,6 +67,13 @@ class LienContextLookup:
             traced_accounts=sorted(traced),
             disputed_paise=disputed,
         )
+
+    def complaint_summary(self, complaint_id: str) -> ComplaintSummary | None:
+        """Category and amount, for the analytics read model's rollup keys."""
+        complaint = self._session.get(ComplaintModel, complaint_id)
+        if complaint is None:
+            return None
+        return ComplaintSummary(category=complaint.category, amount_paise=complaint.amount_paise)
 
     def complaint_ref(self, complaint_id: str) -> str | None:
         complaint = self._session.get(ComplaintModel, complaint_id)

@@ -17,12 +17,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from nakabandi_contracts.enums import Permission, Role
+from sqlalchemy.orm import Session
 
 from nakabandi.access import AccessService
 from nakabandi.access.infrastructure.tokens import JwtTokenIssuer
 from nakabandi.access.interfaces.rate_limit import LoginAttempts
 from nakabandi.access.interfaces.routers import router as access_router
-from nakabandi.alerting import AlertService, DeliveryChannel, SseHub
+from nakabandi.alerting import AlertService, DeliveryChannel, SseEvent, SseHub
 from nakabandi.alerting.infrastructure.channels.email_smtp import SmtpEmail
 from nakabandi.alerting.infrastructure.channels.sms_outbox import OutboxSms
 from nakabandi.alerting.infrastructure.channels.sms_provider import ProviderSms, SmsWithFallback
@@ -32,8 +33,12 @@ from nakabandi.alerting.interfaces.alerts import router as alerts_router
 from nakabandi.alerting.interfaces.integrations import router as integrations_router
 from nakabandi.alerting.interfaces.outbox_view import router as outbox_router
 from nakabandi.alerting.interfaces.stream import router as stream_router
+from nakabandi.analytics import AnalyticsService
+from nakabandi.analytics.interfaces.routers import router as analytics_router
 from nakabandi.audit.interfaces.routers import router as audit_router
+from nakabandi.forecast.infrastructure.repositories import metadata as forecast_metadata
 from nakabandi.geo import LocationScopeLookup
+from nakabandi.geo.interfaces.routers import router as geo_router
 from nakabandi.intake import LienContextLookup
 from nakabandi.intake.interfaces.routers import router as intake_router
 from nakabandi.interception import Interceptor
@@ -56,6 +61,7 @@ from nakabandi.shared.infrastructure.db import (
     make_session_factory,
 )
 from nakabandi.shared.logging import configure_logging
+from nakabandi.wiring import GeoCatalogAdapter, ProjectionSourceAdapter
 
 logger = structlog.get_logger(__name__)
 
@@ -98,6 +104,8 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         engine = create_sqlite_engine(settings.database_url)
         create_all(engine)
+        # forecast's tables sit on their own MetaData (Track B), which create_all does not see
+        forecast_metadata.create_all(engine)
         app.state.session_factory = make_session_factory(engine)
         app.state.clock = SimClock(start=SIM_CLOCK_EPOCH)
         app.state.token_issuer = JwtTokenIssuer(settings.jwt_secret)
@@ -106,7 +114,33 @@ def create_app() -> FastAPI:
         app.state.policy = policy
         app.state.scheduler = Scheduler()
         app.state.sse_hub = SseHub()
-        app.state.event_bus = EventBus()
+
+        # One EventBus per unit of work (LC-3): subscribers such as the analytics projector write
+        # on the publisher's own session, so their rows commit or roll back with the alert or
+        # forecast they describe. `bus_registrars` is the list of subscribers; each is called with
+        # the fresh bus and that session.
+        def register_analytics(bus: EventBus, session: Session) -> None:
+            AnalyticsService(
+                session,
+                policy=policy,
+                clock=app.state.clock,
+                role_permissions=app.state.role_permissions,
+                catalog=GeoCatalogAdapter(session),
+                source=ProjectionSourceAdapter(session),
+                publish_version=lambda v: app.state.sse_hub.publish(
+                    SseEvent(name="heat.version", data={"version": v})
+                ),
+            ).register_projectors(bus)
+
+        app.state.bus_registrars = [register_analytics]
+
+        def event_bus_for(session: Session) -> EventBus:
+            bus = EventBus()
+            for register in app.state.bus_registrars:
+                register(bus, session)
+            return bus
+
+        app.state.event_bus_factory = event_bus_for
         app.state.lien_context_factory = LienContextLookup
         app.state.scope_lookup_factory = LocationScopeLookup
         app.state.validate_lien_factory = lambda session: (
@@ -209,6 +243,8 @@ def create_app() -> FastAPI:
     app = FastAPI(title="NAKABANDI API", version="0.0.0", lifespan=lifespan)
     app.add_exception_handler(DomainError, _domain_error_handler)
     app.include_router(intake_router, prefix="/api/v1")
+    app.include_router(geo_router, prefix="/api/v1")
+    app.include_router(analytics_router, prefix="/api/v1")
     app.include_router(access_router, prefix="/api/v1")
     app.include_router(audit_router, prefix="/api/v1")
     app.include_router(alerts_router, prefix="/api/v1")

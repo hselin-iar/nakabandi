@@ -21,11 +21,19 @@ from nakabandi_contracts.ingest import RegistryLocation, RegistryUnit
 from sqlalchemy.orm import Session
 
 from nakabandi.geo.application.apply_registry import ApplyRegistry, ApplyRegistryResult
+from nakabandi.geo.application.queries import (
+    GeoScope,
+    QueryLocations,
+    QueryRegions,
+    parse_bbox,
+)
+from nakabandi.geo.domain.entities import Cell, Location, Region
 from nakabandi.geo.domain.grid import cell_id_for
 from nakabandi.geo.domain.spatial import GeoPoint, NearestResult, SpatialIndex
 from nakabandi.geo.infrastructure.repositories import (
     SqlBankRepo,
     SqlCellRepo,
+    SqlGeoReadRepo,
     SqlLocationRepo,
     SqlRegionRepo,
     SqlUnitRepo,
@@ -34,6 +42,11 @@ from nakabandi.geo.infrastructure.scope_lookup import LocationScope, LocationSco
 
 __all__ = [
     "GeoService",
+    "GeoScope",
+    "Region",
+    "Cell",
+    "Location",
+    "parse_bbox",
     "LocationScope",
     "LocationScopeLookup",
     "ApplyRegistryResult",
@@ -47,26 +60,19 @@ __all__ = [
 class GeoService:
     """Façade: the ONLY geo object other modules may import.
 
-    Constructed with either a SQLAlchemy Session (for intake/uow writes) or a repository
-    object (for read queries).
+    Constructed on the caller's SQLAlchemy Session, so writes (apply_registry) and reads
+    (regions, cells, locations, spatial_index) share the caller's unit of work.
     """
 
-    def __init__(self, session_or_repo: Session | object) -> None:
-        if isinstance(session_or_repo, Session):
-            self._session: Session | None = session_or_repo
-            self._apply_registry: ApplyRegistry | None = ApplyRegistry(
-                bank_repo=SqlBankRepo(session_or_repo),
-                region_repo=SqlRegionRepo(session_or_repo),
-                cell_repo=SqlCellRepo(session_or_repo),
-                location_repo=SqlLocationRepo(session_or_repo),
-                unit_repo=SqlUnitRepo(session_or_repo),
-            )
-            self._repo: object = None
-        else:
-            self._session = None
-            self._apply_registry = None
-            self._repo = session_or_repo
-
+    def __init__(self, session: Session) -> None:
+        self._session: Session | None = session
+        self._apply_registry: ApplyRegistry | None = ApplyRegistry(
+            bank_repo=SqlBankRepo(session),
+            region_repo=SqlRegionRepo(session),
+            cell_repo=SqlCellRepo(session),
+            location_repo=SqlLocationRepo(session),
+            unit_repo=SqlUnitRepo(session),
+        )
         self._index: SpatialIndex | None = None
         self._index_version: str | None = None
 
@@ -93,33 +99,40 @@ class GeoService:
         """Return the grid cell id for a coordinate pair."""
         return cell_id_for(lat, lon, grid_km)
 
+    def _read(self) -> SqlGeoReadRepo:
+        if self._session is None:
+            raise RuntimeError("GeoService was not initialized with a SQLAlchemy session")
+        return SqlGeoReadRepo(self._session)
+
     def spatial_index(self, version: str | None = None) -> SpatialIndex:
-        """Return the BallTree index, rebuilding if the registry version changed."""
+        """The BallTree over every registered location, rebuilt when `version` changes."""
         if self._index is None or version != self._index_version:
-            if self._repo is None:
-                raise RuntimeError("GeoService has no repo configured for spatial index")
-            points = self._repo.all_location_points()  # type: ignore[attr-defined]
-            self._index = SpatialIndex.build(points)
+            self._index = SpatialIndex.build(self._read().all_location_points())
             self._index_version = version
         return self._index
 
-    def regions(self) -> list[dict]:  # type: ignore[type-arg]
-        """Return the list of region dicts (id, name, state_id, lat, lon)."""
-        if self._repo is None:
-            raise RuntimeError("GeoService has no repo configured for regions")
-        return self._repo.all_regions()  # type: ignore[attr-defined]
+    def regions(self, scope: GeoScope | None = None) -> list[Region]:
+        return QueryRegions(self._read()).run(scope or GeoScope())
+
+    def cells(self) -> list[Cell]:
+        return self._read().all_cells()
 
     def locations(
         self,
+        scope: GeoScope | None = None,
         *,
         bbox: tuple[float, float, float, float] | None = None,
         kind: str | None = None,
         bank_id: str | None = None,
+        after_id: str | None = None,
         limit: int = 500,
-    ) -> list[dict]:  # type: ignore[type-arg]
-        """Return locations filtered by bounding box, kind, or bank."""
-        if self._repo is None:
-            raise RuntimeError("GeoService has no repo configured for locations")
-        return self._repo.query_locations(  # type: ignore[attr-defined]
-            bbox=bbox, kind=kind, bank_id=bank_id, limit=limit
+    ) -> list[Location]:
+        """Locations inside `scope`, optionally narrowed by bbox / kind / bank, ordered by id."""
+        return QueryLocations(self._read()).run(
+            scope or GeoScope(),
+            bbox=bbox,
+            kind=kind,
+            bank_id=bank_id,
+            after_id=after_id,
+            limit=limit,
         )

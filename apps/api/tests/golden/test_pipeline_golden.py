@@ -268,3 +268,57 @@ class TestGoldenScenario:
                 select(ComplaintModel).where(ComplaintModel.processing_status == "unprocessed")
             ).all()
             assert remaining == [], "Still unprocessed after retry"
+
+
+class TestForecastGeneratedEvent:
+    """A9: the pipeline announces each forecast (LC-3 ForecastGenerated) AFTER its chain, so the
+    analytics projector can build the potential layer. A failed stage announces nothing."""
+
+    def _run(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, alert_service: Any
+    ) -> tuple[list[Any], list[Any]]:
+        from nakabandi.shared import EventBus, ForecastGenerated
+
+        db_url = f"sqlite:///{tmp_path / 'events.db'}"
+        monkeypatch.setenv("API_SERVICE_KEY", SERVICE_KEY)
+        monkeypatch.setenv("DATABASE_URL", db_url)
+        with TestClient(create_app()) as client:
+            _load_fixture_via_api(client)
+
+        seen: list[Any] = []
+        bus = EventBus()
+        bus.subscribe(ForecastGenerated, lambda e: seen.append(e))
+        Session = make_session_factory(create_sqlite_engine(db_url))
+        with Session() as session:
+            pipeline = ProcessComplaint(
+                complaint_repo=SqlComplaintRepo(session),
+                cluster_service=StubClusterService(),
+                forecaster=StubForecaster(),
+                interceptor=StubInterceptor(),
+                alert_service=alert_service,
+                bus=bus,
+            )
+            ids = [c.id for c in session.scalars(select(ComplaintModel)).all()]
+            results = [pipeline.run(i, SIM_NOW) for i in ids]
+            session.commit()
+        return seen, results
+
+    def test_each_processed_complaint_publishes_forecast_generated(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen, results = self._run(tmp_path, monkeypatch, StubAlertService())
+
+        assert all(r.ok for r in results) and len(seen) == len(results) > 0
+        assert {e.complaint_id for e in seen} == {r.complaint_id for r in results}
+        assert all(e.forecast_id and e.occurred_at == SIM_NOW for e in seen)
+
+    def test_a_failed_stage_publishes_nothing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class Broken:
+            def raise_or_merge(self, *args: Any, **kwargs: Any) -> Any:
+                raise RuntimeError("deliberate alerting failure")
+
+        seen, results = self._run(tmp_path, monkeypatch, Broken())
+
+        assert not any(r.ok for r in results) and seen == []

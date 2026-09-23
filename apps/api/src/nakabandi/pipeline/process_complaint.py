@@ -15,7 +15,7 @@ from typing import Any, Protocol
 
 import structlog
 
-from nakabandi.shared import Id, SimTime
+from nakabandi.shared import EventBus, ForecastGenerated, Id, SimTime, new_id
 
 logger = structlog.get_logger(__name__)
 
@@ -125,7 +125,9 @@ class ProcessComplaint:
         forecaster: _Forecaster,
         interceptor: _Interceptor,
         alert_service: _AlertService,
+        bus: EventBus | None = None,
     ) -> None:
+        self._bus = bus
         self._complaints = complaint_repo
         self._cluster = cluster_service
         self._forecast = forecaster
@@ -178,6 +180,7 @@ class ProcessComplaint:
         if forecast.stale:
             log.info("pipeline.forecast.stale", complaint_id=complaint_id)
             self._complaints.mark_processed(complaint_id)
+            self._publish_forecast(forecast, complaint_id, now)
             return ProcessResult(complaint_id, ok=True, alert_id=None)
 
         # ------------------------------------------------------------------
@@ -204,6 +207,7 @@ class ProcessComplaint:
         # All stages succeeded
         # ------------------------------------------------------------------
         self._complaints.mark_processed(complaint_id)
+        self._publish_forecast(forecast, complaint_id, now)
         log.info(
             "pipeline.complaint.processed",
             alert_id=getattr(alert_result, "alert_id", None),
@@ -213,6 +217,25 @@ class ProcessComplaint:
             ok=True,
             alert_id=getattr(alert_result, "alert_id", None),
         )
+
+    def _publish_forecast(self, forecast: Any, complaint_id: Id, now: SimTime) -> None:
+        """LC-3 fan-out, after the chain: the analytics projector listens. A failing subscriber is
+        logged and never makes a processed complaint look unprocessed."""
+        if self._bus is None:
+            return
+        try:
+            self._bus.publish(
+                ForecastGenerated(
+                    event_id=new_id(),
+                    occurred_at=now,
+                    forecast_id=forecast.id,
+                    complaint_id=complaint_id,
+                )
+            )
+        except Exception:
+            logger.exception(
+                "pipeline.forecast_generated.publish_failed", complaint_id=complaint_id
+            )
 
 
 # ---------------------------------------------------------------------------

@@ -18,10 +18,12 @@ from nakabandi.shared.errors import (
 )
 from nakabandi.shared.events import (
     ActionRecorded,
+    AlertRaised,
     ClusterMerged,
     ClusterUpdated,
     DomainEvent,
     EventBus,
+    ForecastGenerated,
     HandlerError,
 )
 from nakabandi.shared.ids import new_id
@@ -52,6 +54,8 @@ __all__ = [
     "ValidationFailed",
     "DomainEvent",
     "ActionRecorded",
+    "AlertRaised",
+    "ForecastGenerated",
     "EventBus",
     "HandlerError",
     "ClusterMerged",

@@ -10,7 +10,7 @@ Processes a Forecast + list[InterceptAssessment] from the pipeline:
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any
 
@@ -34,6 +34,7 @@ class AlertResult:
     alert_id: Id | None  # None if all assessments were below floor
     created: bool  # True = new alert, False = merged into existing
     alert_ids: list[Id]  # All alerts raised/merged in this call
+    created_ids: list[Id] = field(default_factory=list)  # the subset that are new
 
 
 class RaiseOrMergeAlert:
@@ -200,4 +201,5 @@ class RaiseOrMergeAlert:
             alert_id=first_alert_id,
             created=first_created,
             alert_ids=alert_ids,
+            created_ids=[a.id for a in raised],
         )

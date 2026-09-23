@@ -7,10 +7,12 @@ so the application layer can report it in `rejected[]` without knowing about SQL
 
 from __future__ import annotations
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from nakabandi.geo.domain.entities import Bank, Cell, Location, Region, Unit
+from nakabandi.geo.domain.spatial import GeoPoint
 from nakabandi.geo.infrastructure.models import (
     BankModel,
     CellModel,
@@ -124,3 +126,101 @@ class SqlUnitRepo:
             ),
             "GEO_UNIT_INTEGRITY",
         )
+
+
+# ---------------------------------------------------------------------------
+# Read side (DOC 3 M3: QueryRegions, QueryLocations, the analytics catalog, the spatial index)
+# ---------------------------------------------------------------------------
+
+
+def _region(row: RegionModel) -> Region:
+    return Region(
+        id=row.id,
+        level=row.level,
+        name=row.name,
+        parent_id=row.parent_id,
+        geojson_ref=row.geojson_ref,
+    )
+
+
+def _cell(row: CellModel) -> Cell:
+    return Cell(
+        id=row.id,
+        grid_km=row.grid_km,
+        row=row.row,
+        col=row.col,
+        district_id=row.district_id,
+        centroid_lat=row.centroid_lat,
+        centroid_lon=row.centroid_lon,
+    )
+
+
+def _location(row: LocationModel) -> Location:
+    return Location(
+        id=row.id,
+        kind=row.kind,
+        bank_id=row.bank_id,
+        lat=row.lat,
+        lon=row.lon,
+        district_id=row.district_id,
+        cell_id=row.cell_id,
+        source=row.source,
+        display_name=row.display_name,
+        area_type=row.area_type,
+        activity_index=row.activity_index,
+    )
+
+
+class SqlGeoReadRepo:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def all_regions(self) -> list[Region]:
+        return [
+            _region(r) for r in self._session.scalars(select(RegionModel).order_by(RegionModel.id))
+        ]
+
+    def all_cells(self) -> list[Cell]:
+        return [_cell(r) for r in self._session.scalars(select(CellModel).order_by(CellModel.id))]
+
+    def district_ids_of_state(self, state_id: str) -> list[str]:
+        return list(
+            self._session.scalars(select(RegionModel.id).where(RegionModel.parent_id == state_id))
+        )
+
+    def query_locations(
+        self,
+        *,
+        bbox: tuple[float, float, float, float] | None = None,
+        kind: str | None = None,
+        bank_id: str | None = None,
+        district_ids: list[str] | None = None,
+        after_id: str | None = None,
+        limit: int = 500,
+    ) -> list[Location]:
+        """Ordered by id (a keyset for paging); bbox = (min_lon, min_lat, max_lon, max_lat)."""
+        q = select(LocationModel)
+        if bbox is not None:
+            min_lon, min_lat, max_lon, max_lat = bbox
+            q = q.where(
+                LocationModel.lon >= min_lon,
+                LocationModel.lon <= max_lon,
+                LocationModel.lat >= min_lat,
+                LocationModel.lat <= max_lat,
+            )
+        if kind is not None:
+            q = q.where(LocationModel.kind == kind)
+        if bank_id is not None:
+            q = q.where(LocationModel.bank_id == bank_id)
+        if district_ids is not None:
+            q = q.where(LocationModel.district_id.in_(district_ids))
+        if after_id is not None:
+            q = q.where(LocationModel.id > after_id)
+        q = q.order_by(LocationModel.id).limit(limit)
+        return [_location(r) for r in self._session.scalars(q)]
+
+    def all_location_points(self) -> list[GeoPoint]:
+        return [
+            GeoPoint(id=r.id, lat=r.lat, lon=r.lon)
+            for r in self._session.scalars(select(LocationModel).order_by(LocationModel.id))
+        ]
