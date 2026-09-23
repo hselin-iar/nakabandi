@@ -1,8 +1,8 @@
 # TRACK B — Algorithms & Simulator
 OWNER:            Algo dev + coding agent
-CURRENT_STEP:     B7 — Evaluation Harness
-LAST_COMPLETED:   B6 — Forecast v1
-STATUS:           ACTIVE
+CURRENT_STEP:     B8 — Simulator v1 Realism
+LAST_COMPLETED:   B7 — Evaluation Harness
+STATUS:           CHECKPOINT
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 8 — after B7 (evaluation harness) and A9; gates final analytics (DOC4 §4.1a)
 
@@ -103,3 +103,22 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [B6] — novelty() is a forecast-domain concern, not a graph-domain concern; placed in forecast/domain/novelty.py to avoid facade-forecast contract violation.
 [B6] — scikit-learn and joblib were not in the venv; added via `uv add scikit-learn joblib` (sklearn 1.9.1, joblib 1.6.0).
 [B6] — `FeatureRow(**dict[str, Any])` fails pyright type-checking; construct with explicit field references float(d["key"]) instead.
+
+## B7 Done When Evidence
+- [x] T1 — every metric matches hand-computed fixture (raw formula checks pass)
+- [x] T2 — expand_grid: 3 timing × 3 mixes × 2 localities = 18 configs; sweep_key format verified
+- [x] T3 — abstained items: empty truth excluded from precision; counted in abstention_rate
+- [x] T4 — n < 30 guard: hit_rate_at_k / brier_score / precision_at_k return NaN when n < 30
+- [x] T5 — ExperimentConfig.config_hash() is deterministic; oracle_url excluded from hash
+- [x] T6 — MetricRow defaults correct; ExperimentResult.rows accumulates rows
+- [x] T7 — HotspotBaseline ranks by frequency; NearestToVictim ranks closer first; BankFootprint by network
+- [x] T8 — reliability_curve: non-empty BinStat list from calibrated probs; perfectly calibrated = frac=0
+- [x] T9 — dispatches_per_interception and false_hold_rate correct (NaN guarded at n<30)
+- [x] T10 — to_json: NaN → null; to_markdown: contains run_id, table rows
+- [x] 390/390 pytest passed, 19/19 import-linter contracts KEPT (new oracle-firewall contract added), 0 pyright errors
+- [x] Committed feat/track-b at 5577eca; pushed to origin
+
+[B7] — cross-track learning [A1→B7] implemented: oracle_client contract added to .importlinter as Row 8; only nakabandi.evaluation may import oracle_client; now 19 contracts total.
+[B7] — evaluation must not import nakabandi.pipeline (existing 'no module imports pipeline' contract); _build_pipeline returns None stub; real wiring injected from main.py at compose time.
+[B7] — evaluation must not import nakabandi.intake.infrastructure (facade contract); _bootstrap_tables creates only eval tables; intake tables are created by main.py before passing the DB to evaluation.
+[B7] — _generate_world_headless() returns [] stub (compose stack not yet wired); run_experiment() short-circuits to ok/empty-rows when both batches are empty — harness tested structurally without a running world-sim.
