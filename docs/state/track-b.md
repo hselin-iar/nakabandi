@@ -162,4 +162,5 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [B9] -- ExperimentResult has no .config attribute; zip(configs, results) to pair them; always use (cfg, r) tuples.
 [B9] -- Stub strategy: all cells produce status=ok/empty rows when oracle is not reachable; that is correct and expected per B7 stub strategy -- swap when compose stack runs.
 [B9] -- Re-run uv run python scripts/sweep/run_sweep.py --out docs/results once docker compose is up to populate real metrics.
-[B9] -- Track B is fully complete: B1-B9 all done and green. HEAD: 6030f81 on origin/feat/track-b.
+[B9] -- Track B is fully complete: B1-B9 all done and green. HEAD: ccd4c8a on origin/feat/track-b.
+[CI] -- Root pyproject.toml and uv.lock (scikit-learn, joblib) committed in ccd4c8a and pushed to origin/feat/track-b.
