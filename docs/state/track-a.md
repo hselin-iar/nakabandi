@@ -1,9 +1,9 @@
 # TRACK A — Platform & Integration
 OWNER:            Systems lead + coding agent (Integration Owner)
-CURRENT_STEP:     A6 — Pipeline v0 stub-swap (waiting on Sync 3 / MP3)
-LAST_COMPLETED:   A6 — Pipeline v0 & Golden Test (stubs phase). Evidence: `npm run ci` green (172 passed, 18/18 contracts kept, web build green). Committed 9d64a11. Files: nakabandi/pipeline/{__init__,process_complaint}.py; tests/stubs/pipeline_stubs.py; tests/golden/test_pipeline_golden.py (3 golden tests: all-processed, forced-stage-failure, retry-recovery). Also added: intake entity/model/repo fields (failed_stage), complaint repo methods (get_by_id, mark_processed, mark_unprocessed, list_unprocessed).
-STATUS:           CHECKPOINT
-PAUSED_AT:        Sync 3 / MP3 (DOC4 §4.1a): Track B must complete B2 (graph), B3 (forecast), B4 (interception) before Track A can swap stubs with real facades. Gate: "each facade's output matches the LC-4 shapes the stubs promised; the golden pipeline test in A6 passes with real facades swapped in one at a time." Who confirms: Systems lead, reviewing with Algo dev. After confirmation, swap stubs one at a time and rerun golden test, then advance to A7.
+CURRENT_STEP:     A7 — Alerting Core
+LAST_COMPLETED:   A6 / MP3 — Pipeline v0 & Golden Test with real Track B facades (Sync 3 confirmed). Evidence: `npm run ci` green (297 passed, 18/18 contracts kept, web build green). Merged origin/feat/track-b at 9f640d4; stub-swap committed at d7914c5. Swapped pipeline stubs with real Track B domain types/logic (B2 ClusterIndex, B3 Interception verdict_from & ladder_level, B4 Forecast & TimingForecast).
+STATUS:           ACTIVE
+PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 4 (after A7 alerting core) — before Track C C3/C4/C7 can swap fixtures for live data.
 
 STATUS is one of ACTIVE | RESUMING | BLOCKED | CHECKPOINT. Only this track's owner (and its agent) edits this file.
@@ -42,3 +42,4 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [A6] — Pipeline port Protocols (_ComplaintRepo, _ClusterService, _Forecaster, _Interceptor, _AlertService) are defined inside pipeline/process_complaint.py, not imported from the modules they abstract. This avoids cross-module imports while giving Pyright something to check attribute accesses against. Stubs in tests/stubs/ implement these protocols structurally — no explicit `implements` marker needed.
 [A6] — Complaint entity required a `failed_stage: str | None` column (added to intake entity, ComplaintModel, and SqlComplaintRepo) to record which pipeline stage caused an unprocessed status. This is an intake table implementation detail, not a LC change, so no Contract Change Process was needed.
 [A6] — Golden test imports from `stubs.pipeline_stubs` (not `tests.stubs...`) because pytest's testpaths root is `apps/api/tests`, making `stubs` the top-level package visible to imports.
+[A6/MP3] — Sync 3 / MP3 confirmed: merged origin/feat/track-b (B1-B4), resolved geo/__init__.py interface merge cleanly; swapped pipeline stubs to use real Track B domain types and logic (B2 ClusterIndex, B3 Interception ladder/verdict/assessment, B4 Forecast/LevelForecast/TimingForecast); npm run ci 297/297 passed, 18/18 contracts kept.
