@@ -2,7 +2,7 @@
 OWNER:            Algo dev + coding agent
 CURRENT_STEP:     B7 — Evaluation Harness
 LAST_COMPLETED:   B6 — Forecast v1
-STATUS:           CHECKPOINT
+STATUS:           ACTIVE
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 8 — after B7 (evaluation harness) and A9; gates final analytics (DOC4 §4.1a)
 
