@@ -1,0 +1,82 @@
+{
+  "_note": "DOC 2 Appendix A verified figures — public sources only. Unverified items use null. Curated geo (D5) and RBI distributions (R2) will swap in on arrival.",
+  "_sources": [
+    "MHA Lok Sabha Unstarred Question 1906, 11 March 2025 — state-wise cybercrime complaints",
+    "NCRB 2024 annual report — Cyber Crime cases and amounts reported",
+    "RBI notifications on ATM daily withdrawal limits (bank-specific, no universal cap)",
+    "I4C/MHA press release 2025 — national cybercrime complaint volume"
+  ],
+
+  "load": {
+    "complaints_per_day": {
+      "value": 6600,
+      "unit": "complaints/day",
+      "confidence": "high_order_of_magnitude",
+      "source": "I4C 2025 average derived from annual total ~24.1 lakh / 365",
+      "note": "Range 6500–8000 cited; golden uses 600 for district-scale slice"
+    }
+  },
+
+  "amounts": {
+    "mean_inr": {
+      "value": 94000,
+      "unit": "INR",
+      "confidence": "high_for_mean",
+      "source": "NCRB 2024 / CERT-In — weighted average ₹94,000 (2025 figure); ₹1.19 lakh (2024)",
+      "note": "Heavy-tailed shape is our assumption; not an official distribution"
+    }
+  },
+
+  "geo": {
+    "state_weights": {
+      "value": {
+        "UP": 0.35,
+        "MH": 0.25,
+        "RJ": 0.22,
+        "HR": 0.18
+      },
+      "confidence": "medium",
+      "source": "MHA Lok Sabha UQ 1906, 11 Mar 2025 — state-wise cybercrime counts (normalised to four demo states)",
+      "note": "Weights complaint origin, not cash-out location"
+    }
+  },
+
+  "caps": {
+    "card_atm_daily_inr": {
+      "value_range": [20000, 100000],
+      "value_median": 50000,
+      "confidence": "medium",
+      "source": "Bank-specific published limits; no universal RBI cap for debit ATM",
+      "note": "Cardless/AEPS caps have official notifications"
+    },
+    "cardless_atm_txn_inr": {
+      "value": 10000,
+      "confidence": "medium",
+      "source": "RBI/Bank notifications on cardless ATM transaction limits"
+    },
+    "aeps_txn_inr": {
+      "value": 10000,
+      "confidence": "medium_low",
+      "source": "NPCI AEPS guidelines — bank-specific; range typically 10,000–50,000/day"
+    }
+  },
+
+  "timing": {
+    "note": "No public time-to-withdrawal distribution exists (fewer than 8 numeric observations found — R2). Values below are priors only.",
+    "fast_median_min": {
+      "value": null,
+      "range": [1, 60],
+      "confidence": "low",
+      "source": "Assumed from scattered case reports; SWEEP 15 / 60 / 240 min"
+    }
+  },
+
+  "network": {
+    "layers": {
+      "range": [2, 12],
+      "median": 4,
+      "confidence": "medium_low",
+      "source": "Case-based, not a distribution study"
+    }
+  }
+}
