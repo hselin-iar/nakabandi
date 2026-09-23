@@ -1,10 +1,10 @@
 # TRACK A — Platform & Integration
 OWNER:            Systems lead + coding agent (Integration Owner)
-CURRENT_STEP:     A7 — Alerting Core
-LAST_COMPLETED:   A6 — Pipeline v0 & Golden Test. Evidence: `npm run ci` green (172 passed, 18/18 contracts kept, web build green). Committed 9d64a11. Files: nakabandi/pipeline/{__init__,process_complaint}.py; tests/stubs/pipeline_stubs.py; tests/golden/test_pipeline_golden.py (3 golden tests: all-processed, forced-stage-failure, retry-recovery). Also added: intake entity/model/repo fields (failed_stage), complaint repo methods (get_by_id, mark_processed, mark_unprocessed, list_unprocessed).
-STATUS:           ACTIVE
-PAUSED_AT:        (none)
-NEXT SYNC POINT:  SYNC 3 / Checkpoint 3 (after A3, A6, A7, Track B B2-B4) is the next real gate.
+CURRENT_STEP:     A6 — Pipeline v0 stub-swap (waiting on Sync 3 / MP3)
+LAST_COMPLETED:   A6 — Pipeline v0 & Golden Test (stubs phase). Evidence: `npm run ci` green (172 passed, 18/18 contracts kept, web build green). Committed 9d64a11. Files: nakabandi/pipeline/{__init__,process_complaint}.py; tests/stubs/pipeline_stubs.py; tests/golden/test_pipeline_golden.py (3 golden tests: all-processed, forced-stage-failure, retry-recovery). Also added: intake entity/model/repo fields (failed_stage), complaint repo methods (get_by_id, mark_processed, mark_unprocessed, list_unprocessed).
+STATUS:           CHECKPOINT
+PAUSED_AT:        Sync 3 / MP3 (DOC4 §4.1a): Track B must complete B2 (graph), B3 (forecast), B4 (interception) before Track A can swap stubs with real facades. Gate: "each facade's output matches the LC-4 shapes the stubs promised; the golden pipeline test in A6 passes with real facades swapped in one at a time." Who confirms: Systems lead, reviewing with Algo dev. After confirmation, swap stubs one at a time and rerun golden test, then advance to A7.
+NEXT SYNC POINT:  SYNC 4 (after A7 alerting core) — before Track C C3/C4/C7 can swap fixtures for live data.
 
 STATUS is one of ACTIVE | RESUMING | BLOCKED | CHECKPOINT. Only this track's owner (and its agent) edits this file.
 Update it after every completed step and before ending a session.
