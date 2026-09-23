@@ -2,11 +2,13 @@
  * Shell.tsx — top bar: sim time, role, connection dot.
  * DOC 3 Web App Shell: layout/ → Shell.tsx
  *
- * STUB STRATEGY (C1): sim time from a static placeholder ("--:--"); the stream
- * provider that delivers real sim-time events is wired in C3.
+ * C3: sim time from useSimTime() (stream-driven); connection dot from useStream().
  */
 
 import { usePrincipal } from "../auth/usePrincipal";
+import { useStream, useSimTime } from "../../shared/stream/useStream";
+import { formatSimTime } from "../../shared/lib/format";
+
 
 // Role display labels (same map as LoginPage)
 const ROLE_LABELS: Record<string, string> = {
@@ -47,6 +49,12 @@ function ConnectionDot({ status }: { status: "streaming" | "polling" | "disconne
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { principal, logout } = usePrincipal();
+  const { status } = useStream();
+  const simTime = useSimTime();
+
+  const simLabel = simTime
+    ? `SIM ${formatSimTime(simTime)}`
+    : "SIM --:--";
 
   return (
     <div className="nk-shell">
@@ -54,7 +62,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <span className="nk-topbar__brand">NAKABANDI</span>
 
         <span className="nk-topbar__simtime" aria-label="Simulator time">
-          SIM --:--
+          {simLabel}
         </span>
 
         <div className="nk-topbar__right">
@@ -63,7 +71,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <span className="nk-topbar__role">
                 {ROLE_LABELS[principal.role] ?? principal.role}
               </span>
-              <ConnectionDot status="polling" />
+              <ConnectionDot status={status} />
               <button
                 id="topbar-logout-btn"
                 className="nk-topbar__logout"

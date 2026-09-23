@@ -29,6 +29,11 @@ export default tseslint.config(
               allow: { to: { element: { type: "shared" } } },
             },
             {
+              // DOC 4 §C6: Cytoscape wrapper is shared between clusters and cases (built once in clusters, imported from cases)
+              from: { element: { type: "feature", name: "cases" } },
+              allow: { to: { element: { type: "feature", name: "clusters" } } },
+            },
+            {
               from: { element: { type: "shared" } },
               allow: { to: { element: { type: "shared" } } },
             },

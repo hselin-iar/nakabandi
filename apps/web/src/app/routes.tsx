@@ -71,6 +71,14 @@ export function AppRoutes() {
                   <Route path="map" element={<MapPage />} />
 
                   <Route
+                    path="clusters"
+                    element={
+                      <RoleGuard require="VIEW_CASES">
+                        <ClustersPage />
+                      </RoleGuard>
+                    }
+                  />
+                  <Route
                     path="clusters/:id"
                     element={
                       <RoleGuard require="VIEW_CASES">
