@@ -18,3 +18,5 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [C1] — tailwind.preset.ts must not import from `tailwindcss` types at C1 (Tailwind not fully wired); use `Record<string, any>` until Tailwind is configured end-to-end. vite.config.ts must be excluded from tsconfig `include` to avoid peer-type resolution failures in the workspace context.
 [C1] — RoleGuard route preservation verified via router location state redirect to /login and return upon quick-login.
 [C2] — better-sqlite3 requires Visual Studio C++ build tools on Node 24 Windows x64. express.json with { verify: (req, res, buf) => req.rawBody = buf } must be used to capture rawBody synchronously for HMAC verification before parsing.
+[C2/Sync 5] — Bank simulator merged to main; Sync 5 webhook callback verified; pulled full API schemas into web client.
+
