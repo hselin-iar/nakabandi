@@ -1,0 +1,15 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "sim_time": {
+      "format": "date-time",
+      "title": "Sim Time",
+      "type": "string"
+    }
+  },
+  "required": [
+    "sim_time"
+  ],
+  "title": "Tick",
+  "type": "object"
+}

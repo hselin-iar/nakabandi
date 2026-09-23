@@ -120,10 +120,11 @@ MVP FEATURES (in build order):
 
 | Role | Skills | Owns |
 |---|---|---|
-| **Systems lead** (Integration Owner) | Experienced vibecoder, systems understanding | Track A |
-| **Algo dev** | DSA, limited agent experience | Track B |
-| **Web dev** | MERN, limited agent experience | Track C |
-| **Designer** | Design, content | Track D; pastes Track R prompts into the research agent |
+| **Systems lead** (Nilesh - Integration Owner) | Experienced vibecoder, systems understanding | Track A |
+| **Algo dev** (Yash) | DSA, limited agent experience | Track B |
+| **Web dev** (Priyam) | MERN, frontend, React + Node | Track C |
+| **Designer** | Design, content | Track D |
+| **Research agent operator** (Abhinay) | Open-web research, fact checking, synthesis | Track R |
 
 **Build strategy.** Walking skeleton first: every module gets a simple **v0** that closes the loop end to end (heuristic forecast, basic alert flow, cell-level map), and named **v1 upgrades** (trained scorer, EM timing, realism, filters, budget) follow. If the MUST tier is at risk, v1 upgrades slip first and MUST features stay; §4.1c says exactly in what order. Descope decisions are triggered by build state, never by the calendar.
 

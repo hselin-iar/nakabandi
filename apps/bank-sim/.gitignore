@@ -1,0 +1,5 @@
+﻿node_modules/
+dist/
+bank-sim.db
+*.db
+.env.bank-sim

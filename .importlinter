@@ -249,6 +249,28 @@ forbidden_modules =
     nakabandi.evaluation.**
 allow_indirect_imports = True
 
+# shared is a module too (DOC 3: "the only code every track imports"); the facade rule applies
+# to it the same way, even though it has no domain/application/infrastructure layers of its own.
+[importlinter:contract:facade-shared]
+name = other modules use shared only through its facade
+type = forbidden
+source_modules =
+    nakabandi.intake
+    nakabandi.graph
+    nakabandi.forecast
+    nakabandi.interception
+    nakabandi.alerting
+    nakabandi.casework
+    nakabandi.access
+    nakabandi.audit
+    nakabandi.geo
+    nakabandi.analytics
+    nakabandi.evaluation
+    nakabandi.pipeline
+forbidden_modules =
+    nakabandi.shared.**
+allow_indirect_imports = True
+
 # Row 3: domain code stays pure.
 [importlinter:contract:domain-purity]
 name = domain packages do not import I/O or framework libraries

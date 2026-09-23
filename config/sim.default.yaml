@@ -1,0 +1,48 @@
+# NAKABANDI world simulator configuration (DOC 3 M1; keys from DOC 2 Appendix A — Simulator
+# Parameter Priors). Skeleton only: Track A creates this file with every known key at null;
+# Track B fills the values (DOC 4 §4.1b: "Track A fills policy.yaml values, Track B fills
+# sim.default.yaml values"). Every value in Appendix A is a PRIOR, swept, never presented as
+# calibrated.
+
+load:
+  complaints_per_day: null # Appendix A: default 8,000 (PS figure); range 6,500-8,000
+
+amounts:
+  mean_paise: null # Appendix A: about ₹94,000 (2025); ₹1.19 lakh (2024)
+
+network:
+  layers: null # Appendix A: 2 to 12, median about 4
+  accounts_per_cluster: null # Appendix A: 10 to about 20,000, median about 100
+  bridge_rate: null # Appendix A: assumed small share of accounts used by two clusters
+  hop_visibility: null # Appendix A: share of deeper hops banks trace and report later, and their lag
+
+caps:
+  card_atm_daily_inr: null # Appendix A: 20,000 to 1,00,000, median about 50,000
+  cardless_atm_txn_inr: null # Appendix A: about 10,000 per transaction
+  aeps_txn_inr: null # Appendix A: about 10,000 per transaction
+  aeps_daily_inr: null # Appendix A: daily 10,000 to 50,000
+
+timing:
+  mixture: null # Appendix A: fast median about 15 min (range 1-60); slow hours to a day; SWEEP 15/60/240
+
+channels:
+  mix: null # Appendix A: unpublished; three labelled-illustrative mixes (ATM-heavy, branch-heavy, balanced)
+
+footprint:
+  locality: null # Appendix A: unpublished; sweep local (one district) to dispersed (multi-state)
+  size_per_cluster: null # Appendix A: sweep tens to hundreds of locations
+
+mule:
+  lifetime_days: null # Appendix A: 1 to 180, median about 30
+
+geo:
+  state_weights: null # Appendix A: official state-wise cybercrime counts (MHA Lok Sabha UQ 1906, 11 Mar 2025)
+
+kit:
+  cards_per_account: null # Appendix A: kits typically hold one ATM card, one cheque book, one SIM, one QR code
+
+noise:
+  innocent_layer1_rate: null # Appendix A: assumed 2% to 5% of complaints land on an innocent holder's account
+
+lag:
+  observation_hours: null # Appendix A: bank/police confirmation lag; range hours to days
