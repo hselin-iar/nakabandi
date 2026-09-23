@@ -125,6 +125,13 @@ class SqlForecastRepo(ForecastRepo):
             return None
         return self._row_to_forecast(row)
 
+    def get_by_id(self, forecast_id: Id) -> Forecast | None:
+        """One forecast by its own id (an alert points at the forecast that last fed it)."""
+        row = self._s.execute(
+            sa.select(forecasts_table).where(forecasts_table.c.id == forecast_id)
+        ).first()
+        return self._row_to_forecast(row) if row is not None else None
+
     def get_latest(self, complaint_id: Id) -> Forecast | None:
         row = self._s.execute(
             sa.select(forecasts_table)

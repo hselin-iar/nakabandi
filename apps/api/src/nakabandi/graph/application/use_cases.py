@@ -50,6 +50,8 @@ class ResolveCluster:
         self._repo.reassign_accounts(account_ids, resolution.cluster_id, as_of)
         for absorbed_id in resolution.merged_from:
             self._repo.mark_absorbed(absorbed_id, resolution.cluster_id, as_of)
+            # its cash-out history belongs to the survivor now
+            self._repo.move_location_stats(absorbed_id, resolution.cluster_id)
             self._bus.publish(
                 ClusterMerged(
                     event_id=new_id(),

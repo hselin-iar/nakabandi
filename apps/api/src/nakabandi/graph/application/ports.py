@@ -55,3 +55,20 @@ class ClusterRepo(ABC):
         self, cluster_id: Id, footprint: ClusterFootprint, updated_at: SimTime
     ) -> None:
         """Persist a recomputed footprint (overwrites prior value)."""
+
+    @abstractmethod
+    def record_location_observation(
+        self,
+        cluster_id: Id,
+        location_id: Id,
+        cell_id: Id,
+        district_id: Id,
+        amount_paise: int,
+        observed_at: SimTime,
+    ) -> None:
+        """Add one cash-out at a location to the cluster's affinity table (count + 1, amount added,
+        last_observed_at = the later of the old value and observed_at)."""
+
+    @abstractmethod
+    def move_location_stats(self, from_cluster_id: Id, into_cluster_id: Id) -> None:
+        """A cluster was absorbed: fold its per-location counts into the surviving cluster's."""

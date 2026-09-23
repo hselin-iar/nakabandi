@@ -44,6 +44,7 @@ def _make_alert(
         expires_at=_NOW,
         created_at=_NOW,
         forecast_id="fc-1",
+        complaint_id="complaint-1",
     )
 
 

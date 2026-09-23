@@ -21,9 +21,18 @@ from nakabandi.geo import GeoService
 from nakabandi.intake.application.use_cases import (
     AdvanceClock,
     IngestComplaints,
+    IngestHooks,
     IngestHops,
     IngestObservations,
     IngestRegistry,
+)
+from nakabandi.intake.infrastructure.lien_lookup import (
+    AccountTrace,
+    ComplaintDetail,
+    ComplaintSummary,
+    LienContextLookup,
+    ObservationSummary,
+    TracedAccount,
 )
 from nakabandi.intake.infrastructure.repositories import (
     SqlAccountRepo,
@@ -32,25 +41,40 @@ from nakabandi.intake.infrastructure.repositories import (
     SqlHopRepo,
     SqlObservationRepo,
 )
-from nakabandi.shared import SimClock
+from nakabandi.shared import EventBus, SimClock
 
-__all__ = ["IngestService"]
+__all__ = [
+    "IngestService",
+    "IngestHooks",
+    "LienContextLookup",
+    "AccountTrace",
+    "ComplaintSummary",
+    "ComplaintDetail",
+    "ObservationSummary",
+    "TracedAccount",
+]
 
 
 class IngestService:
-    def __init__(self, session: Session, clock: SimClock) -> None:
+    def __init__(
+        self,
+        session: Session,
+        clock: SimClock,
+        bus: EventBus | None = None,
+        hooks: IngestHooks | None = None,
+    ) -> None:
         complaint_repo = SqlComplaintRepo(session)
         account_repo = SqlAccountRepo(session)
         batch_repo = SqlBatchRepo(session)
 
-        self._complaints = IngestComplaints(complaint_repo, account_repo, batch_repo, clock)
+        self._complaints = IngestComplaints(complaint_repo, account_repo, batch_repo, clock, hooks)
         self._hops = IngestHops(
-            SqlHopRepo(session), account_repo, complaint_repo, batch_repo, clock
+            SqlHopRepo(session), account_repo, complaint_repo, batch_repo, clock, hooks
         )
         self._observations = IngestObservations(
-            SqlObservationRepo(session), account_repo, batch_repo, clock
+            SqlObservationRepo(session), account_repo, batch_repo, clock, bus
         )
-        self._registry = IngestRegistry(GeoService(session), batch_repo, clock)
+        self._registry = IngestRegistry(GeoService(session), batch_repo, clock, hooks)
         self._tick = AdvanceClock(clock)
 
     def ingest_registry(self, update: RegistryUpdate) -> IngestResponse:

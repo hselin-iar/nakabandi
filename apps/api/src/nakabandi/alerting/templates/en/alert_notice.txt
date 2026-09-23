@@ -1,0 +1,3 @@
+Informational notice for bank $bank_id, complaint $complaint_ref.
+Account: $account_ref
+An alert was raised that may involve this account. No action is requested by this notice.

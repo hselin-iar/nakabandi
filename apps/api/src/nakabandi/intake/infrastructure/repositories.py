@@ -121,6 +121,21 @@ class SqlComplaintRepo:
         )
         return _complaint_from_model(model) if model is not None else None
 
+    def accounts_of(self, complaint_id: Id) -> list[Id]:
+        """Every account this complaint's money reached: layer 1 plus each hop's ends. The
+        pipeline resolves ALL of them into one cluster, so hops that arrived after the complaint
+        are not missed."""
+        model = self._session.get(ComplaintModel, complaint_id)
+        if model is None:
+            return []
+        ids = {model.layer1_account_id}
+        for hop in self._session.scalars(
+            select(FundHopModel).where(FundHopModel.complaint_id == complaint_id)
+        ):
+            ids.add(hop.from_account_id)
+            ids.add(hop.to_account_id)
+        return sorted(ids)
+
     def mark_processed(self, complaint_id: Id) -> None:
         """Mark complaint as processed (pipeline completed all stages)."""
         model = self._session.scalar(

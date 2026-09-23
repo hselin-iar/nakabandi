@@ -43,6 +43,10 @@ _TRANSITIONS: dict[AlertStatus, set[AlertStatus]] = {
 }
 
 
+# A human may still act on an alert in these states (RecordAction, and what the UI offers).
+ACTIONABLE_STATUSES = frozenset({AlertStatus.OPEN, AlertStatus.ESCALATED, AlertStatus.ACKNOWLEDGED})
+
+
 # ---------------------------------------------------------------------------
 # Timeline entry (pure; mapped to ORM in infrastructure)
 # ---------------------------------------------------------------------------
@@ -83,7 +87,18 @@ class Alert:
     expires_at: SimTime
     created_at: SimTime
     forecast_id: Id  # most-recent forecast that contributed
+    complaint_id: Id  # the complaint anchor: the complaint whose forecast raised this alert
     masked: bool = False
+    # Where the target location sits, copied at raise time so the alert can be filtered by a
+    # principal's scope without reading geo (DOC 2 §2.3 Alert.scope_*; state added because
+    # authorize() compares a state-scoped principal against the resource's state).
+    scope_state_id: str | None = None
+    scope_district_id: str | None = None
+    scope_bank_id: str | None = None
+    # DOC 3 M4 budget: priority = confidence x log1p(amount) x interception_probability, fixed at
+    # raise time; budget_rank is the alert's place (1 = first) in its queue for its shift.
+    priority: float = 0.0
+    budget_rank: int | None = None
     timeline: list[TimelineEntry] = field(default_factory=list)
 
     # ------------------------------------------------------------------
@@ -102,6 +117,25 @@ class Alert:
         self.status = new_status
         self.timeline.append(entry)
 
+    def close_as_merged(self, entry: TimelineEntry) -> None:
+        """Close an alert that a cluster merge made a duplicate (DOC 3 M4 edge case: "close the
+        newer as closed(reason=merged)"). This is NOT an ordinary transition: the table lets only a
+        worked (acknowledged or actioned) alert close, but a duplicate is closed whatever its
+        state, as long as it is not already finished."""
+        if self.status not in (
+            AlertStatus.OPEN,
+            AlertStatus.ESCALATED,
+            AlertStatus.ACKNOWLEDGED,
+            AlertStatus.ACTIONED,
+        ):
+            raise Conflict(
+                "INVALID_TRANSITION",
+                f"Cannot merge-close an alert that is {self.status.value!r}",
+                details=[{"from": self.status.value, "to": AlertStatus.CLOSED.value}],
+            )
+        self.status = AlertStatus.CLOSED
+        self.timeline.append(entry)
+
     # ------------------------------------------------------------------
     # Merge (DOC 3 M4 RaiseOrMergeAlert: keep earlier created_at, update
     # confidence and window_end if the new values extend/improve them)
@@ -114,10 +148,14 @@ class Alert:
         confidence: float,
         window_end: SimTime,
         entry: TimelineEntry,
+        expires_at: SimTime | None = None,
     ) -> None:
-        """Merge a new forecast into an open alert (confidence rises / window extends)."""
+        """Merge a new forecast into an open alert (confidence rises / window extends). When the
+        window extends, expiry moves with it: no alert may expire before its own window ends."""
         self.forecast_id = forecast_id
         self.confidence = max(self.confidence, confidence)
         if window_end > self.window_end:
             self.window_end = window_end
+            if expires_at is not None and expires_at > self.expires_at:
+                self.expires_at = expires_at
         self.timeline.append(entry)

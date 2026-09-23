@@ -2,22 +2,25 @@
 
 Processes a Forecast + list[InterceptAssessment] from the pipeline:
   - For each qualifying target (ladder_level != NONE, confidence >= floor):
-    - Find open alert by dedup_key → merge; else create
+    - Find open alert by dedup_key → merge; else create (the alert is anchored to the
+      complaint of the forecast that raised it, and keeps that anchor when later merges arrive)
   - Apply budget ranking and timer scheduling in the same unit of work.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import timedelta
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import structlog
 from nakabandi_contracts.enums import AlertStatus, LadderLevel
 
-from nakabandi.alerting.application.ports import AlertRepo
+from nakabandi.alerting.application.ports import AlertRepo, TargetScopePort
 from nakabandi.alerting.domain.alert import Alert, TimelineEntry
-from nakabandi.alerting.domain.budget import rank_and_cap
+from nakabandi.alerting.domain.budget import priority as compute_priority
+from nakabandi.alerting.domain.budget import queue_key, rank_and_cap
 from nakabandi.alerting.domain.dedup import dedup_key
 from nakabandi.alerting.domain.severity import severity
 from nakabandi.shared import Clock, Id, Policy, Scheduler, SimTime, new_id
@@ -32,6 +35,7 @@ class AlertResult:
     alert_id: Id | None  # None if all assessments were below floor
     created: bool  # True = new alert, False = merged into existing
     alert_ids: list[Id]  # All alerts raised/merged in this call
+    created_ids: list[Id] = field(default_factory=list)  # the subset that are new
 
 
 class RaiseOrMergeAlert:
@@ -49,6 +53,10 @@ class RaiseOrMergeAlert:
         scheduler: Scheduler,
         escalate_fn: Any,  # EscalateAlert.schedule — injected to avoid circular import
         expire_fn: Any,  # ExpireAlert.schedule
+        scope_lookup: TargetScopePort | None = None,
+        on_created: Callable[[Alert], None] | None = None,
+        amount_of: Callable[[Id], int | None] | None = None,
+        on_scheduled: Callable[[Alert], None] | None = None,
     ) -> None:
         self._repo = alert_repo
         self._policy = policy
@@ -56,6 +64,10 @@ class RaiseOrMergeAlert:
         self._scheduler = scheduler
         self._escalate_fn = escalate_fn
         self._expire_fn = expire_fn
+        self._scope_lookup = scope_lookup
+        self._on_created = on_created
+        self._amount_of = amount_of
+        self._on_scheduled = on_scheduled
 
     def run(self, forecast: Any, assessments: list[Any]) -> AlertResult:
         """Process assessments and raise or merge alerts.
@@ -78,7 +90,8 @@ class RaiseOrMergeAlert:
             # Skip non-qualifying assessments (DOC 3 M4)
             if assessment.ladder_level == LadderLevel.NONE:
                 continue
-            if assessment.confidence < floor:
+            confidence = self._confidence(forecast, assessment)
+            if confidence < floor:
                 continue
 
             dk = dedup_key(
@@ -107,8 +120,9 @@ class RaiseOrMergeAlert:
                 window_end = now + timedelta(minutes=dedup_window_min)
                 existing.merge(
                     forecast_id=forecast.id,
-                    confidence=assessment.confidence,
+                    confidence=confidence,
                     window_end=window_end,
+                    expires_at=window_end + timedelta(minutes=expire_grace_min),
                     entry=entry,
                 )
                 self._repo.save(existing)
@@ -120,13 +134,19 @@ class RaiseOrMergeAlert:
                 # --- Create ---
                 window_end = now + timedelta(minutes=dedup_window_min)
                 expires_at = window_end + timedelta(minutes=expire_grace_min)
+                amount = self._amount(forecast)
                 sev = severity(
-                    confidence=assessment.confidence,
-                    amount_paise=getattr(forecast, "amount_paise", 0),
+                    confidence=confidence,
+                    amount_paise=amount,
                     verdict=assessment.verdict,
                     policy=self._policy,
                 )
                 alert_id = new_id()
+                scope = (
+                    self._scope_lookup.for_location(assessment.target.id)
+                    if self._scope_lookup is not None
+                    else None
+                )
                 init_entry = TimelineEntry(
                     id=new_id(),
                     alert_id=alert_id,
@@ -139,12 +159,14 @@ class RaiseOrMergeAlert:
                 new_alert = Alert(
                     id=alert_id,
                     cluster_ref=forecast.cluster_id,
-                    target_kind=assessment.target.kind,
+                    target_kind=(scope.kind if scope is not None and scope.kind else None)
+                    or assessment.target.kind,
                     target_id=assessment.target.id,
-                    target_name=getattr(assessment.target, "name", ""),
+                    target_name=getattr(assessment.target, "name", None)
+                    or (scope.name if scope is not None and scope.name else assessment.target.id),
                     dedup_key=dk,
                     severity=sev,
-                    confidence=assessment.confidence,
+                    confidence=confidence,
                     status=AlertStatus.OPEN,
                     ladder_level=assessment.ladder_level,
                     is_deferred=False,
@@ -154,7 +176,16 @@ class RaiseOrMergeAlert:
                     expires_at=expires_at,
                     created_at=now,
                     forecast_id=forecast.id,
+                    complaint_id=forecast.complaint_id,
                     masked=False,
+                    scope_state_id=scope.state_id if scope is not None else None,
+                    scope_district_id=scope.district_id if scope is not None else None,
+                    scope_bank_id=scope.bank_id if scope is not None else None,
+                    priority=compute_priority(
+                        confidence,
+                        amount,
+                        self._interception_probability(assessment),
+                    ),
                     timeline=[init_entry],
                 )
                 self._repo.save(new_alert)
@@ -164,15 +195,19 @@ class RaiseOrMergeAlert:
                     first_alert_id = alert_id
                     first_created = True
 
-        # Budget ranking across all newly raised alerts
-        if raised:
-            rank_and_cap(raised, self._policy)
-            for a in raised:
-                self._repo.save(a)
-                # Schedule escalation and expiry timers
-                escalate_at = a.window_start + timedelta(minutes=escalate_after_min)
-                self._escalate_fn(a.id, escalate_at)
-                self._expire_fn(a.id, a.expires_at)
+        # Budget: rank each new alert against the others in its queue (jurisdiction x shift), then
+        # schedule its timers. Ranking a queue can change its older members' place, so the whole
+        # queue is saved.
+        for a in raised:
+            self._rank_queue(a)
+        for a in raised:
+            escalate_at = a.window_start + timedelta(minutes=escalate_after_min)
+            self._escalate_fn(a.id, escalate_at)
+            self._expire_fn(a.id, a.expires_at)
+            if self._on_scheduled is not None:
+                self._on_scheduled(a)
+            if self._on_created is not None:
+                self._on_created(a)
 
         logger.info(
             "alerting.raise_or_merge.done",
@@ -183,4 +218,56 @@ class RaiseOrMergeAlert:
             alert_id=first_alert_id,
             created=first_created,
             alert_ids=alert_ids,
+            created_ids=[a.id for a in raised],
         )
+
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _confidence(forecast: Any, assessment: Any) -> float:
+        """How sure we are about THIS target: the forecast's probability that the cluster's next
+        cash-out is at it (LC-4 item.prob, location level). An InterceptAssessment carries no
+        confidence of its own, and the forecast's overall confidence is the district level's,
+        near 1.0 for every target, which would make every alert look equally certain. A caller
+        that supplies a confidence per assessment still wins."""
+        own = getattr(assessment, "confidence", None)
+        if own is not None:
+            return float(own)
+        level = getattr(forecast, "levels", {}).get("location")
+        if level is not None and not level.abstained:
+            for item in level.items:
+                if item.id == assessment.target.id:
+                    return float(item.prob)
+        return float(getattr(forecast, "confidence", 0.0))
+
+    def _amount(self, forecast: Any) -> int:
+        """The complaint's amount. A Forecast does not carry it (it belongs to the complaint), so
+        it is looked up through intake; a caller that does pass `amount_paise` still wins."""
+        direct = getattr(forecast, "amount_paise", None)
+        if direct is not None:
+            return int(direct)
+        if self._amount_of is not None:
+            looked_up = self._amount_of(forecast.complaint_id)
+            if looked_up is not None:
+                return int(looked_up)
+        return 0
+
+    def _interception_probability(self, assessment: Any) -> float:
+        """The assessment's own probability that a unit arrives first; if a caller's assessment
+        has none, the policy floor (the same floor severity() uses)."""
+        p = getattr(assessment, "interception_probability", None)
+        return float(p) if p is not None else self._policy.interception.thresholds.marginal
+
+    def _rank_queue(self, alert: Alert) -> None:
+        """Rank this alert's queue for its shift and save every member whose place changed."""
+        district, shift = queue_key(alert, self._policy)
+        shift_seconds = self._policy.alerting.shift_hours * 3600
+        start = datetime.fromtimestamp(shift * shift_seconds, tz=UTC)
+        peers = self._repo.list_queue(
+            None if district == "unscoped" else district,
+            start,
+            start + timedelta(seconds=shift_seconds),
+        )
+        rank_and_cap(peers, self._policy)
+        for peer in peers:
+            self._repo.save(peer)

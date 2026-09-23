@@ -1,17 +1,31 @@
 <%
   // console-list.ejs — list all webhook requests grouped by status
   const title = "Requests";
-%>
-<%- include('layout', { title, body: `
-<div class="nav-bar">
-  <strong style="font-size:1.1rem">Webhook Requests</strong>
-  <span style="color:#718096;font-size:0.8rem">Auto-refreshes on action</span>
-</div>
+  const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-${requests.length === 0 ? '<p style="color:#718096;font-size:0.9rem">No webhook requests received yet.</p>' : ''}
+  const rows = requests.map((r) => {
+    const body = JSON.parse(r.body_json);
+    const lien = lienByReqId[r.request_id];
+    const cb = callbackByReqId[r.request_id];
+    const proposed = body.proposed_lien_paise != null ? (body.proposed_lien_paise / 100).toFixed(2) : "—";
+    const applied = lien ? (lien.applied_paise / 100).toFixed(2) : "—";
+    const cbStatus = cb ? (cb.success ? cb.status : "pending") : "—";
+    const id = esc(r.request_id);
+    return `<tr>
+      <td><a href="/console/requests/${id}">${id.slice(0, 16)}…</a></td>
+      <td>${esc(r.kind)}</td>
+      <td><span class="badge badge-${esc(r.status)}">${esc(r.status)}</span></td>
+      <td style="font-size:0.78rem;color:#718096">${esc(r.received_at.replace("T", " ").slice(0, 19))}</td>
+      <td>${proposed}</td>
+      <td>${applied}</td>
+      <td style="font-size:0.78rem">${esc(cbStatus)}</td>
+      <td><a href="/console/requests/${id}">View →</a></td>
+    </tr>`;
+  }).join("");
 
-${requests.length > 0 ? \`
-<table>
+  const table = requests.length === 0
+    ? '<p style="color:#718096;font-size:0.9rem">No webhook requests received yet.</p>'
+    : `<table>
   <thead>
     <tr>
       <th>Request ID</th>
@@ -24,26 +38,13 @@ ${requests.length > 0 ? \`
       <th></th>
     </tr>
   </thead>
-  <tbody>
-    \${requests.map(r => {
-      const body = JSON.parse(r.body_json);
-      const lien = lienByReqId[r.request_id];
-      const cb = callbackByReqId[r.request_id];
-      const proposed = body.proposed_lien_paise != null ? (body.proposed_lien_paise / 100).toFixed(2) : '—';
-      const applied = lien ? (lien.applied_paise / 100).toFixed(2) : '—';
-      const cbStatus = cb ? (cb.success ? cb.status : 'pending') : '—';
-      return \`<tr>
-        <td><a href="/console/requests/\${r.request_id}">\${r.request_id.slice(0, 16)}…</a></td>
-        <td>\${r.kind}</td>
-        <td><span class="badge badge-\${r.status}">\${r.status}</span></td>
-        <td style="font-size:0.78rem;color:#718096">\${r.received_at.replace('T', ' ').slice(0, 19)}</td>
-        <td>\${proposed}</td>
-        <td>\${applied}</td>
-        <td style="font-size:0.78rem">\${cbStatus}</td>
-        <td><a href="/console/requests/\${r.request_id}">View →</a></td>
-      </tr>\`;
-    }).join('')}
-  </tbody>
-</table>
-\` : ''}
-`) %>
+  <tbody>${rows}</tbody>
+</table>`;
+
+  const body = `<div class="nav-bar">
+  <strong style="font-size:1.1rem">Webhook Requests</strong>
+  <span style="color:#718096;font-size:0.8rem">Auto-refreshes on action</span>
+</div>
+${table}`;
+%>
+<%- include('layout', { title, body }) %>

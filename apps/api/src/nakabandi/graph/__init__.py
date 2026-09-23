@@ -9,6 +9,11 @@ from __future__ import annotations
 
 import structlog
 
+from nakabandi.graph.application.apply_cashouts import (
+    ApplyCashOuts,
+    ApplyConfirmedCashOut,
+    CashOutFact,
+)
 from nakabandi.graph.application.ports import ClusterRepo
 from nakabandi.graph.application.use_cases import RebuildIndex, RefineCommunities, ResolveCluster
 from nakabandi.graph.domain.footprint import compute_footprint
@@ -21,6 +26,7 @@ __all__ = [
     "ClusterService",
     "ClusterContext",
     "ClusterResolution",
+    "CashOutFact",
     "compute_footprint",
 ]
 
@@ -38,6 +44,8 @@ class ClusterService:
         self._resolve_uc = ResolveCluster(repo, bus)
         self._rebuild_uc = RebuildIndex(repo, bus)
         self._refine_uc = RefineCommunities(repo)
+        self._apply_cashouts_uc = ApplyCashOuts(repo, bus)
+        self._apply_confirmed_uc = ApplyConfirmedCashOut(repo, bus)
 
     # ------------------------------------------------------------------
     # M2 public API
@@ -73,3 +81,17 @@ class ClusterService:
     def refine_communities(self, cluster_id: Id, as_of: SimTime) -> None:
         """Annotate sub-communities; never splits or merges."""
         self._refine_uc.run(cluster_id, as_of)
+
+    def cluster_of(self, account_id: Id) -> Id | None:
+        """The cluster an account currently belongs to, if any."""
+        return self._repo.get_cluster_ids_for_accounts([account_id]).get(account_id)
+
+    def apply_cashouts(self, facts: list[CashOutFact], as_of: SimTime) -> int:
+        """Fold observed cash-outs into their clusters' location affinity; returns how many."""
+        return self._apply_cashouts_uc.run(facts, as_of)
+
+    def apply_confirmed(
+        self, cluster_id: Id, location_id: Id, cell_id: Id, district_id: Id, at: SimTime
+    ) -> None:
+        """An officer confirmed a cash-out at this location: affinity updates immediately."""
+        self._apply_confirmed_uc.run(cluster_id, location_id, cell_id, district_id, at)

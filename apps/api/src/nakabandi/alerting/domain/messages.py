@@ -19,3 +19,19 @@ class OutboundMessage:
     deep_link: str
     masked_refs: list[str] = field(default_factory=list)
     subject: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DeliveryResult:
+    """What a channel adapter reports back. Adapters only send; the outbox decides what a
+    failure means (retry, dead-letter) and turns it into a Delivery row update."""
+
+    ok: bool
+    provider: str | None = None
+    error: str | None = None
+
+
+def mask_last4(ref: str) -> str:
+    """Fixed masking for stored, recipient-independent bodies: identifiers are never written
+    unmasked into a rendered_body (DOC 4 A8 drift warning)."""
+    return f"****{ref[-4:]}" if len(ref) > 4 else "****"

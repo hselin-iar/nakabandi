@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from nakabandi.access import Principal, Scope
 from nakabandi.alerting import AlertService, SseHub
 from nakabandi.main import create_app
 from nakabandi.shared import (
@@ -29,8 +30,9 @@ from nakabandi.shared import (
     SqlAlchemyUnitOfWork,
 )
 from nakabandi.shared.infrastructure.db import create_sqlite_engine, make_session_factory
-from nakabandi_contracts.enums import LadderLevel, Verdict
+from nakabandi_contracts.enums import LadderLevel, Permission, Role, Verdict
 
+_ADMIN = Principal(user_id="u-admin", role=Role.ADMIN, scope=Scope(), display_name="Admin")
 SERVICE_KEY = "test-only-service-key"
 JWT_SECRET = "test-only-jwt-secret-at-least-32-bytes-long"
 
@@ -94,6 +96,7 @@ class FakeAssessment:
 class FakeForecast:
     id: str = "forecast-1"
     cluster_id: str = "cluster-1"
+    complaint_id: str = "complaint-1"
     amount_paise: int = 10_000_000
     stale: bool = False
 
@@ -149,7 +152,7 @@ def _make_alert_service(
         clock=clock,
         policy=policy,
         scheduler=scheduler,
-        role_permissions={},
+        role_permissions={Role.ADMIN: frozenset({Permission.VIEW_ALERTS})},
         sse_hub=hub,
     )
     return svc, uow, clock, scheduler
@@ -183,7 +186,7 @@ def test_raise_or_merge_deduplicates(db_url: str) -> None:
         uow.commit()
 
         # Should NOT create a second alert
-        alerts, _ = svc.list_alerts(None, limit=100)
+        alerts, _ = svc.list_alerts(_ADMIN, limit=100)
         open_alerts = [a for a in alerts if a.status.value in ("open", "escalated", "acknowledged")]
         assert len(open_alerts) == 1
         # Confidence should be updated to the max

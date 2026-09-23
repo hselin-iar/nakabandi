@@ -9,8 +9,9 @@ from nakabandi_contracts.enums import AlertStatus, Permission, Role
 
 from nakabandi.access import Principal, authorize
 from nakabandi.alerting.application.ports import AlertRepo
+from nakabandi.alerting.application.scope import scope_of
 from nakabandi.alerting.domain.alert import Alert, TimelineEntry
-from nakabandi.shared import Clock, Forbidden, NotFound, Policy, new_id
+from nakabandi.shared import Clock, NotFound, Policy, new_id
 
 logger = structlog.get_logger(__name__)
 
@@ -35,7 +36,7 @@ class AcknowledgeAlert:
         self._role_perms = role_permissions
 
     def run(self, principal: Principal, alert_id: str) -> Alert:
-        # 1. Authorize
+        # 1. Authorize the permission
         authorize(principal, Permission.ACKNOWLEDGE, self._role_perms)
 
         # 2. Load
@@ -43,9 +44,8 @@ class AcknowledgeAlert:
         if alert is None:
             raise NotFound("ALERT_NOT_FOUND", f"Alert {alert_id!r} not found")
 
-        # 3. Scope check — principal must have visibility of this alert
-        if not _scope_allows(principal, alert):
-            raise Forbidden("FORBIDDEN_SCOPE", "alert is outside your scope")
+        # 3. Scope check: the alert must lie inside the principal's own scope
+        authorize(principal, Permission.ACKNOWLEDGE, self._role_perms, scope_of(alert))
 
         # 4. Transition
         now = self._clock.now()
@@ -63,15 +63,3 @@ class AcknowledgeAlert:
 
         logger.info("alerting.acknowledged", alert_id=alert_id, by=principal.user_id)
         return alert
-
-
-def _scope_allows(principal: Principal, alert: Alert) -> bool:
-    """Simple scope check: an unrestricted principal sees everything."""
-    scope = principal.scope
-    # No scope restrictions set → sees all alerts
-    if scope.state_id is None and scope.district_id is None and scope.bank_id is None:
-        return True
-    # bank_nodal scope: must match the alert's bank reference — not available in A7
-    # district scope: not yet mapped on alert in A7 (target_id is a location, not district)
-    # For now allow viewing; full scope enforcement lands when geo tables are populated.
-    return True

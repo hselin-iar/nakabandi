@@ -4,33 +4,104 @@ AlertService is constructed per-request (like AccessService) on the caller's
 SQLAlchemy session, so a raise_or_merge and its timeline entries share one transaction.
 
 Exports:
-  AlertService   — raise_or_merge, acknowledge, on_cluster_merged, rebuild_timers,
-                   get_alert, list_alerts
+  AlertService   — raise_or_merge, acknowledge, record_action, handle_bank_callback,
+                   deliver_outbox, fire_due_timers, on_cluster_merged, rebuild_timers,
+                   get_alert_for, list_alerts, list_actions, list_deliveries
   AlertResult    — result returned to pipeline Stage 5
+  ActionIn, BankCallback, LienContext — inputs to record_action / handle_bank_callback and the
+                   port main.py wires for hold validation
   SseHub         — shared hub (also used by analytics for heat.version)
   SseEvent       — typed event for broadcast
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Set
+from collections.abc import Callable, Mapping, Set
+from datetime import datetime
 
+import structlog
 from nakabandi_contracts.enums import Permission, Role
 from sqlalchemy.orm import Session
 
+from nakabandi.access import Principal, authorize
 from nakabandi.alerting.application.acknowledge import AcknowledgeAlert
+from nakabandi.alerting.application.bank_callback import (
+    BankCallback,
+    CallbackResult,
+    HandleBankCallback,
+)
+from nakabandi.alerting.application.feedback import MarkOutcome, ReviewQueue
+from nakabandi.alerting.application.outbox import DeliverOutbox, EnqueueDeliveries
+from nakabandi.alerting.application.ports import (
+    AlertDetailSource,
+    ConfirmedCashOutPort,
+    LienContext,
+    LienContextPort,
+    LienValidator,
+    NotificationChannel,
+    ObservationSource,
+    ObservedCashOut,
+    TargetScopePort,
+)
 from nakabandi.alerting.application.raise_or_merge import AlertResult, RaiseOrMergeAlert
-from nakabandi.alerting.application.timers import EscalateAlert, ExpireAlert, RebuildTimers
-from nakabandi.alerting.domain.alert import Alert
+from nakabandi.alerting.application.reconcile import ReconcileOutcome
+from nakabandi.alerting.application.record_action import ActionIn, RecordAction
+from nakabandi.alerting.application.scope import scope_of
+from nakabandi.alerting.application.timers import (
+    EscalateAlert,
+    ExpireAlert,
+    RebuildTimers,
+    ReviewLien,
+)
+from nakabandi.alerting.domain.action import Action, allowed_actions
+from nakabandi.alerting.domain.alert import ACTIONABLE_STATUSES, Alert
+from nakabandi.alerting.domain.delivery import Delivery, DeliveryChannel
+from nakabandi.alerting.domain.outcome import Outcome
 from nakabandi.alerting.infrastructure.channels.sse_hub import SseEvent, SseHub
-from nakabandi.alerting.infrastructure.repos import SqlAlertRepo
-from nakabandi.shared import Clock, Policy, Scheduler
+from nakabandi.alerting.infrastructure.render import FileTemplateRenderer
+from nakabandi.alerting.infrastructure.repos import (
+    SqlActionRepo,
+    SqlAlertRepo,
+    SqlDeliveryRepo,
+    SqlOutcomeRepo,
+)
+from nakabandi.audit import AuditLog
+from nakabandi.shared import (
+    AlertRaised,
+    Clock,
+    EventBus,
+    Id,
+    NotFound,
+    ObservationIngested,
+    OutcomeRecorded,
+    Policy,
+    Scheduler,
+    SystemClock,
+    new_id,
+)
+
+logger = structlog.get_logger(__name__)
 
 __all__ = [
     "AlertService",
     "AlertResult",
     "SseHub",
     "SseEvent",
+    "ActionIn",
+    "BankCallback",
+    "CallbackResult",
+    "LienContext",
+    "LienContextPort",
+    "LienValidator",
+    "NotificationChannel",
+    "ObservationSource",
+    "ObservedCashOut",
+    "ConfirmedCashOutPort",
+    "AlertDetailSource",
+    "Outcome",
+    "Action",
+    "Delivery",
+    "DeliveryChannel",
 ]
 
 
@@ -49,17 +120,43 @@ class AlertService:
         scheduler: Scheduler,
         role_permissions: Mapping[Role, Set[Permission]],
         sse_hub: SseHub,
+        *,
+        lien_context: LienContextPort | None = None,
+        validate_lien: LienValidator | None = None,
+        scope_lookup: TargetScopePort | None = None,
+        observations: ObservationSource | None = None,
+        confirmed: ConfirmedCashOutPort | None = None,
+        detail_source: AlertDetailSource | None = None,
+        bus: EventBus | None = None,
+        now_wall: Callable[[], datetime] = SystemClock().now,
     ) -> None:
         self._repo = SqlAlertRepo(session)
+        self._action_repo = SqlActionRepo(session)
+        self._delivery_repo = SqlDeliveryRepo(session)
         self._clock = clock
         self._policy = policy
         self._scheduler = scheduler
         self._role_permissions = role_permissions
         self._hub = sse_hub
+        self._bus = bus if bus is not None else EventBus()
 
         # Build timer use cases (they share the same repo/clock/scheduler)
         self._escalate = EscalateAlert(self._repo, clock, scheduler)
         self._expire = ExpireAlert(self._repo, clock, scheduler)
+
+        self._review = ReviewLien(self._repo, self._action_repo, clock, scheduler)
+        self._lien_context = lien_context
+        self._detail_source = detail_source
+        self._outcome_repo = SqlOutcomeRepo(session)
+        self._reconcile = ReconcileOutcome(
+            self._repo,
+            self._outcome_repo,
+            observations,
+            policy,
+            clock,
+            scheduler,
+            on_outcome=self._outcome_recorded,
+        )
 
         self._raise_or_merge = RaiseOrMergeAlert(
             alert_repo=self._repo,
@@ -68,6 +165,10 @@ class AlertService:
             scheduler=scheduler,
             escalate_fn=self._escalate.schedule,
             expire_fn=self._expire.schedule,
+            scope_lookup=scope_lookup,
+            on_created=self._notify_banks,
+            amount_of=self._amount_of,
+            on_scheduled=self._reconcile.schedule_miss,
         )
         self._acknowledge = AcknowledgeAlert(self._repo, policy, clock, role_permissions)
         self._rebuild_timers = RebuildTimers(
@@ -76,7 +177,37 @@ class AlertService:
             expire=self._expire,
             policy=policy,
             clock=clock,
+            review=self._review,
+            action_repo=self._action_repo,
+            reconcile=self._reconcile,
         )
+        self._enqueue = EnqueueDeliveries(self._delivery_repo, FileTemplateRenderer(), now_wall)
+        audit = AuditLog(session, clock)
+        self._record_action = RecordAction(
+            alert_repo=self._repo,
+            action_repo=self._action_repo,
+            enqueue=self._enqueue,
+            audit=audit,
+            clock=clock,
+            role_permissions=role_permissions,
+            lien_context=lien_context,
+            validate_lien=validate_lien,
+            scheduler=scheduler,
+            review=self._review,
+            publish=self._bus.publish,
+        )
+        self._bank_callback = HandleBankCallback(self._action_repo, self._repo, audit, clock)
+        self._mark_outcome = MarkOutcome(
+            alert_repo=self._repo,
+            outcome_repo=self._outcome_repo,
+            audit=audit,
+            clock=clock,
+            role_permissions=role_permissions,
+            scope_lookup=scope_lookup,
+            confirmed=confirmed,
+            on_outcome=self._outcome_recorded,
+        )
+        self._review_queue = ReviewQueue(self._repo, policy)
 
     # ------------------------------------------------------------------
     # Pipeline interface (called by pipeline.ProcessComplaint Stage 5)
@@ -85,15 +216,91 @@ class AlertService:
     def raise_or_merge(self, forecast: object, assessments: list[object]) -> AlertResult:
         result = self._raise_or_merge.run(forecast, assessments)
         # Publish alert.created SSE for each newly raised alert
+        created = set(result.created_ids)
         for aid in result.alert_ids:
-            self._hub.publish(
-                SseEvent(
-                    name="alert.created" if result.created else "alert.updated",
-                    data={"alert_id": aid, "version": 1},
-                    alert_id=aid,
+            self._publish_alert_event(
+                "alert.created" if aid in created else "alert.updated", aid, version=1
+            )
+        # LC-3 fan-out (the analytics projector listens): a failing subscriber is logged by the
+        # bus and must not undo an alert that was already raised.
+        for aid in result.created_ids:
+            try:
+                self._bus.publish(
+                    AlertRaised(event_id=new_id(), occurred_at=self._clock.now(), alert_id=aid)
+                )
+            except Exception:
+                logger.exception("alerting.alert_raised.publish_failed", alert_id=aid)
+        return result
+
+    def _notify_banks(self, alert: Alert) -> None:
+        """One informational alert_notice per account the alert's complaint reached (LC-6 masks
+        account_ref on the wire). Queued in the same unit of work as the alert, sent by the
+        outbox worker. Skipped when no intake lookup is wired (e.g. a pure unit test)."""
+        if self._lien_context is None:
+            return
+        complaint_ref = self._lien_context.complaint_ref(alert.complaint_id)
+        if complaint_ref is None:
+            return
+        now = self._clock.now()
+        for traced in self._lien_context.traced_accounts(alert.complaint_id):
+            self._enqueue.enqueue_alert_notice(
+                alert_id=alert.id,
+                account_id=traced.account_id,
+                bank_id=traced.bank_id,
+                account_ref=traced.account_ref,
+                complaint_ref=complaint_ref,
+                sim_time=now,
+            )
+
+    def _amount_of(self, complaint_id: Id) -> int | None:
+        """The complaint's amount, for severity and priority (a Forecast does not carry it)."""
+        if self._lien_context is None:
+            return None
+        summary = self._lien_context.complaint_summary(complaint_id)
+        return summary.amount_paise if summary is not None else None
+
+    def _outcome_recorded(self, alert: Alert, outcome: Outcome) -> None:
+        """Announce an outcome: the alert changed (SSE) and OutcomeRecorded (LC-3, fan-out only)."""
+        self._publish_alert_event("alert.updated", alert.id, version=5)
+        try:
+            self._bus.publish(
+                OutcomeRecorded(
+                    event_id=new_id(),
+                    occurred_at=self._clock.now(),
+                    alert_id=alert.id,
+                    result=outcome.result,
                 )
             )
-        return result
+        except Exception:
+            logger.exception("alerting.outcome_recorded.publish_failed", alert_id=alert.id)
+
+    def register_subscribers(self, bus: EventBus) -> None:
+        """Subscribe ReconcileOutcome to ObservationIngested (LC-3) on `bus`."""
+        bus.subscribe(
+            ObservationIngested,
+            lambda e: self._reconcile.on_observation(e),  # type: ignore[arg-type]
+        )
+
+    def _publish_alert_event(
+        self,
+        name: str,
+        alert_id: Id,
+        *,
+        version: int | None = None,
+        data: dict | None = None,
+    ) -> None:
+        """Every alert event carries the alert's scope so the stream can filter by principal."""
+        alert = self._repo.get_by_id(alert_id)
+        self._hub.publish(
+            SseEvent(
+                name=name,
+                data=data if data is not None else {"alert_id": alert_id, "version": version},
+                alert_id=alert_id,
+                scope_state_id=alert.scope_state_id if alert else None,
+                scope_district_id=alert.scope_district_id if alert else None,
+                scope_bank_id=alert.scope_bank_id if alert else None,
+            )
+        )
 
     # ------------------------------------------------------------------
     # Action: acknowledge
@@ -101,31 +308,146 @@ class AlertService:
 
     def acknowledge(self, principal: object, alert_id: str) -> Alert:
         alert = self._acknowledge.run(principal, alert_id)  # type: ignore[arg-type]
-        self._hub.publish(
-            SseEvent(
-                name="alert.updated",
-                data={"alert_id": alert.id, "version": 2},
-                alert_id=alert.id,
-            )
-        )
+        self._publish_alert_event("alert.updated", alert.id, version=2)
         return alert
+
+    # ------------------------------------------------------------------
+    # Action: the human gate, and the bank's answer to it
+    # ------------------------------------------------------------------
+
+    def record_action(self, principal: object, alert_id: Id, action_in: ActionIn) -> Action:
+        """Raises Forbidden after auditing the denial; the caller must commit in that case."""
+        action = self._record_action.run(principal, alert_id, action_in)  # type: ignore[arg-type]
+        self._publish_alert_event("alert.updated", alert_id, version=3)
+        return action
+
+    def handle_bank_callback(self, callback: BankCallback) -> CallbackResult:
+        result = self._bank_callback.run(callback)
+        if result.applied:
+            self._publish_alert_event("alert.updated", result.action.alert_id, version=4)
+        return result
+
+    # ------------------------------------------------------------------
+    # Outbox
+    # ------------------------------------------------------------------
+
+    def deliver_outbox(
+        self, channels: Mapping[DeliveryChannel, NotificationChannel], now_wall: datetime
+    ) -> int:
+        """One worker pass (DOC 3 M4 DeliverOutbox.run_once). Publishes delivery.updated (LC-5)
+        for every delivery it touched."""
+
+        def _publish(delivery: Delivery) -> None:
+            self._publish_alert_event(
+                "delivery.updated",
+                delivery.alert_id,
+                data={"alert_id": delivery.alert_id, "delivery_id": delivery.id},
+            )
+
+        return DeliverOutbox(self._delivery_repo, channels, self._policy, _publish).run_once(
+            now_wall
+        )
+
+    def list_deliveries(
+        self,
+        principal: Principal,
+        *,
+        status: str | None = None,
+        channel: str | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> tuple[list[Delivery], str | None]:
+        """The outbox as one principal may see it: only deliveries of alerts in their scope."""
+        return self._delivery_repo.list_page(
+            status=status,
+            channel=channel,
+            cursor=cursor,
+            limit=limit,
+            **_scope_filter(principal),
+        )
+
+    def count_dead_deliveries(self) -> int:
+        return self._delivery_repo.count_dead()
+
+    def active_hold_totals(self, complaint_id: Id) -> dict[Id, int]:
+        """Proposed-for-hold paise per account for a complaint (interception needs it so a new
+        lien proposal never exceeds what is still holdable)."""
+        return self._action_repo.active_hold_totals_by_account(complaint_id)
+
+    def list_actions(self, alert_id: Id) -> list[Action]:
+        return self._action_repo.list_for_alert(alert_id)
+
+    def forecast_for(self, alert: Alert) -> object | None:
+        """The forecast behind an alert (LC-4 AlertDetail.forecast), if a source is wired."""
+        if self._detail_source is None:
+            return None
+        return self._detail_source.forecast(alert.forecast_id)
+
+    def assessments_for(self, alert: Alert) -> list[object]:
+        """The interception assessments behind an alert (LC-4 AlertDetail.interception)."""
+        if self._detail_source is None:
+            return []
+        return self._detail_source.assessments(alert.forecast_id)
+
+    def list_deliveries_for_alert(self, alert_id: Id) -> list[Delivery]:
+        return self._delivery_repo.list_for_alert(alert_id)
+
+    def allowed_actions(self, principal: Principal, alert: Alert) -> list[str]:
+        """LC-4 AlertDetail.allowed_actions: what this principal may record on this alert now."""
+        if alert.status not in ACTIONABLE_STATUSES:
+            return []
+        perms = self._role_permissions.get(principal.role, frozenset())
+        return [t.value for t in allowed_actions(perms)]
 
     # ------------------------------------------------------------------
     # Queries
     # ------------------------------------------------------------------
 
     def get_alert(self, alert_id: str) -> Alert | None:
+        """Unscoped read for internal callers (the pipeline, timers). Routers use
+        get_alert_for."""
         return self._repo.get_by_id(alert_id)
+
+    def get_alert_for(self, principal: Principal, alert_id: Id) -> Alert:
+        """The alert, if the principal may see it: VIEW_ALERTS and the alert inside their scope."""
+        authorize(principal, Permission.VIEW_ALERTS, self._role_permissions)
+        alert = self._repo.get_by_id(alert_id)
+        if alert is None:
+            raise NotFound("ALERT_NOT_FOUND", f"Alert {alert_id!r} not found")
+        authorize(principal, Permission.VIEW_ALERTS, self._role_permissions, scope_of(alert))
+        return alert
 
     def list_alerts(
         self,
-        principal: object,
+        principal: Principal,
         *,
         status: str | None = None,
+        view: str = "queue",
         cursor: str | None = None,
         limit: int = 50,
     ) -> tuple[list[Alert], str | None]:
-        return self._repo.list_by_scope(status=status, cursor=cursor, limit=limit)
+        """`view`: "queue" (default: what the budget shows), "backlog" (the deferred alerts, still
+        reachable), "all". "review" is the officer's uncertainty-ordered feedback queue."""
+        authorize(principal, Permission.VIEW_ALERTS, self._role_permissions)
+        if view == "review":
+            return self._review_queue.run(**_scope_filter(principal)), None
+        return self._repo.list_by_scope(
+            status=status, view=view, cursor=cursor, limit=limit, **_scope_filter(principal)
+        )
+
+    def list_outcomes(self, alert_id: Id) -> list[Outcome]:
+        return self._outcome_repo.list_for_alert(alert_id)
+
+    def mark_outcome(
+        self,
+        principal: Principal,
+        alert_id: Id,
+        result: str,
+        location_id: Id | None = None,
+        reason: str | None = None,
+    ) -> tuple[Outcome, bool]:
+        """DOC 3 S3 MarkOutcome. Returns (outcome, created); a repeat returns the existing row."""
+        return self._mark_outcome.run(principal, alert_id, result, location_id, reason)
 
     # ------------------------------------------------------------------
     # Timer management
@@ -134,6 +456,13 @@ class AlertService:
     def rebuild_timers(self) -> int:
         return self._rebuild_timers.run()
 
+    def fire_due_timers(self) -> int:
+        """One tick of the timer driver: re-register every live timer on THIS session (a timer
+        registered during an earlier request is bound to that request's closed session), then
+        fire what is due at the current sim time. Returns how many fired."""
+        self.rebuild_timers()
+        return self._scheduler.run_due(self._clock.now())
+
     # ------------------------------------------------------------------
     # Cluster merge re-keying (DOC 3 M4 edge case)
     # ------------------------------------------------------------------
@@ -141,28 +470,25 @@ class AlertService:
     def on_cluster_merged(self, from_cluster_id: str, into_cluster_id: str) -> None:
         """Re-key dedup_keys when two clusters merge (ClusterMerged event).
 
-        Finds open alerts belonging to from_cluster_id, updates their cluster_ref
-        and dedup_key to use into_cluster_id. If two open alerts now share the same
-        dedup_key, closes the newer one as merged (DOC 3 M4 edge case).
-        """
-        from nakabandi_contracts.enums import AlertStatus
-
+        Open alerts of the absorbed cluster move to the surviving one. Alerts are then compared
+        against the survivor's OWN open alerts too: if two now share a dedup_key, the newer is
+        closed as merged into the older (DOC 3 M4 edge case)."""
         from nakabandi.alerting.domain.alert import TimelineEntry
-        from nakabandi.alerting.domain.dedup import dedup_key as mk_dk
         from nakabandi.shared import new_id
 
         now = self._clock.now()
-        open_alerts = [a for a in self._repo.list_open() if a.cluster_ref == from_cluster_id]
+        involved = [
+            a for a in self._repo.list_open() if a.cluster_ref in (from_cluster_id, into_cluster_id)
+        ]
+        seen_keys: dict[str, Alert] = {}  # new dedup_key -> the older alert that keeps it
 
-        seen_keys: dict[str, Alert] = {}  # new_dedup_key -> first (older) alert
-
-        for alert in sorted(open_alerts, key=lambda a: a.created_at):
-            new_dk = mk_dk(into_cluster_id, alert.target_kind, alert.target_id)
+        for alert in sorted(involved, key=lambda a: (a.created_at, a.id)):
+            # dedup_key is "<cluster>:<kind>:<target>"; keep the kind exactly as it was created
+            new_dk = f"{into_cluster_id}:{alert.dedup_key.split(':', 1)[1]}"
             alert.cluster_ref = into_cluster_id
             alert.dedup_key = new_dk
 
             if new_dk in seen_keys:
-                # Collision: close this (newer) alert as merged into the older one
                 entry = TimelineEntry(
                     id=new_id(),
                     alert_id=alert.id,
@@ -172,8 +498,21 @@ class AlertService:
                     text_code="alert.cluster_merged_close",
                     text_params={"into": seen_keys[new_dk].id},
                 )
-                alert.transition(AlertStatus.CLOSED, entry)
+                alert.close_as_merged(entry)
             else:
                 seen_keys[new_dk] = alert
 
             self._repo.save(alert)
+
+
+def _scope_filter(principal: Principal) -> dict[str, str | None]:
+    """The repo filter for a principal's scope, with access.authorize's precedence: bank, then
+    district, then state; an unrestricted principal filters nothing."""
+    scope = principal.scope
+    if scope.bank_id is not None:
+        return {"bank_id": scope.bank_id}
+    if scope.district_id is not None:
+        return {"district_id": scope.district_id}
+    if scope.state_id is not None:
+        return {"state_id": scope.state_id}
+    return {}

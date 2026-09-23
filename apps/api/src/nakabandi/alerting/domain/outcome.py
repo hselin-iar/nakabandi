@@ -7,12 +7,24 @@ LC-10: alerting owns the outcomes table.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from nakabandi.shared import Id, Policy, SimTime
 
 if TYPE_CHECKING:
     from nakabandi.alerting.domain.alert import Alert
+
+
+class OutcomeResult(StrEnum):
+    HIT = "hit"
+    LATE = "late"
+    MISS = "miss"
+
+
+class OutcomeSource(StrEnum):
+    OFFICER = "officer"  # an investigating officer marked it (MarkOutcome)
+    RECONCILED = "reconciled"  # decided by ReconcileOutcome from data or a timer
 
 
 @dataclass(slots=True)
@@ -22,6 +34,10 @@ class Outcome:
     result: str  # hit | late | miss
     observation_id: Id | None
     decided_at: SimTime
+    source: str = OutcomeSource.RECONCILED.value
+    actor_id: Id | None = None  # the officer, for source=officer
+    location_id: Id | None = None  # the cash-out location an officer confirmed
+    reason: str | None = None
 
 
 def classify_outcome(

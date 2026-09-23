@@ -33,6 +33,11 @@ EXPECTED_TABLES = {
     "alerts",
     "alert_timeline",
     "outcomes",
+    # alerting (LC-10, Step A8)
+    "deliveries",
+    "actions",
+    # analytics (LC-10, Step A9)
+    "heat_rollups",
 }
 
 

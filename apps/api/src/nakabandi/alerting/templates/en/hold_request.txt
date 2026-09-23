@@ -1,0 +1,5 @@
+Hold request for bank $bank_id, complaint $complaint_ref.
+Account: $account_ref
+Proposed partial hold: INR $proposed_rupees of INR $disputed_rupees traced from this complaint.
+The hold lapses automatically at $expires_at (sim time); review is due by $review_at.
+Requested by role: $requested_by_role. A human officer authorised this request.

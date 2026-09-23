@@ -68,8 +68,10 @@ export function createConsoleRouter(simTime: SimTimeSource): Router {
       .all() as LienRow[];
 
     const callbacks = db
+      // The latest callback per request. (`SELECT DISTINCT ON` is PostgreSQL-only; on SQLite it
+      // is a syntax error and made GET /console return 500.)
       .prepare(
-        `SELECT DISTINCT ON (request_id, status) * FROM callbacks ORDER BY id DESC`,
+        `SELECT * FROM callbacks WHERE id IN (SELECT MAX(id) FROM callbacks GROUP BY request_id)`,
       )
       .all() as CallbackRow[];
 

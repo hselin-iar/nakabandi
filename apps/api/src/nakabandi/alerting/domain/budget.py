@@ -1,57 +1,60 @@
-"""budget.rank_and_cap() (DOC 3 M4 — pure, seeded, deterministic).
+"""priority(), queue_key() and rank_and_cap() (DOC 3 M4 budget.py — pure, seeded, deterministic).
 
-All caps and exploration_share come from policy; never hard-coded.
-"""
+Every cap and share comes from policy (alerting.budget_per_shift, shift_hours,
+exploration_share); nothing is hard-coded here."""
 
 from __future__ import annotations
 
 import hashlib
+import math
 from typing import TYPE_CHECKING
 
-from nakabandi.shared import Policy
+from nakabandi.shared import Policy, SimTime
 
 if TYPE_CHECKING:
     from nakabandi.alerting.domain.alert import Alert
 
 
-def rank_and_cap(alerts: list[Alert], policy: Policy) -> list[Alert]:
-    """Rank alerts and apply per-(role, jurisdiction) budget cap.
+def priority(confidence: float, amount_paise: int, interception_probability: float) -> float:
+    """DOC 3 M4: priority = confidence x log1p(amount) x interception_probability."""
+    return confidence * math.log1p(max(amount_paise, 0)) * interception_probability
 
-    DOC 3 M4:
-      priority = confidence × log1p(amount_paise) × interception_probability
-      Top budget_per_shift visible per shift queue; rest are deferred.
-      With probability exploration_share a deferred alert is promoted (is_probe=True),
-      drawn deterministically by seeding with the alert id.
 
-    This function sets is_deferred and is_probe on each Alert in-place and
-    returns the same list sorted by descending priority.
+def shift_index(at: SimTime, policy: Policy) -> int:
+    """Which shift (a policy.alerting.shift_hours-long slice of sim time) `at` falls in."""
+    return int(at.timestamp() // (policy.alerting.shift_hours * 3600))
 
-    NOTE: amount_paise and interception_probability are not stored on Alert directly;
-    we use confidence × 1.0 as a priority proxy here (good enough for budget ranking
-    without storing redundant raw inputs on the domain object). A later step can refine
-    this by passing the raw inputs through if needed.
-    """
-    budget = policy.alerting.budget_per_shift
-    exploration_share = policy.alerting.exploration_share
 
-    # Sort descending by confidence (proxy for priority)
-    ranked = sorted(alerts, key=lambda a: a.confidence, reverse=True)
+def queue_key(alert: Alert, policy: Policy) -> tuple[str, int]:
+    """The queue an alert competes in: (jurisdiction, shift). The jurisdiction is the target's
+    district, the district officers' queue, the first recipient of every alert (DOC 3 M4 routing);
+    an alert whose district is unknown queues under "unscoped"."""
+    return (alert.scope_district_id or "unscoped", shift_index(alert.created_at, policy))
 
-    visible_count = 0
-    for alert in ranked:
-        if visible_count < budget:
-            alert.is_deferred = False
-            alert.is_probe = False
-            visible_count += 1
+
+def exploration_draw(alert_id: str, seed: str = "") -> float:
+    """A deterministic draw in [0, 1) from the alert id (and an optional seed): the same alert
+    always gets the same number, so a replay promotes the same probes."""
+    digest = hashlib.md5(f"{seed}:{alert_id}".encode()).hexdigest()  # noqa: S324 - not security
+    return (int(digest, 16) % 10_000) / 10_000.0
+
+
+def rank_and_cap(alerts: list[Alert], policy: Policy, seed: str = "") -> list[Alert]:
+    """Rank ONE queue's alerts (highest priority first; ties by age, then id) and apply the shift
+    budget: the top `budget_per_shift` are visible, the rest are deferred (budget_rank > cap) and
+    stay reachable under Backlog. With probability `exploration_share` a deferred alert is
+    promoted with is_probe=True, drawn from its id, so the choice is reproducible.
+
+    Sets budget_rank, is_deferred and is_probe in place and returns the alerts in rank order."""
+    cap = policy.alerting.budget_per_shift
+    share = policy.alerting.exploration_share
+    ranked = sorted(alerts, key=lambda a: (-a.priority, a.created_at, a.id))
+    for rank, alert in enumerate(ranked, start=1):
+        alert.budget_rank = rank
+        if rank <= cap:
+            alert.is_deferred, alert.is_probe = False, False
+        elif exploration_draw(alert.id, seed) < share:
+            alert.is_deferred, alert.is_probe = False, True
         else:
-            # Deterministic exploration draw keyed by alert_id
-            h = int(hashlib.md5(alert.id.encode()).hexdigest(), 16)  # noqa: S324
-            probe_draw = (h % 10_000) / 10_000.0  # uniform in [0, 1)
-            if probe_draw < exploration_share:
-                alert.is_deferred = False
-                alert.is_probe = True
-            else:
-                alert.is_deferred = True
-                alert.is_probe = False
-
+            alert.is_deferred, alert.is_probe = True, False
     return ranked

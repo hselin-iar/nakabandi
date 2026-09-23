@@ -17,11 +17,16 @@ from nakabandi.shared.errors import (
     ValidationFailed,
 )
 from nakabandi.shared.events import (
+    ActionRecorded,
+    AlertRaised,
     ClusterMerged,
     ClusterUpdated,
     DomainEvent,
     EventBus,
+    ForecastGenerated,
     HandlerError,
+    ObservationIngested,
+    OutcomeRecorded,
 )
 from nakabandi.shared.ids import new_id
 from nakabandi.shared.infrastructure.db import Base, UTCDateTime
@@ -50,6 +55,11 @@ __all__ = [
     "Unauthenticated",
     "ValidationFailed",
     "DomainEvent",
+    "ActionRecorded",
+    "AlertRaised",
+    "ForecastGenerated",
+    "ObservationIngested",
+    "OutcomeRecorded",
     "EventBus",
     "HandlerError",
     "ClusterMerged",
