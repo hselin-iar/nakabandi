@@ -3,7 +3,14 @@ name = "nakabandi-world-sim"
 version = "0.0.0"
 description = "NAKABANDI world simulator: external system, separate process (DOC 3 M1)."
 requires-python = ">=3.11,<3.12"
-dependencies = []
+dependencies = [
+  "numpy>=1.26",
+  "pydantic>=2.0",
+  "pyyaml>=6.0",
+  "click>=8.0",
+  "httpx>=0.25",
+  "nakabandi-contracts",
+]
 
 [build-system]
 requires = ["uv_build>=0.12,<0.13"]
@@ -11,3 +18,6 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = "worldsim"
+
+[project.scripts]
+worldsim = "worldsim.cli:cli"

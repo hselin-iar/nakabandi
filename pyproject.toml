@@ -62,4 +62,4 @@ include = ["apps", "packages"]
 exclude = ["**/node_modules"]
 
 [tool.pytest.ini_options]
-testpaths = ["apps/api/tests", "packages/contracts/src/nakabandi_contracts/tests"]
+testpaths = ["apps/api/tests", "packages/contracts/src/nakabandi_contracts/tests", "apps/world-sim/tests"]
