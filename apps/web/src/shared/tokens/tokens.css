@@ -1739,5 +1739,53 @@ body {
   border-top: 1px solid var(--nk-border-subtle);
 }
 
+/* -------------------------------------------------------------------------
+   C6 — Clusters & Cases UI
+   ------------------------------------------------------------------------- */
+
+.nk-cluster-graph {
+  position: relative;
+  width: 100%;
+  border-radius: var(--nk-radius-lg);
+}
+
+.nk-cluster-graph__cap-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--nk-space-2);
+  animation: nk-pulse 2s ease-in-out infinite;
+}
+
+.nk-case-brief__disclaimer {
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid var(--nk-brand-primary);
+  border-radius: var(--nk-radius-md);
+  color: var(--nk-text-primary);
+  padding: var(--nk-space-3) var(--nk-space-4);
+  font-size: var(--nk-size-13);
+  font-weight: var(--nk-weight-600);
+}
+
+.nk-case-brief__content h3 {
+  font-size: var(--nk-size-16);
+  color: var(--nk-text-primary);
+  margin-top: var(--nk-space-4);
+  margin-bottom: var(--nk-space-2);
+}
+
+.nk-case-brief__content h4 {
+  font-size: var(--nk-size-14);
+  color: var(--nk-brand-primary);
+  margin-top: var(--nk-space-3);
+  margin-bottom: var(--nk-space-2);
+}
+
+.nk-case-brief__content p {
+  color: var(--nk-text-secondary);
+  line-height: 1.6;
+  margin: var(--nk-space-2) 0;
+}
+
+
 
 

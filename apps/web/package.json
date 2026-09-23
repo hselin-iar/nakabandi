@@ -15,6 +15,7 @@
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
+    "@types/cytoscape": "^3.21.9",
     "@types/geojson": "^7946.0.16",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
@@ -31,6 +32,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.103.2",
+    "cytoscape": "^3.34.3",
     "maplibre-gl": "^6.11.1",
     "openapi-fetch": "^0.13.8",
     "react": "^18.3.1",

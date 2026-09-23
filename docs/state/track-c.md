@@ -1,7 +1,7 @@
 # TRACK C — Web & Bank Simulator
 OWNER:            Web dev + coding agent
-CURRENT_STEP:     C6 — Clusters & Cases UI
-LAST_COMPLETED:   C5 — Map Dashboard
+CURRENT_STEP:     C7 — Evaluation, Ops, Outbox & Audit Pages
+LAST_COMPLETED:   C6 — Clusters & Cases UI
 STATUS:           ACTIVE
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 6, after D1 (DOC4 §4.1a)
@@ -22,5 +22,6 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [C3] — tsx extension required for files rendering JSX (useStream.tsx); React Testing Library cleanup() in afterEach avoids cross-test DOM bleed; openapi-fetch client typed via schema.d.ts paths contract.
 [C4] — TanStack Query queries resolve asynchronously in RTL tests: always await findBy* for table rows and status badges; action modals update status to match StatusBadge config; review queue requires loaded alerts to display triage cards.
 [C5] — MapLibre GL is completely isolated inside MapLibreAdapter.ts; zero CDN tile requests (bundled GeoJSON for UP, MH, RJ, HR); WebGL failure gracefully drops down to TableViewFallback without blank canvas; verbatimModuleSyntax requires explicit tsconfig types: ["geojson"].
+[C6] — Cytoscape wrapper shared across clusters and cases via eslint boundaries exception; graph node capping at 200 preserves top priority entities with a "+N more" summary node; brief rendering uses safe React elements enforcing the mandatory FIR statutory disclaimer with zero XSS risk; role-gated masking strictly isolates raw account references from non-LEA principals.
 
 
