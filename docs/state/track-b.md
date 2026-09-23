@@ -1,8 +1,8 @@
 # TRACK B — Algorithms & Simulator
 OWNER:            Algo dev + coding agent
 CURRENT_STEP:     B3 — Interception Domain
-LAST_COMPLETED:   B2 — Graph & Geo Domain
-STATUS:           ACTIVE
+LAST_COMPLETED:   B3 — Interception Domain
+STATUS:           CHECKPOINT
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 2 — after B1 (golden generator) and A3 (intake); gates B2-B4 (DOC4 §4.1a)
 
@@ -19,7 +19,19 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [B1] — Golden stream hash (seed=42, 3 days, 6 clusters, ~600/day): 9a4ecbd8b11a2bd7afaff7c91f768864c51201d3766674ab2c41899fd051148b — identical across two runs; stored in commit 1f64da6.
 [B2] — import-linter "other modules use shared only through its facade" forbids nakabandi.shared.** (sub-modules); all graph/geo imports must use nakabandi.shared (the facade). Added ClusterMerged/ClusterUpdated to shared/__init__.py re-exports to make them available through the facade.
 [B2] — DisjointSet tie-break: lex-smaller id survives on equal size. Since fresh ULIDs start with '01…' and old hand-written test ids like 'CLU-X' start with 'C', the ULID wins (lex smaller). Test must assert "all in same cluster" not "surviving_id == 'CLU-X'".
-[B2] — TID251 (datetime.now banned): pass updated_at as a SimTime parameter into save_footprint() instead of calling datetime.now() inside the repo. Port and repo signatures updated together.
+[B3] — interception_probability(0, timing) = 1.0, not residual_mass. F_cond(0)=0 by definition (conditional CDF starts at 0), so P(intercept | eta=0) = 1-0 = 1. residual_mass is only a shortcut for negative eta (guard for bad input).
+[B3] — LienProposal.__post_init__ with **kwargs confuses pyright on frozen dataclasses — pyright cannot narrow dict[str,Any] to specific field types. Replace _valid(**overrides) test helper with explicit per-test construction.
+
+## B3 — Done When Evidence (DOC4)
+- [x] LienProposal invariants: 11 tests — proposed>0, proposed<=disputed, expires>review, non-empty ids, no freeze field (P1-P3)
+- [x] Ladder exhaustive: all Channel×Verdict pairs return a defined LadderLevel (P4); confidence gate returns NONE
+- [x] ETA monotone: larger distance → larger ETA; area_type ordering urban>semi_urban>rural (P5)
+- [x] Probability monotone non-increasing in ETA across 7 breakpoints; in [0,1] at all points (P6)
+- [x] No-units case: UnitIndex.build([]) raises ValueError (P7)
+- [x] build_lien total-cap: remaining enforced, untraceable account → None, expiry from policy (P8)
+- [x] verdict_from boundaries: at and around threshold values (P9)
+- [x] `npm run ci` green — 157/157 passed, 18 contracts kept, 0 pyright errors
+- [x] Committed on feat/track-b at fb38b07; pushed to origin
 
 ## B1 — Done When Evidence (DOC4)
 - [x] `worldsim hash --seed 42 --days 3` printed same sha256 twice
