@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import threading
 from collections.abc import Mapping, Set
 from contextlib import asynccontextmanager
+from datetime import timedelta
 
+import httpx
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -37,39 +40,47 @@ from nakabandi.alerting.interfaces.stream import router as stream_router
 from nakabandi.analytics import AnalyticsService
 from nakabandi.analytics.interfaces.routers import router as analytics_router
 from nakabandi.audit.interfaces.routers import router as audit_router
-from nakabandi.forecast.infrastructure.repositories import metadata as forecast_metadata
 from nakabandi.geo import LocationScopeLookup
 from nakabandi.geo.interfaces.routers import router as geo_router
 from nakabandi.graph import CashOutFact, ClusterService
 from nakabandi.graph.infrastructure.repositories import SqlClusterRepo
-from nakabandi.graph.infrastructure.repositories import metadata as graph_metadata
-from nakabandi.intake import IngestHooks, LienContextLookup
+from nakabandi.intake import IngestHooks, LienContextLookup, latest_ingest_sim_time
 from nakabandi.intake.infrastructure.repositories import SqlComplaintRepo
 from nakabandi.intake.interfaces.routers import router as intake_router
 from nakabandi.interception import Interceptor
 from nakabandi.interception.infrastructure.repositories import (
     SqlAssessmentRepo,
     SqlUnitRepo,
-    intercept_assessments,
 )
 from nakabandi.live_pipeline import RegistryCache, build_pipeline
+from nakabandi.maintenance import (
+    AutoPause,
+    ResetReport,
+    StreamGate,
+    create_schema,
+    reset_database,
+    seconds_until,
+)
+from nakabandi.ops import LatencyMiddleware
+from nakabandi.ops import router as ops_router
 from nakabandi.pipeline import RetryUnprocessed
 from nakabandi.shared import (
     SIM_CLOCK_EPOCH,
     ClusterMerged,
     DomainError,
     EventBus,
+    MeteredEventBus,
+    Metrics,
     ObservationIngested,
     Policy,
-    Scheduler,
     SimClock,
+    SlidingWindowLimiter,
     SqlAlchemyUnitOfWork,
     SystemClock,
     get_settings,
     message_for,
 )
 from nakabandi.shared.infrastructure.db import (
-    create_all,
     create_sqlite_engine,
     make_session_factory,
 )
@@ -111,6 +122,7 @@ def _role_permissions(policy: Policy) -> Mapping[Role, Set[Permission]]:
 
 OUTBOX_POLL_S = 1.0  # how often the in-process outbox worker looks for due deliveries
 TIMER_POLL_S = 1.0  # how often the timer driver fires timers that are due at the sim time
+AUTO_PAUSE_POLL_S = 30.0  # how often auto-pause checks for viewers
 RETRY_EVERY_TICKS = 300  # RetryUnprocessed runs every 5 minutes (DOC 3 M2)
 
 
@@ -123,21 +135,22 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         engine = create_sqlite_engine(settings.database_url)
-        create_all(engine)
-        # forecast's, graph's and interception's tables sit on MetaData of their own (Track B),
-        # which create_all does not see. Of interception's only intercept_assessments is created:
-        # its other table ("units") would clash with geo's units table of the same name (geo owns
-        # units, LC-10; see wiring.GeoUnitRepo).
-        forecast_metadata.create_all(engine)
-        graph_metadata.create_all(engine)
-        intercept_assessments.create(engine, checkfirst=True)
+        create_schema(engine)
         app.state.session_factory = make_session_factory(engine)
         app.state.clock = SimClock(start=SIM_CLOCK_EPOCH)
         app.state.token_issuer = JwtTokenIssuer(settings.jwt_secret)
         app.state.role_permissions = _role_permissions(policy)
         app.state.login_attempts = LoginAttempts()
+        app.state.settings = settings
+        app.state.started_at = SystemClock().now()
+        app.state.metrics = Metrics()
+        # Hosted-demo protections (DOC 2 §2.7). Each is off unless configured (or hosted_demo).
+        app.state.control_limiter = SlidingWindowLimiter(
+            settings.effective_control_rate_per_min, timedelta(minutes=1)
+        )
+        app.state.stream_gate = StreamGate(settings.effective_max_sse_streams)
+        app.state.maintenance = threading.Lock()  # held while the nightly reset runs
         app.state.policy = policy
-        app.state.scheduler = Scheduler()
         app.state.sse_hub = SseHub()
 
         # One EventBus per unit of work (LC-3): subscribers such as the analytics projector write
@@ -164,7 +177,6 @@ def create_app() -> FastAPI:
                 session=session,
                 clock=app.state.clock,
                 policy=policy,
-                scheduler=app.state.scheduler,
                 role_permissions=app.state.role_permissions,
                 sse_hub=app.state.sse_hub,
                 lien_context=LienContextLookup(session),
@@ -236,6 +248,7 @@ def create_app() -> FastAPI:
                 bus=bus,
                 registry_cache=app.state.registry_cache,
                 alert_service=alert_service_for(session, bus),
+                metrics=app.state.metrics,
             )
 
         app.state.pipeline_factory = pipeline_for
@@ -245,6 +258,7 @@ def create_app() -> FastAPI:
             session: a posted complaint yields its forecast and alert in the same request."""
 
             def on_complaints(ids: list[str]) -> None:
+                app.state.metrics.incr("complaints", len(ids))
                 pipeline = pipeline_for(session, bus)
                 for complaint_id in ids:
                     pipeline.run(complaint_id, app.state.clock.now())
@@ -266,7 +280,7 @@ def create_app() -> FastAPI:
         app.state.ingest_hooks_factory = ingest_hooks_for
 
         def event_bus_for(session: Session) -> EventBus:
-            bus = EventBus()
+            bus = MeteredEventBus(app.state.metrics)
             for register in app.state.bus_registrars:
                 register(bus, session)
             return bus
@@ -331,6 +345,8 @@ def create_app() -> FastAPI:
             while True:
                 await asyncio.sleep(TIMER_POLL_S)
                 ticks += 1
+                if app.state.maintenance.locked():
+                    continue
                 try:
                     await asyncio.to_thread(run_timers_once)
                     if ticks % RETRY_EVERY_TICKS == 0:
@@ -343,6 +359,8 @@ def create_app() -> FastAPI:
         async def outbox_worker() -> None:
             while True:
                 await asyncio.sleep(OUTBOX_POLL_S)
+                if app.state.maintenance.locked():
+                    continue  # the nightly reset is rebuilding the database
                 try:
                     await asyncio.to_thread(run_outbox_once)
                 except Exception:  # one bad pass must not stop the worker
@@ -350,17 +368,77 @@ def create_app() -> FastAPI:
 
         worker = asyncio.create_task(outbox_worker()) if settings.outbox_worker_enabled else None
 
+        # The SimClock lives in memory: after a restart resume from the newest ingested batch, so
+        # timers rebuilt from the database fire relative to where the world actually stopped.
         with SqlAlchemyUnitOfWork(app.state.session_factory) as uow:
             assert uow.session is not None
+            resumed_at = latest_ingest_sim_time(uow.session)
+        if resumed_at is not None:
+            app.state.clock.advance_to(resumed_at)
+            logger.info("clock.restored", sim_time=resumed_at.isoformat())
+
+        def seed_users(session: Session) -> None:
             AccessService(
-                uow.session, app.state.clock, app.state.token_issuer, app.state.role_permissions
+                session, app.state.clock, app.state.token_issuer, app.state.role_permissions
             ).seed_demo_users()
+
+        with SqlAlchemyUnitOfWork(app.state.session_factory) as uow:
+            assert uow.session is not None
+            seed_users(uow.session)
             uow.commit()
 
-        # Rebuild alerting timers from any existing open alerts (DOC 3 M4 RebuildTimers)
-        with SqlAlchemyUnitOfWork(app.state.session_factory) as uow:
-            assert uow.session is not None
-            alert_service_for(uow.session).rebuild_timers()
+        def run_reset_now() -> ResetReport:
+            """The nightly reset (DOC 2 §2.7): restore the seeded world. Workers pause while it
+            runs; in-memory state that belongs to the old world is dropped with it."""
+            with app.state.maintenance:
+                report = reset_database(
+                    engine,
+                    app.state.session_factory,
+                    app.state.clock,
+                    settings.seed_file,
+                    seed_users,
+                )
+                app.state.registry_cache.invalidate()
+                if settings.sim_control_url:
+                    try:
+                        httpx.post(
+                            f"{settings.sim_control_url.rstrip('/')}/reset", json={}, timeout=10
+                        )
+                    except httpx.HTTPError:
+                        logger.warning("reset.world_sim_unreachable")
+            return report
+
+        app.state.run_reset_now = run_reset_now
+
+        auto_pause = AutoPause(
+            app.state.stream_gate, settings.sim_control_url, settings.effective_auto_pause_after_min
+        )
+        app.state.auto_pause = auto_pause
+
+        async def auto_pause_worker() -> None:
+            while True:
+                await asyncio.sleep(AUTO_PAUSE_POLL_S)
+                try:
+                    await asyncio.to_thread(auto_pause.tick)
+                except Exception:
+                    logger.exception("auto_pause.tick_failed")
+
+        reset_at = settings.effective_nightly_reset_at
+
+        async def nightly_reset_worker() -> None:
+            assert reset_at is not None
+            while True:
+                await asyncio.sleep(seconds_until(reset_at, SystemClock().now()))
+                try:
+                    await asyncio.to_thread(run_reset_now)
+                except Exception:
+                    logger.exception("reset.failed")
+
+        extra_tasks = []
+        if auto_pause.enabled:
+            extra_tasks.append(asyncio.create_task(auto_pause_worker()))
+        if reset_at is not None:
+            extra_tasks.append(asyncio.create_task(nightly_reset_worker()))
 
         # Complaints a crash left unprocessed are retried at boot (DOC 3 M2)
         try:
@@ -371,7 +449,7 @@ def create_app() -> FastAPI:
         yield
 
         # Shutdown: stop the outbox worker and timer driver, then signal SSE subscribers to close
-        for task in (worker, timers):
+        for task in (worker, timers, *extra_tasks):
             if task is not None:
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
@@ -380,6 +458,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="NAKABANDI API", version="0.0.0", lifespan=lifespan)
     app.add_exception_handler(DomainError, _domain_error_handler)
+    app.add_middleware(LatencyMiddleware)
     app.include_router(intake_router, prefix="/api/v1")
     app.include_router(geo_router, prefix="/api/v1")
     app.include_router(analytics_router, prefix="/api/v1")
@@ -391,6 +470,7 @@ def create_app() -> FastAPI:
     app.include_router(integrations_router, prefix="/api/v1")
     app.include_router(outbox_router, prefix="/api/v1")
     app.include_router(stream_router, prefix="/api/v1")
+    app.include_router(ops_router, prefix="/api/v1")
 
     @app.get("/api/v1/system/health")
     def health() -> dict[str, str]:

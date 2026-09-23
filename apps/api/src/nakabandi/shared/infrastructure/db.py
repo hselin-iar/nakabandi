@@ -46,17 +46,35 @@ class UTCDateTime(TypeDecorator):
         return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
-def create_sqlite_engine(url: str) -> Engine:
+BUSY_TIMEOUT_MS = 30_000
+
+
+def create_sqlite_engine(url: str, *, immediate: bool = True) -> Engine:
     """WAL mode and foreign keys are session-level PRAGMAs in SQLite: they must be set on every
-    new connection, not once on the engine (DOC 2 §2.3)."""
-    engine = create_engine(url, connect_args={"check_same_thread": False})
+    new connection, not once on the engine (DOC 2 §2.3).
+
+    Concurrency (DOC 2 §2.8 T7, found by the A11 stress run): SQLite has ONE writer. With Python's
+    default deferred BEGIN, two requests that both read and then write make the second fail at
+    once with "database is locked" (a stale WAL snapshot cannot be upgraded, and no busy timeout
+    helps). So every transaction begins with BEGIN IMMEDIATE, which takes the write lock up front
+    and WAITS for it (busy_timeout), turning contention into queueing instead of errors. A
+    read-only engine (`immediate=False`) keeps deferred transactions: readers never block on the
+    writer under WAL."""
+    engine = create_engine(url, connect_args={"check_same_thread": False, "timeout": 30})
 
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragmas(dbapi_connection: object, _connection_record: object) -> None:
+        dbapi_connection.isolation_level = None  # type: ignore[attr-defined]  # we emit BEGIN
         cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA synchronous=NORMAL")  # safe under WAL; far fewer fsyncs
+        cursor.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
         cursor.close()
+
+    @event.listens_for(engine, "begin")
+    def _begin(conn: object) -> None:
+        conn.exec_driver_sql("BEGIN IMMEDIATE" if immediate else "BEGIN")  # type: ignore[attr-defined]
 
     return engine
 

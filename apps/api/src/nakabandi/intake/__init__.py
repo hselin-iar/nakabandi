@@ -41,10 +41,11 @@ from nakabandi.intake.infrastructure.repositories import (
     SqlHopRepo,
     SqlObservationRepo,
 )
-from nakabandi.shared import EventBus, SimClock
+from nakabandi.shared import EventBus, SimClock, SimTime
 
 __all__ = [
     "IngestService",
+    "latest_ingest_sim_time",
     "IngestHooks",
     "LienContextLookup",
     "AccountTrace",
@@ -53,6 +54,12 @@ __all__ = [
     "ObservationSummary",
     "TracedAccount",
 ]
+
+
+def latest_ingest_sim_time(session: Session) -> SimTime | None:
+    """The sim time of the newest ingest batch, or None on an empty database. main.py restores
+    the (in-memory) SimClock from it at boot, so a restart resumes where the world stopped."""
+    return SqlBatchRepo(session).latest_received_at()
 
 
 class IngestService:

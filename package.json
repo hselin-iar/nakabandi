@@ -14,7 +14,8 @@
     "ci:bank-sim": "npm run typecheck --workspace apps/bank-sim && npm run test --workspace apps/bank-sim",
     "types": "uv run python scripts/gen_contract_schemas.py && git diff --stat --exit-code packages/contracts/src/nakabandi_contracts/schemas",
     "seed": "uv run python scripts/seed.py",
-    "reset": "node scripts/not-yet.mjs reset",
-    "sweep": "node scripts/not-yet.mjs sweep"
+    "reset": "uv run python scripts/reset.py",
+    "sweep": "node scripts/not-yet.mjs sweep",
+    "stress": "uv run python scripts/stress.py"
   }
 }

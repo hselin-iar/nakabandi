@@ -45,6 +45,11 @@ class SimClock:
     def now(self) -> SimTime:
         return self._current
 
+    def reset(self, to: SimTime) -> None:
+        """Set the clock back to `to`. Only the nightly reset uses this (it restores the seeded
+        world); ordinary code moves time forward with advance_to."""
+        self._current = to
+
     def advance_to(self, t: SimTime) -> None:
         if t <= self._current:
             logger.warning(

@@ -282,6 +282,7 @@ def build_pipeline(
     registry_cache: RegistryCache,
     alert_service: Any,
     model_store: Any | None = None,
+    metrics: Any | None = None,
 ) -> ProcessComplaint:
     """A ProcessComplaint over the REAL facades, on `session`. main.py builds one per unit of work;
     the evaluation harness (Track B) calls it too, so both run the same chain.
@@ -310,4 +311,5 @@ def build_pipeline(
         ),
         alert_service=alert_service,
         bus=bus,
+        metrics=metrics,
     )

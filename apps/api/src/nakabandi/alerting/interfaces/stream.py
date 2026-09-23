@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from nakabandi_contracts.enums import Permission
 
@@ -37,6 +37,11 @@ async def stream(
     hub: SseHub = request.app.state.sse_hub
     role_permissions = request.app.state.role_permissions
     authorize(principal, Permission.VIEW_ALERTS, role_permissions)  # 403 before the stream opens
+    gate = request.app.state.stream_gate
+    if not gate.try_open():  # the hosted cap (DOC 2 §2.7: at most 25 concurrent streams)
+        raise HTTPException(
+            status_code=503, detail="too many open streams", headers={"Retry-After": "30"}
+        )
 
     async def event_generator():
         subscription = hub.subscribe()
@@ -52,6 +57,7 @@ async def stream(
             pass
         finally:
             heartbeat_task.cancel()
+            gate.closed()
 
     return StreamingResponse(
         event_generator(),

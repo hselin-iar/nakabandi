@@ -20,8 +20,14 @@ class SqlRollupRepo:
 
     def add(self, deltas: list[RollupDelta]) -> int:
         """Add every delta to its row (creating it), stamp the touched rows with one new version,
-        and return that version. One call = one visible change to the map."""
+        and return that version. One call = one visible change to the map.
+
+        Set-based, not row by row: the deltas are merged by key, the rows that already exist are
+        read with ONE query, and the new ones are inserted in one batch. (A forecast has up to a
+        couple of hundred deltas; a get-and-flush per delta was the single biggest cost of a
+        complaint, measured in the A11 stress run.)"""
         version = self.current_version() + 1
+        merged: dict[tuple, RollupDelta] = {}
         for d in deltas:
             key = (
                 d.target_kind,
@@ -32,9 +38,49 @@ class SqlRollupRepo:
                 d.confidence_band,
                 d.layer,
             )
-            row = self._session.get(HeatRollupModel, key)
+            prior = merged.get(key)
+            merged[key] = (
+                d
+                if prior is None
+                else RollupDelta(
+                    d.target_kind,
+                    d.target_id,
+                    d.hour_bucket,
+                    d.category,
+                    d.amount_band,
+                    d.confidence_band,
+                    d.layer,
+                    prior.mass + d.mass,
+                    prior.alert_count + d.alert_count,
+                )
+            )
+        if not merged:
+            return version
+
+        m = HeatRollupModel
+        existing = {
+            (
+                r.target_kind,
+                r.target_id,
+                r.hour_bucket,
+                r.category,
+                r.amount_band,
+                r.confidence_band,
+                r.layer,
+            ): r
+            for r in self._session.scalars(
+                select(m).where(
+                    m.target_id.in_({k[1] for k in merged}),
+                    m.hour_bucket.in_({k[2] for k in merged}),
+                    m.layer.in_({k[6] for k in merged}),
+                )
+            )
+        }
+        new_rows = []
+        for key, d in merged.items():
+            row = existing.get(key)
             if row is None:
-                self._session.add(
+                new_rows.append(
                     HeatRollupModel(
                         target_kind=d.target_kind,
                         target_id=d.target_id,
@@ -52,6 +98,7 @@ class SqlRollupRepo:
                 row.expected_mass += d.mass
                 row.alert_count += d.alert_count
                 row.version = version
+        self._session.add_all(new_rows)
         self._session.flush()
         return version
 

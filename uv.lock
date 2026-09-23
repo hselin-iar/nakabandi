@@ -496,6 +496,7 @@ source = { editable = "apps/api" }
 dependencies = [
     { name = "argon2-cffi" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "nakabandi-contracts" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -512,6 +513,7 @@ dependencies = [
 requires-dist = [
     { name = "argon2-cffi", specifier = ">=25.1.0" },
     { name = "fastapi", specifier = ">=0.121.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "nakabandi-contracts", editable = "packages/contracts" },
     { name = "pydantic", specifier = ">=2.13.5" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },

@@ -25,6 +25,8 @@ COPY apps/world-sim/ apps/world-sim/
 RUN uv sync --frozen --no-dev --package nakabandi-api
 
 COPY config/ config/
+# The nightly reset (NAKABANDI_NIGHTLY_RESET_AT / hosted demo) reloads this seed through intake.
+COPY data/seed/mini_ingest.jsonl data/seed/mini_ingest.jsonl
 COPY --from=web-builder /repo/apps/web/dist static/
 
 ENV STATIC_DIR=/repo/static

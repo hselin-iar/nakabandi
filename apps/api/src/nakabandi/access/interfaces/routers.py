@@ -14,8 +14,11 @@ from pydantic import BaseModel
 from nakabandi.access import AccessService
 from nakabandi.access.domain.principal import Principal
 from nakabandi.access.interfaces.dependencies import SESSION_COOKIE_NAME, get_principal
-from nakabandi.access.interfaces.rate_limit import enforce_login_rate_limit
-from nakabandi.shared import DomainError, Forbidden, SqlAlchemyUnitOfWork
+from nakabandi.access.interfaces.rate_limit import (
+    enforce_control_rate_limit,
+    enforce_login_rate_limit,
+)
+from nakabandi.shared import DomainError, Forbidden, NotFound, SqlAlchemyUnitOfWork
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -127,7 +130,7 @@ def me(
     )
 
 
-@router.get("/check")
+@router.get("/check", dependencies=[Depends(enforce_control_rate_limit)])
 def check(
     role: Role,
     principal: Principal = Depends(get_principal),
@@ -139,7 +142,13 @@ def check(
 
 
 @router.get("/demo-users")
-def demo_users(service: AccessService = Depends(get_access_service)) -> list[DemoUserResponse]:
+def demo_users(
+    request: Request, service: AccessService = Depends(get_access_service)
+) -> list[DemoUserResponse]:
+    """Quick-login accounts for demos. 404 when NAKABANDI_DEMO_USERS_ENABLED is false: a
+    deployment that is not a demo must not publish credentials (DOC 2 §2.8 T19)."""
+    if not request.app.state.settings.demo_users_enabled:
+        raise NotFound("NOT_FOUND", "demo users are not enabled")
     return [
         DemoUserResponse(
             username=u.name, password=u.password, role=u.role.value, display_name=u.display_name
