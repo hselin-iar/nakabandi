@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%- title %> — NAKABANDI Bank Console</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+    header { background: #1e2130; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2d3748; }
+    header h1 { font-size: 1.1rem; font-weight: 700; color: #63b3ed; letter-spacing: 0.05em; }
+    header span { font-size: 0.8rem; color: #718096; }
+    main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+    .badge { display: inline-block; padding: 0.2em 0.6em; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .badge-pending  { background: #744210; color: #fbd38d; }
+    .badge-applied  { background: #1a4731; color: #68d391; }
+    .badge-rejected { background: #63171b; color: #fc8181; }
+    .badge-released { background: #1a365d; color: #90cdf4; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { text-align: left; padding: 0.65rem 1rem; border-bottom: 1px solid #2d3748; font-size: 0.85rem; }
+    th { background: #1e2130; color: #a0aec0; font-weight: 600; }
+    tr:hover td { background: #1a1f2e; }
+    a { color: #63b3ed; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .btn { display: inline-block; padding: 0.4rem 0.9rem; border: none; border-radius: 5px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+    .btn-green  { background: #276749; color: #fff; }
+    .btn-red    { background: #9b2c2c; color: #fff; }
+    .btn-blue   { background: #2b4c7e; color: #fff; }
+    .btn-gray   { background: #2d3748; color: #e2e8f0; }
+    form.inline { display: inline; }
+    .nav-bar { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; }
+    .nav-bar a { font-size: 0.85rem; }
+    .kv { display: grid; grid-template-columns: 220px 1fr; gap: 0.4rem 1rem; font-size: 0.85rem; margin-top: 0.75rem; }
+    .kv dt { color: #a0aec0; }
+    .kv dd { font-family: monospace; word-break: break-all; }
+    .section-title { font-size: 0.95rem; font-weight: 700; color: #a0aec0; margin: 1.5rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .callback-log { font-family: monospace; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>NAKABANDI · Bank Console</h1>
+    <span>
+      Bank Gateway Simulator — demo only
+      <form class="inline" method="POST" action="/console/logout">
+        &nbsp;·&nbsp;<button class="btn btn-gray" style="font-size:0.75rem;padding:0.2rem 0.6rem">Logout</button>
+      </form>
+    </span>
+  </header>
+  <main>
+    <%- body %>
+  </main>
+</body>
+</html>

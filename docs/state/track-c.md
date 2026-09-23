@@ -1,7 +1,7 @@
 # TRACK C — Web & Bank Simulator
 OWNER:            Web dev + coding agent
-CURRENT_STEP:     C2 — Bank Gateway Simulator
-LAST_COMPLETED:   C1 — Web Scaffold & Shell
+CURRENT_STEP:     C3 — Shared UI Kit & Stream
+LAST_COMPLETED:   C2 — Bank Gateway Simulator
 STATUS:           ACTIVE
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 5 (after A8 + C2); SYNC 6, after D1 (DOC4 §4.1a)
@@ -17,3 +17,4 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [C1] — eslint-plugin-boundaries 7.x uses `policies` not `element-types` (A1 learning confirmed); the `import/resolver` node extensions setting is essential — without it, extensionless TS imports go unchecked silently. Both were already in place from A1 merge.
 [C1] — tailwind.preset.ts must not import from `tailwindcss` types at C1 (Tailwind not fully wired); use `Record<string, any>` until Tailwind is configured end-to-end. vite.config.ts must be excluded from tsconfig `include` to avoid peer-type resolution failures in the workspace context.
 [C1] — RoleGuard route preservation verified via router location state redirect to /login and return upon quick-login.
+[C2] — better-sqlite3 requires Visual Studio C++ build tools on Node 24 Windows x64. express.json with { verify: (req, res, buf) => req.rawBody = buf } must be used to capture rawBody synchronously for HMAC verification before parsing.
