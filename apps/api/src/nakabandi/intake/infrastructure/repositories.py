@@ -46,6 +46,7 @@ def _complaint_from_model(m: ComplaintModel) -> Complaint:
         observed_at=m.observed_at,
         layer1_account_id=m.layer1_account_id,
         processing_status=m.processing_status,
+        failed_stage=m.failed_stage,
     )
 
 
@@ -109,9 +110,43 @@ class SqlComplaintRepo:
                 observed_at=complaint.observed_at,
                 layer1_account_id=complaint.layer1_account_id,
                 processing_status=complaint.processing_status,
+                failed_stage=complaint.failed_stage,
             )
         )
         self._session.flush()
+
+    def get_by_id(self, complaint_id: Id) -> Complaint | None:
+        model = self._session.scalar(
+            select(ComplaintModel).where(ComplaintModel.id == complaint_id)
+        )
+        return _complaint_from_model(model) if model is not None else None
+
+    def mark_processed(self, complaint_id: Id) -> None:
+        """Mark complaint as processed (pipeline completed all stages)."""
+        model = self._session.scalar(
+            select(ComplaintModel).where(ComplaintModel.id == complaint_id)
+        )
+        if model is not None:
+            model.processing_status = "processed"
+            model.failed_stage = None
+            self._session.flush()
+
+    def mark_unprocessed(self, complaint_id: Id, *, failed_stage: str) -> None:
+        """Mark complaint as unprocessed with the name of the stage that failed."""
+        model = self._session.scalar(
+            select(ComplaintModel).where(ComplaintModel.id == complaint_id)
+        )
+        if model is not None:
+            model.processing_status = "unprocessed"
+            model.failed_stage = failed_stage
+            self._session.flush()
+
+    def list_unprocessed(self) -> list[Complaint]:
+        """Return all complaints not yet successfully processed; used by RetryUnprocessed."""
+        models = self._session.scalars(
+            select(ComplaintModel).where(ComplaintModel.processing_status == "unprocessed")
+        )
+        return [_complaint_from_model(m) for m in models]
 
     def get_by_external_ref(self, external_ref: str) -> Complaint | None:
         model = self._session.scalar(

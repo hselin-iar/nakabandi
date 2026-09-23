@@ -29,7 +29,8 @@ class Complaint:
     reported_event_at: SimTime
     observed_at: SimTime
     layer1_account_id: Id
-    processing_status: str = "unprocessed"  # processed | unprocessed | failed
+    processing_status: str = "unprocessed"  # processed | unprocessed
+    failed_stage: str | None = None  # set by pipeline when processing_status is 'unprocessed'
 
 
 @dataclass(slots=True)

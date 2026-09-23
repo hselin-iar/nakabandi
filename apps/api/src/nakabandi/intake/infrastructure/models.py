@@ -39,6 +39,7 @@ class ComplaintModel(Base):
         String, ForeignKey("accounts.id"), nullable=False, index=True
     )
     processing_status: Mapped[str] = mapped_column(String, nullable=False, default="unprocessed")
+    failed_stage: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
 
 
 class FundHopModel(Base):
