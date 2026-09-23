@@ -27,6 +27,8 @@ const ClustersPage = lazy(() => import("../features/clusters/ClustersPage"));
 const CasesPage = lazy(() => import("../features/cases/CasesPage"));
 const EvaluationPage = lazy(() => import("../features/evaluation/EvaluationPage"));
 const OpsPage = lazy(() => import("../features/ops/OpsPage"));
+const OutboxPage = lazy(() => import("../features/outbox/OutboxPage"));
+const AuditPage = lazy(() => import("../features/audit/AuditPage"));
 const DemoPage = lazy(() => import("../features/demo/DemoPage"));
 
 /** Generic page-level loading fallback. */
@@ -126,7 +128,7 @@ export function AppRoutes() {
                     path="outbox"
                     element={
                       <RoleGuard require="VIEW_AUDIT">
-                        <EvaluationPage />
+                        <OutboxPage />
                       </RoleGuard>
                     }
                   />
@@ -135,7 +137,7 @@ export function AppRoutes() {
                     path="audit"
                     element={
                       <RoleGuard require="VIEW_AUDIT">
-                        <EvaluationPage />
+                        <AuditPage />
                       </RoleGuard>
                     }
                   />
