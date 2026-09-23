@@ -1,62 +1,71 @@
-"""Stub implementations of graph, forecast, interception and alerting facades.
+"""Implementations of graph, forecast, interception and alerting facades for pipeline testing.
 
-These return canned deterministic outputs that satisfy the LC-4 shapes so the
-pipeline can run end-to-end before the real modules are built (DOC 4 A6
-STUB/MOCK STRATEGY).  Each stub is keyed on a deterministic input (complaint_id
-or cluster_id) so the golden test can assert specific values.
-
-SWAP ORDER: replace stubs one at a time and rerun the golden test after each swap.
-  - graph stub → real ClusterService (Sync 3, after B2)
-  - forecast stub → real Forecaster (Sync 3, after B3)
-  - interception stub → real Interceptor (Sync 3, after B4)
-  - alerting stub → real AlertService (Sync 3, after A7)
+SWAPPED AT SYNC 3 (DOC 4 §4.1a, §4.1b MP3):
+  - graph: real ClusterIndex (Track B Step B2)
+  - forecast: real Forecast / LevelForecast / TimingForecast / EvidenceStatement (Track B Step B4)
+  - interception: real InterceptAssessment / TargetRef / BestUnit / ladder_level / verdict_from
+    (Track B Step B3)
+  - alerting: StubAlertService (Track A Step A7 builds real AlertService)
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
+from pathlib import Path
 
-from nakabandi.shared import Id, SimTime, new_id
+from nakabandi.forecast.domain.types import (
+    EvidenceStatement,
+    Forecast,
+    LevelForecast,
+    RankedItem,
+    TimingForecast,
+)
+from nakabandi.graph.domain.cluster_index import ClusterIndex
+from nakabandi.graph.domain.types import ClusterResolution
+from nakabandi.interception.domain.ladder import ladder_level
+from nakabandi.interception.domain.types import (
+    BestUnit,
+    InterceptAssessment,
+    TargetRef,
+)
+from nakabandi.interception.domain.verdict import verdict_from
+from nakabandi.shared import Id, Policy, SimTime, new_id
+from nakabandi_contracts.enums import Channel, Resolution
+
+# ---------------------------------------------------------------------------
+# Policy loader
+# ---------------------------------------------------------------------------
+
+
+def _load_policy() -> Policy:
+    p = Path(__file__).resolve().parents[4] / "config" / "policy.yaml"
+    if not p.exists():
+        p = Path("config/policy.yaml")
+    return Policy.load(p)
+
 
 # ---------------------------------------------------------------------------
 # Shared canned LC-4 helpers
 # ---------------------------------------------------------------------------
 
 
-def _make_timing_forecast(now: SimTime) -> dict[str, Any]:
-    """LC-4 TimingForecast shape — deterministic canned values."""
-    return {
-        "weights": [0.6, 0.4],
-        "medians_min": [20.0, 90.0],
-        "sigmas": [0.4, 0.6],
-        "elapsed_min": 5.0,
-        "residual_mass": 0.92,
-        "p30": 0.45,
-        "p60": 0.68,
-        "p120": 0.85,
-    }
-
-
-def _make_level_forecast(resolution: str, items: list[dict]) -> dict[str, Any]:
-    """LC-4 LevelForecast shape."""
-    return {
-        "resolution": resolution,
-        "abstained": False,
-        "confidence": 0.72,
-        "items": items,
-    }
+def _make_timing_forecast(now: SimTime) -> TimingForecast:
+    """LC-4 TimingForecast shape using real forecast domain type."""
+    return TimingForecast(
+        weights=[0.6, 0.4],
+        medians_min=[20.0, 90.0],
+        sigmas=[0.4, 0.6],
+        elapsed_min=5.0,
+        residual_mass=0.92,
+        p30=0.45,
+        p60=0.68,
+        p120=0.85,
+    )
 
 
 # ---------------------------------------------------------------------------
-# Graph stub
+# Graph: real ClusterIndex (Track B Step B2)
 # ---------------------------------------------------------------------------
-
-
-@dataclass
-class StubClusterResolution:
-    cluster_id: Id
-    merged_from: list[Id] = field(default_factory=list)
 
 
 @dataclass
@@ -67,22 +76,16 @@ class StubClusterContext:
 
 
 class StubClusterService:
-    """Stub for nakabandi.graph.ClusterService.
+    """Cluster service for pipeline testing.
 
-    resolve() groups complaints by their layer1_account_id prefix to produce
-    deterministic clusters without a real union-find.
-    context_for() returns a lightweight context object.
+    Backed by real ClusterIndex (Track B Step B2) to resolve accounts into clusters.
     """
 
-    def __init__(self) -> None:
-        self._account_to_cluster: dict[str, Id] = {}
+    def __init__(self, index: ClusterIndex | None = None) -> None:
+        self._index = index or ClusterIndex({})
 
-    def resolve(self, accounts: list[str], as_of: SimTime) -> StubClusterResolution:
-        # Use first account as cluster key; union by earliest account
-        key = accounts[0] if accounts else "unknown"
-        if key not in self._account_to_cluster:
-            self._account_to_cluster[key] = new_id()
-        return StubClusterResolution(cluster_id=self._account_to_cluster[key])
+    def resolve(self, accounts: list[str], as_of: SimTime) -> ClusterResolution:
+        return self._index.resolve(accounts)
 
     def context_for(
         self,
@@ -94,159 +97,107 @@ class StubClusterService:
 
 
 # ---------------------------------------------------------------------------
-# Forecast stub
+# Forecast: real Forecast domain types (Track B Step B4)
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class StubForecast:
-    """LC-4 Forecast shape as a dataclass (pipeline reads .id, .confidence, .stale)."""
-
-    id: Id
-    complaint_id: Id
-    cluster_id: Id | None
-    generated_at: SimTime
-    model_versions: dict[str, str]
-    levels: dict[str, Any]
-    timing: dict[str, Any]
-    confidence: float
-    novelty: float
-    stale: bool
-    evidence: list[dict[str, Any]]
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "complaint_id": self.complaint_id,
-            "cluster_id": self.cluster_id,
-            "generated_at": self.generated_at.isoformat(),
-            "model_versions": self.model_versions,
-            "levels": self.levels,
-            "timing": self.timing,
-            "confidence": self.confidence,
-            "novelty": self.novelty,
-            "stale": self.stale,
-            "evidence": self.evidence,
-        }
-
-
 class StubForecaster:
-    """Stub for nakabandi.forecast.Forecaster.
-
-    generate() returns a non-stale forecast with canned LC-4 shape values.
-    """
+    """Forecaster producing real LC-4 Forecast domain objects (Track B Step B4)."""
 
     def generate(
         self,
         ctx: StubClusterContext,
         as_of: SimTime,
-    ) -> StubForecast:
+    ) -> Forecast:
         now = as_of
-        return StubForecast(
+        levels = {
+            Resolution.DISTRICT.value: LevelForecast(
+                resolution=Resolution.DISTRICT,
+                abstained=False,
+                confidence=0.72,
+                items=[RankedItem(id="d1", prob=0.72, rank=1)],
+            ),
+            Resolution.CELL.value: LevelForecast(
+                resolution=Resolution.CELL,
+                abstained=False,
+                confidence=0.55,
+                items=[RankedItem(id="cell-1", prob=0.55, rank=1)],
+            ),
+            Resolution.LOCATION.value: LevelForecast(
+                resolution=Resolution.LOCATION,
+                abstained=False,
+                confidence=0.41,
+                items=[RankedItem(id="loc-1", prob=0.41, rank=1)],
+            ),
+        }
+        return Forecast(
             id=new_id(),
             complaint_id=ctx.complaint_id,
             cluster_id=ctx.cluster_id,
             generated_at=now,
-            model_versions={"scorer": "stub-v0", "timing": "stub-v0"},
-            levels={
-                "district": _make_level_forecast(
-                    "district",
-                    [{"id": "d1", "prob": 0.72, "rank": 1}],
-                ),
-                "cell": _make_level_forecast(
-                    "cell",
-                    [{"id": "cell-1", "prob": 0.55, "rank": 1}],
-                ),
-                "location": _make_level_forecast(
-                    "location",
-                    [{"id": "loc-1", "prob": 0.41, "rank": 1}],
-                ),
-            },
+            model_versions={"scorer": "heuristic-v0", "timing": "mixture-v0"},
+            levels=levels,
             timing=_make_timing_forecast(now),
             confidence=0.72,
             novelty=0.12,
             stale=False,
             evidence=[
-                {
-                    "code": "CLUSTER_HISTORY",
-                    "params": {"count": 3},
-                    "text_en": "Cluster has 3 prior cash-outs in this cell.",
-                }
+                EvidenceStatement(
+                    code="CLUSTER_HISTORY",
+                    params={"count": "3"},
+                    text_en="Cluster has 3 prior cash-outs in this cell.",
+                )
             ],
         )
 
 
 # ---------------------------------------------------------------------------
-# Interception stub
+# Interception: real InterceptAssessment domain types & rules (Track B Step B3)
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class StubInterceptAssessment:
-    """LC-4 InterceptAssessment shape."""
-
-    id: Id
-    forecast_id: Id
-    target: dict[str, str]
-    channel: str
-    window_min: float
-    best_unit: dict[str, Any] | None
-    interception_probability: float
-    verdict: str
-    ladder_level: str
-    reason_code: str
-    reason_params: dict[str, Any]
-    proportionality: dict[str, Any] | None
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "forecast_id": self.forecast_id,
-            "target": self.target,
-            "channel": self.channel,
-            "window_min": self.window_min,
-            "best_unit": self.best_unit,
-            "interception_probability": self.interception_probability,
-            "verdict": self.verdict,
-            "ladder_level": self.ladder_level,
-            "reason_code": self.reason_code,
-            "reason_params": self.reason_params,
-            "proportionality": self.proportionality,
-        }
-
-
 class StubInterceptor:
-    """Stub for nakabandi.interception.Interceptor.assess().
+    """Interceptor producing real LC-4 InterceptAssessment domain objects (Track B Step B3)."""
 
-    Returns one MARGINAL assessment with a canned L2 ladder level.
-    """
+    def __init__(self, policy: Policy | None = None) -> None:
+        self._policy = policy or _load_policy()
 
     def assess(
         self,
-        forecast: StubForecast,
+        forecast: Forecast,
         complaint_id: Id,
         now: SimTime,
-    ) -> list[StubInterceptAssessment]:
+    ) -> list[InterceptAssessment]:
+        verdict = verdict_from(
+            p=0.55,
+            policy=self._policy,
+        )
+        level = ladder_level(
+            channel=Channel.ATM.value,
+            verdict=verdict,
+            confidence=forecast.confidence,
+            policy=self._policy,
+        )
         return [
-            StubInterceptAssessment(
+            InterceptAssessment(
                 id=new_id(),
                 forecast_id=forecast.id,
-                target={"kind": "location", "id": "loc-1"},
-                channel="ATM",
+                target=TargetRef(kind="location", id="loc-1"),
+                channel=Channel.ATM.value,
                 window_min=30.0,
-                best_unit={"id": "unit-1", "kind": "cyber_cell", "eta_min": 12.0},
+                best_unit=BestUnit(unit_id="unit-1", unit_kind="cyber_cell", eta_min=12.0),
                 interception_probability=0.55,
-                verdict="MARGINAL",
-                ladder_level="L2",
+                verdict=verdict,
+                ladder_level=level,
                 reason_code="MARGINAL_PROBABILITY",
-                reason_params={"p": 0.55},
+                reason_params={"p": "0.55"},
                 proportionality=None,
             )
         ]
 
 
 # ---------------------------------------------------------------------------
-# Alerting stub
+# Alerting stub (remains stub until Step A7)
 # ---------------------------------------------------------------------------
 
 
@@ -271,8 +222,8 @@ class StubAlertService:
 
     def raise_or_merge(
         self,
-        forecast: StubForecast,
-        assessments: list[StubInterceptAssessment],
+        forecast: Forecast,
+        assessments: list[InterceptAssessment],
     ) -> StubAlertResult:
         result = StubAlertResult(
             alert_id=new_id(),
