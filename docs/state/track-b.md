@@ -1,8 +1,8 @@
 # TRACK B — Algorithms & Simulator
 OWNER:            Algo dev + coding agent
 CURRENT_STEP:     B4 — Forecast v0
-LAST_COMPLETED:   B3 — Interception Domain
-STATUS:           ACTIVE
+LAST_COMPLETED:   B4 — Forecast v0
+STATUS:           CHECKPOINT
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 2 — after B1 (golden generator) and A3 (intake); gates B2-B4 (DOC4 §4.1a)
 
@@ -21,6 +21,21 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [B2] — DisjointSet tie-break: lex-smaller id survives on equal size. Since fresh ULIDs start with '01…' and old hand-written test ids like 'CLU-X' start with 'C', the ULID wins (lex smaller). Test must assert "all in same cluster" not "surviving_id == 'CLU-X'".
 [B3] — interception_probability(0, timing) = 1.0, not residual_mass. F_cond(0)=0 by definition (conditional CDF starts at 0), so P(intercept | eta=0) = 1-0 = 1. residual_mass is only a shortcut for negative eta (guard for bad input).
 [B3] — LienProposal.__post_init__ with **kwargs confuses pyright on frozen dataclasses — pyright cannot narrow dict[str,Any] to specific field types. Replace _valid(**overrides) test helper with explicit per-test construction.
+[B4] — ruff B027: an ABC method with only a pass body but no @abstractmethod fires B027. Suppress with # noqa: B027 when the method is intentionally a no-op default (fit() on LocationScorer).
+[B4] — normalise() uses softmax, not simple sum-normalise. This is important: raw heuristic scores can be negative, so dividing by the sum would fail. Softmax maps arbitrary reals to (0,1) safely.
+[B4] — MixtureTimingModel.fit EM initialises by splitting at the log-delay median. Must guard against empty sub-partitions (all samples above or below split) and std=0 (use max(std, 0.05)).
+
+## B4 — Done When Evidence (DOC4)
+- [x] Probabilities sum to 1 ± 1e-6 at every level — asserted in GenerateForecast + 3 test cases (F10)
+- [x] Cell probability equals sum of its location probs — tested exactly (F3)
+- [x] Abstention monotone in threshold (F4)
+- [x] Leakage test: features derived purely from ctx; future data in ctx changes features (F8)
+- [x] BLOCKLIST: no registry name in BLOCKLIST; all 13 FEATURE_REGISTRY names present (F1)
+- [x] MixtureTimingModel.fit recovers a known mixture within tolerance (F7)
+- [x] Conditional probs monotone non-decreasing in horizon (F5)
+- [x] generate_candidates never exceeds policy.max; deduplicates; sorted by dist (F9)
+- [x] `npm run ci` green — 189/189 passed, 18 contracts kept, 0 pyright errors
+- [x] Committed on feat/track-b at a4c2f56; pushed to origin
 
 ## B3 — Done When Evidence (DOC4)
 - [x] LienProposal invariants: 11 tests — proposed>0, proposed<=disputed, expires>review, non-empty ids, no freeze field (P1-P3)
