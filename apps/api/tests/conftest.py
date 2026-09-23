@@ -8,3 +8,4 @@ import os
 
 os.environ.setdefault("API_SERVICE_KEY", "test-only-service-key")
 os.environ.setdefault("JWT_SECRET", "test-only-jwt-secret-at-least-32-bytes-long")
+os.environ.setdefault("NAKABANDI_OUTBOX_WORKER_ENABLED", "false")  # tests call run_outbox_once

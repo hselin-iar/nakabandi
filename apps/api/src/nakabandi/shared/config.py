@@ -25,6 +25,18 @@ class Settings(BaseSettings):
     service_api_key: str = Field(validation_alias="API_SERVICE_KEY")
     database_url: str = Field(default="sqlite:///nakabandi.db", validation_alias="DATABASE_URL")
     jwt_secret: str = Field(validation_alias="JWT_SECRET")
+    webhook_secret: str | None = Field(default=None, validation_alias="WEBHOOK_SECRET")
+    """HMAC secret for the LC-6 bank webhook; the SAME value apps/bank-sim verifies with
+    (infra/.env.example). Optional so the API boots without a bank; a hold_request then
+    dead-letters visibly in the outbox instead of being sent unsigned."""
+    bank_webhook_url: str | None = None
+    """Full URL of the bank gateway's POST /webhooks/nakabandi (LC-6)."""
+    smtp_host: str | None = None
+    smtp_port: int = 1025
+    sms_provider_url: str | None = None
+    sms_provider_key: str | None = None
+    outbox_worker_enabled: bool = True
+    """Run the in-process outbox worker (DOC 2 §2.2). Tests turn it off and call run_once."""
     static_dir: Path | None = Field(default=None, validation_alias="STATIC_DIR")
     """The built SPA's directory (DOC 4 Step A5: "api container, SPA static files"). Unset
     outside the Docker image, where Dockerfile.api builds apps/web and sets it."""

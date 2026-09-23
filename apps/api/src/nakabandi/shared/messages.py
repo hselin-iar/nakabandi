@@ -49,6 +49,12 @@ MESSAGES: dict[str, str] = {
     "INVALID_TRANSITION": "This action is not allowed for the alert's current status.",
     "FORBIDDEN_ACTION": "You do not have permission to perform this action on this alert.",
     "LIEN_INVALID": "The proposed hold amount is invalid.",
+    # alerting delivery, actions and callbacks (Step A8)
+    "LIEN_EXCEEDS_REMAINING": "The proposed hold is above what can still be held.",
+    "LIEN_ACCOUNT_NOT_TRACED": "This account is not part of the traced funds for this complaint.",
+    "ACTION_REASON_REQUIRED": "A reason is required for this action.",
+    "ACTION_NOT_FOUND": "This request could not be found.",
+    "CALLBACK_INVALID": "The bank's update could not be accepted.",
 }
 
 

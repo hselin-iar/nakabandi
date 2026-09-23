@@ -4,33 +4,68 @@ AlertService is constructed per-request (like AccessService) on the caller's
 SQLAlchemy session, so a raise_or_merge and its timeline entries share one transaction.
 
 Exports:
-  AlertService   — raise_or_merge, acknowledge, on_cluster_merged, rebuild_timers,
-                   get_alert, list_alerts
+  AlertService   — raise_or_merge, acknowledge, record_action, handle_bank_callback,
+                   deliver_outbox, on_cluster_merged, rebuild_timers, get_alert, list_alerts,
+                   list_actions, list_deliveries
   AlertResult    — result returned to pipeline Stage 5
+  ActionIn, BankCallback, LienContext — inputs to record_action / handle_bank_callback and the
+                   port main.py wires for hold validation
   SseHub         — shared hub (also used by analytics for heat.version)
   SseEvent       — typed event for broadcast
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Set
+from collections.abc import Callable, Mapping, Set
+from datetime import datetime
 
 from nakabandi_contracts.enums import Permission, Role
 from sqlalchemy.orm import Session
 
 from nakabandi.alerting.application.acknowledge import AcknowledgeAlert
+from nakabandi.alerting.application.bank_callback import (
+    BankCallback,
+    CallbackResult,
+    HandleBankCallback,
+)
+from nakabandi.alerting.application.outbox import DeliverOutbox, EnqueueDeliveries
+from nakabandi.alerting.application.ports import (
+    LienContext,
+    LienContextPort,
+    LienValidator,
+    NotificationChannel,
+)
 from nakabandi.alerting.application.raise_or_merge import AlertResult, RaiseOrMergeAlert
+from nakabandi.alerting.application.record_action import ActionIn, RecordAction
 from nakabandi.alerting.application.timers import EscalateAlert, ExpireAlert, RebuildTimers
+from nakabandi.alerting.domain.action import Action
 from nakabandi.alerting.domain.alert import Alert
+from nakabandi.alerting.domain.delivery import Delivery, DeliveryChannel
 from nakabandi.alerting.infrastructure.channels.sse_hub import SseEvent, SseHub
-from nakabandi.alerting.infrastructure.repos import SqlAlertRepo
-from nakabandi.shared import Clock, Policy, Scheduler
+from nakabandi.alerting.infrastructure.render import FileTemplateRenderer
+from nakabandi.alerting.infrastructure.repos import (
+    SqlActionRepo,
+    SqlAlertRepo,
+    SqlDeliveryRepo,
+)
+from nakabandi.audit import AuditLog
+from nakabandi.shared import Clock, Id, Policy, Scheduler, SystemClock
 
 __all__ = [
     "AlertService",
     "AlertResult",
     "SseHub",
     "SseEvent",
+    "ActionIn",
+    "BankCallback",
+    "CallbackResult",
+    "LienContext",
+    "LienContextPort",
+    "LienValidator",
+    "NotificationChannel",
+    "Action",
+    "Delivery",
+    "DeliveryChannel",
 ]
 
 
@@ -49,8 +84,14 @@ class AlertService:
         scheduler: Scheduler,
         role_permissions: Mapping[Role, Set[Permission]],
         sse_hub: SseHub,
+        *,
+        lien_context: LienContextPort | None = None,
+        validate_lien: LienValidator | None = None,
+        now_wall: Callable[[], datetime] = SystemClock().now,
     ) -> None:
         self._repo = SqlAlertRepo(session)
+        self._action_repo = SqlActionRepo(session)
+        self._delivery_repo = SqlDeliveryRepo(session)
         self._clock = clock
         self._policy = policy
         self._scheduler = scheduler
@@ -77,6 +118,19 @@ class AlertService:
             policy=policy,
             clock=clock,
         )
+        self._enqueue = EnqueueDeliveries(self._delivery_repo, FileTemplateRenderer(), now_wall)
+        audit = AuditLog(session, clock)
+        self._record_action = RecordAction(
+            alert_repo=self._repo,
+            action_repo=self._action_repo,
+            enqueue=self._enqueue,
+            audit=audit,
+            clock=clock,
+            role_permissions=role_permissions,
+            lien_context=lien_context,
+            validate_lien=validate_lien,
+        )
+        self._bank_callback = HandleBankCallback(self._action_repo, self._repo, audit, clock)
 
     # ------------------------------------------------------------------
     # Pipeline interface (called by pipeline.ProcessComplaint Stage 5)
@@ -109,6 +163,74 @@ class AlertService:
             )
         )
         return alert
+
+    # ------------------------------------------------------------------
+    # Action: the human gate, and the bank's answer to it
+    # ------------------------------------------------------------------
+
+    def record_action(self, principal: object, alert_id: Id, action_in: ActionIn) -> Action:
+        """Raises Forbidden after auditing the denial; the caller must commit in that case."""
+        action = self._record_action.run(principal, alert_id, action_in)  # type: ignore[arg-type]
+        self._hub.publish(
+            SseEvent(
+                name="alert.updated", data={"alert_id": alert_id, "version": 3}, alert_id=alert_id
+            )
+        )
+        return action
+
+    def handle_bank_callback(self, callback: BankCallback) -> CallbackResult:
+        result = self._bank_callback.run(callback)
+        if result.applied:
+            alert_id = result.action.alert_id
+            self._hub.publish(
+                SseEvent(
+                    name="alert.updated",
+                    data={"alert_id": alert_id, "version": 4},
+                    alert_id=alert_id,
+                )
+            )
+        return result
+
+    # ------------------------------------------------------------------
+    # Outbox
+    # ------------------------------------------------------------------
+
+    def deliver_outbox(
+        self, channels: Mapping[DeliveryChannel, NotificationChannel], now_wall: datetime
+    ) -> int:
+        """One worker pass (DOC 3 M4 DeliverOutbox.run_once). Publishes delivery.updated (LC-5)
+        for every delivery it touched."""
+
+        def _publish(delivery: Delivery) -> None:
+            self._hub.publish(
+                SseEvent(
+                    name="delivery.updated",
+                    data={"alert_id": delivery.alert_id, "delivery_id": delivery.id},
+                    alert_id=delivery.alert_id,
+                )
+            )
+
+        return DeliverOutbox(self._delivery_repo, channels, self._policy, _publish).run_once(
+            now_wall
+        )
+
+    def list_deliveries(
+        self,
+        *,
+        status: str | None = None,
+        channel: str | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> tuple[list[Delivery], str | None]:
+        return self._delivery_repo.list_page(
+            status=status, channel=channel, cursor=cursor, limit=limit
+        )
+
+    def count_dead_deliveries(self) -> int:
+        return self._delivery_repo.count_dead()
+
+    def list_actions(self, alert_id: Id) -> list[Action]:
+        return self._action_repo.list_for_alert(alert_id)
 
     # ------------------------------------------------------------------
     # Queries
