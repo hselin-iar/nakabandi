@@ -1,10 +1,10 @@
 # TRACK B — Algorithms & Simulator
 OWNER:            Algo dev + coding agent
-CURRENT_STEP:     B4 — Forecast v0
-LAST_COMPLETED:   B4 — Forecast v0
-STATUS:           CHECKPOINT
+CURRENT_STEP:     B5 — Live Runner & Control API
+LAST_COMPLETED:   B4 — Forecast v0 (MP3 / Sync 3 confirmed)
+STATUS:           ACTIVE
 PAUSED_AT:        none
-NEXT SYNC POINT:  SYNC 2 — after B1 (golden generator) and A3 (intake); gates B2-B4 (DOC4 §4.1a)
+NEXT SYNC POINT:  SYNC 7 — after B5 (live runner) and A5; gates C8 demo console (DOC4 §4.1a)
 
 STATUS is one of ACTIVE | RESUMING | BLOCKED | CHECKPOINT. Only this track's owner (and its agent) edits this file.
 Update it after every completed step and before ending a session.
@@ -24,6 +24,7 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [B4] — ruff B027: an ABC method with only a pass body but no @abstractmethod fires B027. Suppress with # noqa: B027 when the method is intentionally a no-op default (fit() on LocationScorer).
 [B4] — normalise() uses softmax, not simple sum-normalise. This is important: raw heuristic scores can be negative, so dividing by the sum would fail. Softmax maps arbitrary reals to (0,1) safely.
 [B4] — MixtureTimingModel.fit EM initialises by splitting at the log-delay median. Must guard against empty sub-partitions (all samples above or below split) and std=0 (use max(std, 0.05)).
+[B4/MP3] — Sync 3 confirmed by Systems Lead; real facades (graph, forecast, interception) verified against golden pipeline test (297/297 green, 18 contracts); merged feat/track-a into feat/track-b cleanly (no conflicts, 84 files, 5127 insertions).
 
 ## B4 — Done When Evidence (DOC4)
 - [x] Probabilities sum to 1 ± 1e-6 at every level — asserted in GenerateForecast + 3 test cases (F10)
