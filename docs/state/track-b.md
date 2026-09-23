@@ -1,8 +1,8 @@
 # TRACK B — Algorithms & Simulator
 OWNER:            Algo dev + coding agent
-CURRENT_STEP:     B1 — Simulator v0 Golden Generator
+CURRENT_STEP:     B2 — Graph & Geo Domain
 LAST_COMPLETED:   B1 — Simulator v0 Golden Generator
-STATUS:           CHECKPOINT
+STATUS:           ACTIVE
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 2 — after B1 (golden generator) and A3 (intake); gates B2-B4 (DOC4 §4.1a)
 

@@ -16,7 +16,13 @@ from nakabandi.shared.errors import (
     Unauthenticated,
     ValidationFailed,
 )
-from nakabandi.shared.events import DomainEvent, EventBus, HandlerError
+from nakabandi.shared.events import (
+    ClusterMerged,
+    ClusterUpdated,
+    DomainEvent,
+    EventBus,
+    HandlerError,
+)
 from nakabandi.shared.ids import new_id
 from nakabandi.shared.messages import message_for
 from nakabandi.shared.policy import Policy, PolicyLoadError
@@ -41,6 +47,8 @@ __all__ = [
     "DomainEvent",
     "EventBus",
     "HandlerError",
+    "ClusterMerged",
+    "ClusterUpdated",
     "new_id",
     "message_for",
     "Policy",
