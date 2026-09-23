@@ -1,7 +1,7 @@
 # TRACK C — Web & Bank Simulator
 OWNER:            Web dev + coding agent
-CURRENT_STEP:     C4 — Alerts Inbox & Detail
-LAST_COMPLETED:   C3 — Shared UI Kit & Stream
+CURRENT_STEP:     C5 — Map Dashboard
+LAST_COMPLETED:   C4 — Alerts Inbox & Detail
 STATUS:           ACTIVE
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 6, after D1 (DOC4 §4.1a)
@@ -20,5 +20,6 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [C2] — better-sqlite3 requires Visual Studio C++ build tools on Node 24 Windows x64. express.json with { verify: (req, res, buf) => req.rawBody = buf } must be used to capture rawBody synchronously for HMAC verification before parsing.
 [C2/Sync 5] — Bank simulator merged to main; Sync 5 webhook callback verified; pulled full API schemas into web client.
 [C3] — tsx extension required for files rendering JSX (useStream.tsx); React Testing Library cleanup() in afterEach avoids cross-test DOM bleed; openapi-fetch client typed via schema.d.ts paths contract.
+[C4] — TanStack Query queries resolve asynchronously in RTL tests: always await findBy* for table rows and status badges; action modals update status to match StatusBadge config; review queue requires loaded alerts to display triage cards.
 
 
