@@ -29,6 +29,7 @@ from nakabandi.intake.infrastructure.lien_lookup import (
     AccountTrace,
     ComplaintSummary,
     LienContextLookup,
+    ObservationSummary,
     TracedAccount,
 )
 from nakabandi.intake.infrastructure.repositories import (
@@ -38,19 +39,20 @@ from nakabandi.intake.infrastructure.repositories import (
     SqlHopRepo,
     SqlObservationRepo,
 )
-from nakabandi.shared import SimClock
+from nakabandi.shared import EventBus, SimClock
 
 __all__ = [
     "IngestService",
     "LienContextLookup",
     "AccountTrace",
     "ComplaintSummary",
+    "ObservationSummary",
     "TracedAccount",
 ]
 
 
 class IngestService:
-    def __init__(self, session: Session, clock: SimClock) -> None:
+    def __init__(self, session: Session, clock: SimClock, bus: EventBus | None = None) -> None:
         complaint_repo = SqlComplaintRepo(session)
         account_repo = SqlAccountRepo(session)
         batch_repo = SqlBatchRepo(session)
@@ -60,7 +62,7 @@ class IngestService:
             SqlHopRepo(session), account_repo, complaint_repo, batch_repo, clock
         )
         self._observations = IngestObservations(
-            SqlObservationRepo(session), account_repo, batch_repo, clock
+            SqlObservationRepo(session), account_repo, batch_repo, clock, bus
         )
         self._registry = IngestRegistry(GeoService(session), batch_repo, clock)
         self._tick = AdvanceClock(clock)

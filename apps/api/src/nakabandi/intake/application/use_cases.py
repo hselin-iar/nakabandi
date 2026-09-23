@@ -13,6 +13,7 @@ TickAdvanced) is deferred to Step A6 (Pipeline v0 & Golden Test), the first cons
 
 from __future__ import annotations
 
+import structlog
 from nakabandi_contracts.ingest import (
     CashOutObservationBatch,
     ComplaintBatch,
@@ -38,7 +39,15 @@ from nakabandi.intake.domain.entities import (
     IngestBatchRecord,
 )
 from nakabandi.intake.domain.validation import normalise_ref, validate_complaint
-from nakabandi.shared import DomainError, SimClock, SimTime, ValidationFailed, new_id
+from nakabandi.shared import (
+    DomainError,
+    EventBus,
+    ObservationIngested,
+    SimClock,
+    SimTime,
+    ValidationFailed,
+    new_id,
+)
 
 
 def _replay_if_seen(batch_repo: BatchRepo, idempotency_key: str) -> IngestResponse | None:
@@ -46,6 +55,9 @@ def _replay_if_seen(batch_repo: BatchRepo, idempotency_key: str) -> IngestRespon
     if existing is not None and existing.response is not None:
         return IngestResponse.model_validate(existing.response)
     return None
+
+
+logger = structlog.get_logger(__name__)
 
 
 def _record_batch(
@@ -206,11 +218,13 @@ class IngestObservations:
         account_repo: AccountRepo,
         batch_repo: BatchRepo,
         clock: SimClock,
+        bus: EventBus | None = None,
     ) -> None:
         self._observations = observation_repo
         self._accounts = account_repo
         self._batches = batch_repo
         self._clock = clock
+        self._bus = bus
 
     def run(self, batch: CashOutObservationBatch) -> IngestResponse:
         replayed = _replay_if_seen(self._batches, batch.idempotency_key)
@@ -218,6 +232,7 @@ class IngestObservations:
             return replayed
 
         accepted = 0
+        accepted_ids: list[str] = []
         rejected: list[RejectedItem] = []
         for index, item in enumerate(batch.items):
             try:
@@ -226,9 +241,10 @@ class IngestObservations:
                     raise ValidationFailed(
                         "ACCOUNT_UNKNOWN", f"no account known for ref {item.account_ref!r}"
                     )
+                observation_id = new_id()
                 self._observations.add(
                     CashOutObservation(
-                        id=new_id(),
+                        id=observation_id,
                         account_id=account.id,
                         location_id=item.location_id,
                         channel=item.channel.value,
@@ -239,6 +255,7 @@ class IngestObservations:
                     )
                 )
                 accepted += 1
+                accepted_ids.append(observation_id)
             except DomainError as exc:
                 rejected.append(RejectedItem(index=index, code=exc.code, message=exc.message))
 
@@ -251,7 +268,24 @@ class IngestObservations:
             received_at=self._clock.now(),
             response=response,
         )
+        self._announce(accepted_ids)
         return response
+
+    def _announce(self, observation_ids: list[str]) -> None:
+        """LC-3 ObservationIngested, once per batch, after its rows are added: ReconcileOutcome
+        listens. A failing subscriber is logged and must not reject an accepted batch."""
+        if self._bus is None or not observation_ids:
+            return
+        try:
+            self._bus.publish(
+                ObservationIngested(
+                    event_id=new_id(),
+                    occurred_at=self._clock.now(),
+                    observation_ids=observation_ids,
+                )
+            )
+        except Exception:
+            logger.exception("intake.observation_ingested.publish_failed")
 
 
 class IngestRegistry:

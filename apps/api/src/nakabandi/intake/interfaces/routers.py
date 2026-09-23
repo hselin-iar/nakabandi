@@ -35,10 +35,14 @@ def get_clock(request: Request) -> SimClock:
 
 
 def get_ingest_service(
-    uow: SqlAlchemyUnitOfWork = Depends(get_uow), clock: SimClock = Depends(get_clock)
+    request: Request,
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+    clock: SimClock = Depends(get_clock),
 ) -> IngestService:
     assert uow.session is not None
-    return IngestService(uow.session, clock)
+    # The bus is per unit of work, so an ObservationIngested subscriber (ReconcileOutcome)
+    # writes on this request's own session.
+    return IngestService(uow.session, clock, request.app.state.event_bus_factory(uow.session))
 
 
 @router.post("/registry")

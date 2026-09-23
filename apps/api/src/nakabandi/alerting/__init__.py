@@ -30,15 +30,20 @@ from nakabandi.alerting.application.bank_callback import (
     CallbackResult,
     HandleBankCallback,
 )
+from nakabandi.alerting.application.feedback import MarkOutcome, ReviewQueue
 from nakabandi.alerting.application.outbox import DeliverOutbox, EnqueueDeliveries
 from nakabandi.alerting.application.ports import (
+    ConfirmedCashOutPort,
     LienContext,
     LienContextPort,
     LienValidator,
     NotificationChannel,
+    ObservationSource,
+    ObservedCashOut,
     TargetScopePort,
 )
 from nakabandi.alerting.application.raise_or_merge import AlertResult, RaiseOrMergeAlert
+from nakabandi.alerting.application.reconcile import ReconcileOutcome
 from nakabandi.alerting.application.record_action import ActionIn, RecordAction
 from nakabandi.alerting.application.scope import scope_of
 from nakabandi.alerting.application.timers import (
@@ -50,12 +55,14 @@ from nakabandi.alerting.application.timers import (
 from nakabandi.alerting.domain.action import Action, allowed_actions
 from nakabandi.alerting.domain.alert import ACTIONABLE_STATUSES, Alert
 from nakabandi.alerting.domain.delivery import Delivery, DeliveryChannel
+from nakabandi.alerting.domain.outcome import Outcome
 from nakabandi.alerting.infrastructure.channels.sse_hub import SseEvent, SseHub
 from nakabandi.alerting.infrastructure.render import FileTemplateRenderer
 from nakabandi.alerting.infrastructure.repos import (
     SqlActionRepo,
     SqlAlertRepo,
     SqlDeliveryRepo,
+    SqlOutcomeRepo,
 )
 from nakabandi.audit import AuditLog
 from nakabandi.shared import (
@@ -64,6 +71,8 @@ from nakabandi.shared import (
     EventBus,
     Id,
     NotFound,
+    ObservationIngested,
+    OutcomeRecorded,
     Policy,
     Scheduler,
     SystemClock,
@@ -84,6 +93,10 @@ __all__ = [
     "LienContextPort",
     "LienValidator",
     "NotificationChannel",
+    "ObservationSource",
+    "ObservedCashOut",
+    "ConfirmedCashOutPort",
+    "Outcome",
     "Action",
     "Delivery",
     "DeliveryChannel",
@@ -109,6 +122,8 @@ class AlertService:
         lien_context: LienContextPort | None = None,
         validate_lien: LienValidator | None = None,
         scope_lookup: TargetScopePort | None = None,
+        observations: ObservationSource | None = None,
+        confirmed: ConfirmedCashOutPort | None = None,
         bus: EventBus | None = None,
         now_wall: Callable[[], datetime] = SystemClock().now,
     ) -> None:
@@ -128,6 +143,16 @@ class AlertService:
 
         self._review = ReviewLien(self._repo, self._action_repo, clock, scheduler)
         self._lien_context = lien_context
+        self._outcome_repo = SqlOutcomeRepo(session)
+        self._reconcile = ReconcileOutcome(
+            self._repo,
+            self._outcome_repo,
+            observations,
+            policy,
+            clock,
+            scheduler,
+            on_outcome=self._outcome_recorded,
+        )
 
         self._raise_or_merge = RaiseOrMergeAlert(
             alert_repo=self._repo,
@@ -138,6 +163,8 @@ class AlertService:
             expire_fn=self._expire.schedule,
             scope_lookup=scope_lookup,
             on_created=self._notify_banks,
+            amount_of=self._amount_of,
+            on_scheduled=self._reconcile.schedule_miss,
         )
         self._acknowledge = AcknowledgeAlert(self._repo, policy, clock, role_permissions)
         self._rebuild_timers = RebuildTimers(
@@ -148,6 +175,7 @@ class AlertService:
             clock=clock,
             review=self._review,
             action_repo=self._action_repo,
+            reconcile=self._reconcile,
         )
         self._enqueue = EnqueueDeliveries(self._delivery_repo, FileTemplateRenderer(), now_wall)
         audit = AuditLog(session, clock)
@@ -165,6 +193,17 @@ class AlertService:
             publish=self._bus.publish,
         )
         self._bank_callback = HandleBankCallback(self._action_repo, self._repo, audit, clock)
+        self._mark_outcome = MarkOutcome(
+            alert_repo=self._repo,
+            outcome_repo=self._outcome_repo,
+            audit=audit,
+            clock=clock,
+            role_permissions=role_permissions,
+            scope_lookup=scope_lookup,
+            confirmed=confirmed,
+            on_outcome=self._outcome_recorded,
+        )
+        self._review_queue = ReviewQueue(self._repo, policy)
 
     # ------------------------------------------------------------------
     # Pipeline interface (called by pipeline.ProcessComplaint Stage 5)
@@ -207,6 +246,35 @@ class AlertService:
                 complaint_ref=complaint_ref,
                 sim_time=now,
             )
+
+    def _amount_of(self, complaint_id: Id) -> int | None:
+        """The complaint's amount, for severity and priority (a Forecast does not carry it)."""
+        if self._lien_context is None:
+            return None
+        summary = self._lien_context.complaint_summary(complaint_id)
+        return summary.amount_paise if summary is not None else None
+
+    def _outcome_recorded(self, alert: Alert, outcome: Outcome) -> None:
+        """Announce an outcome: the alert changed (SSE) and OutcomeRecorded (LC-3, fan-out only)."""
+        self._publish_alert_event("alert.updated", alert.id, version=5)
+        try:
+            self._bus.publish(
+                OutcomeRecorded(
+                    event_id=new_id(),
+                    occurred_at=self._clock.now(),
+                    alert_id=alert.id,
+                    result=outcome.result,
+                )
+            )
+        except Exception:
+            logger.exception("alerting.outcome_recorded.publish_failed", alert_id=alert.id)
+
+    def register_subscribers(self, bus: EventBus) -> None:
+        """Subscribe ReconcileOutcome to ObservationIngested (LC-3) on `bus`."""
+        bus.subscribe(
+            ObservationIngested,
+            lambda e: self._reconcile.on_observation(e),  # type: ignore[arg-type]
+        )
 
     def _publish_alert_event(
         self,
@@ -332,13 +400,32 @@ class AlertService:
         principal: Principal,
         *,
         status: str | None = None,
+        view: str = "queue",
         cursor: str | None = None,
         limit: int = 50,
     ) -> tuple[list[Alert], str | None]:
+        """`view`: "queue" (default: what the budget shows), "backlog" (the deferred alerts, still
+        reachable), "all". "review" is the officer's uncertainty-ordered feedback queue."""
         authorize(principal, Permission.VIEW_ALERTS, self._role_permissions)
+        if view == "review":
+            return self._review_queue.run(**_scope_filter(principal)), None
         return self._repo.list_by_scope(
-            status=status, cursor=cursor, limit=limit, **_scope_filter(principal)
+            status=status, view=view, cursor=cursor, limit=limit, **_scope_filter(principal)
         )
+
+    def list_outcomes(self, alert_id: Id) -> list[Outcome]:
+        return self._outcome_repo.list_for_alert(alert_id)
+
+    def mark_outcome(
+        self,
+        principal: Principal,
+        alert_id: Id,
+        result: str,
+        location_id: Id | None = None,
+        reason: str | None = None,
+    ) -> tuple[Outcome, bool]:
+        """DOC 3 S3 MarkOutcome. Returns (outcome, created); a repeat returns the existing row."""
+        return self._mark_outcome.run(principal, alert_id, result, location_id, reason)
 
     # ------------------------------------------------------------------
     # Timer management

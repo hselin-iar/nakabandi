@@ -8,7 +8,13 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from nakabandi.intake.infrastructure.models import AccountModel, ComplaintModel, FundHopModel
+from nakabandi.intake.infrastructure.models import (
+    AccountModel,
+    CashOutObservationModel,
+    ComplaintModel,
+    FundHopModel,
+)
+from nakabandi.shared import SimTime, to_sim_time
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,6 +37,13 @@ class TracedAccount:
 class ComplaintSummary:
     category: str
     amount_paise: int
+
+
+@dataclass(frozen=True, slots=True)
+class ObservationSummary:
+    id: str
+    location_id: str
+    event_at: SimTime
 
 
 class LienContextLookup:
@@ -67,6 +80,16 @@ class LienContextLookup:
             traced_accounts=sorted(traced),
             disputed_paise=disputed,
         )
+
+    def observation_summaries(self, observation_ids: list[str]) -> list[ObservationSummary]:
+        """Where and when the given cash-outs happened, for ReconcileOutcome."""
+        rows = self._session.scalars(
+            select(CashOutObservationModel).where(CashOutObservationModel.id.in_(observation_ids))
+        )
+        return [
+            ObservationSummary(id=o.id, location_id=o.location_id, event_at=to_sim_time(o.event_at))
+            for o in rows
+        ]
 
     def complaint_summary(self, complaint_id: str) -> ComplaintSummary | None:
         """Category and amount, for the analytics read model's rollup keys."""

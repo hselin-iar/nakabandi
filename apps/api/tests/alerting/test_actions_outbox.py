@@ -30,7 +30,6 @@ from nakabandi.audit.infrastructure.models import AuditEntryModel
 from nakabandi.geo import LocationScope, LocationScopeLookup
 from nakabandi.intake import LienContextLookup
 from nakabandi.intake.infrastructure.models import AccountModel, ComplaintModel
-from nakabandi.main import create_app
 from nakabandi.shared import SqlAlchemyUnitOfWork, SystemClock
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -49,23 +48,6 @@ T0 = datetime(2026, 1, 15, 12, 0, tzinfo=UTC)
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
-    monkeypatch.setenv("API_SERVICE_KEY", SERVICE_KEY)
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'a8.db'}")
-    monkeypatch.setenv("JWT_SECRET", "test-only-jwt-secret-at-least-32-bytes-long")
-    monkeypatch.setenv("WEBHOOK_SECRET", SECRET)
-    with TestClient(create_app()) as c:
-        for path, key in (
-            ("registry", "registry"),
-            ("complaints", "complaints"),
-            ("hops", "hops"),
-        ):
-            r = c.post(f"/api/v1/ingest/{path}", json=FIXTURE[key], headers=SERVICE_HEADERS)
-            assert r.status_code == 200, r.text
-        yield c
 
 
 def _login(client: TestClient, role: str) -> None:

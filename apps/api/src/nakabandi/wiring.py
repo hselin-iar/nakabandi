@@ -6,8 +6,10 @@ from __future__ import annotations
 
 from datetime import UTC
 
+import structlog
 from sqlalchemy.orm import Session
 
+from nakabandi.alerting import ObservedCashOut
 from nakabandi.alerting.infrastructure.repos import SqlAlertRepo
 from nakabandi.analytics import (
     AlertFacts,
@@ -20,6 +22,8 @@ from nakabandi.analytics import (
 from nakabandi.forecast.infrastructure.repositories import SqlForecastRepo
 from nakabandi.geo import GeoService
 from nakabandi.intake import LienContextLookup
+
+logger = structlog.get_logger(__name__)
 
 
 class ProjectionSourceAdapter:
@@ -114,3 +118,38 @@ class GeoCatalogAdapter:
             },
             district_names={r.id: r.name for r in regions.values() if r.level == "district"},
         )
+
+
+class ObservationSourceAdapter:
+    """alerting.ObservationSource over intake: what an ObservationIngested event's IDs refer to."""
+
+    def __init__(self, session: Session) -> None:
+        self._intake = LienContextLookup(session)
+
+    def observations(self, observation_ids: list[str]) -> list[ObservedCashOut]:
+        return [
+            ObservedCashOut(id=o.id, location_id=o.location_id, event_at=o.event_at)
+            for o in self._intake.observation_summaries(observation_ids)
+        ]
+
+
+class ConfirmedCashOutPending:
+    """alerting.ConfirmedCashOutPort until Track B's graph ships `apply_confirmed` (DOC 4 A10
+    STUB/MOCK STRATEGY: "stub it with a recording fake and swap at the next merge").
+
+    It is deliberately NOT silent: it says so in the log and reports False, and MarkOutcome logs
+    that the confirmation reached the outcome row but not the graph. SWAP POINT: the merge that
+    brings graph.apply_confirmed; replace this class with an adapter over that facade."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, object]] = []  # a recording fake, for tests
+
+    def apply_confirmed(self, cluster_id: str, location_id: str, at: object) -> bool:
+        self.calls.append((cluster_id, location_id, at))
+        logger.warning(
+            "graph.apply_confirmed is not available yet; the officer's confirmation was recorded "
+            "on the outcome only",
+            cluster_id=cluster_id,
+            location_id=location_id,
+        )
+        return False

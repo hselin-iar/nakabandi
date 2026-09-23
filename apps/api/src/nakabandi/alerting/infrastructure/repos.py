@@ -61,6 +61,8 @@ def _model_to_alert(row: AlertModel, timeline_rows: list[AlertTimelineModel]) ->
         forecast_id=row.forecast_id,
         complaint_id=row.complaint_id,
         masked=row.masked,
+        priority=row.priority,
+        budget_rank=row.budget_rank,
         scope_state_id=row.scope_state_id,
         scope_district_id=row.scope_district_id,
         scope_bank_id=row.scope_bank_id,
@@ -89,6 +91,8 @@ def _alert_to_model(alert: Alert) -> AlertModel:
         forecast_id=alert.forecast_id,
         complaint_id=alert.complaint_id,
         masked=alert.masked,
+        priority=alert.priority,
+        budget_rank=alert.budget_rank,
         scope_state_id=alert.scope_state_id,
         scope_district_id=alert.scope_district_id,
         scope_bank_id=alert.scope_bank_id,
@@ -156,13 +160,19 @@ class SqlAlertRepo:
         district_id: str | None = None,
         bank_id: str | None = None,
         status: str | None = None,
+        view: str = "all",
         cursor: str | None = None,
         limit: int = 50,
     ) -> tuple[list[Alert], str | None]:
-        """Paginated listing. Cursor is the last seen created_at ISO string."""
+        """Paginated listing. Cursor is the last seen created_at ISO string. `view` is the
+        budget view: "queue" (not deferred), "backlog" (deferred only) or "all"."""
         q = self._session.query(AlertModel)
         if status is not None:
             q = q.filter(AlertModel.status == status)
+        if view == "queue":
+            q = q.filter(AlertModel.is_deferred.is_(False))
+        elif view == "backlog":
+            q = q.filter(AlertModel.is_deferred.is_(True))
         # Same precedence as access.authorize's scope check: bank, then district, then state.
         if bank_id is not None:
             q = q.filter(AlertModel.scope_bank_id == bank_id)
@@ -191,6 +201,59 @@ class SqlAlertRepo:
             alerts.append(_model_to_alert(row, tl))
         return alerts, next_cursor
 
+    def _load(self, rows: list[AlertModel]) -> list[Alert]:
+        out = []
+        for row in rows:
+            tl = self._session.query(AlertTimelineModel).filter_by(alert_id=row.id).all()
+            out.append(_model_to_alert(row, tl))
+        return out
+
+    def list_queue(self, district_id: str | None, start: datetime, end: datetime) -> list[Alert]:
+        """Every alert of one budget queue: its district (None = unscoped), created in one shift
+        [start, end)."""
+        q = self._session.query(AlertModel).filter(
+            AlertModel.created_at >= start, AlertModel.created_at < end
+        )
+        q = q.filter(
+            AlertModel.scope_district_id.is_(None)
+            if district_id is None
+            else AlertModel.scope_district_id == district_id
+        )
+        return self._load(q.all())
+
+    def list_awaiting_outcome(self, target_id: str | None = None) -> list[Alert]:
+        """Alerts of any status that ReconcileOutcome has not yet decided (no reconciled outcome
+        row), optionally only those targeting one location."""
+        decided = self._session.query(OutcomeModel.alert_id).filter(
+            OutcomeModel.source == "reconciled"
+        )
+        q = self._session.query(AlertModel).filter(AlertModel.id.not_in(decided))
+        if target_id is not None:
+            q = q.filter(AlertModel.target_id == target_id)
+        return self._load(q.all())
+
+    def list_for_review(
+        self,
+        *,
+        state_id: str | None = None,
+        district_id: str | None = None,
+        bank_id: str | None = None,
+        limit: int = 1000,
+    ) -> list[Alert]:
+        """Alerts no officer has labelled yet, inside the scope filter (the review queue's
+        candidates; ordering is the domain's job)."""
+        labelled = self._session.query(OutcomeModel.alert_id).filter(
+            OutcomeModel.source == "officer"
+        )
+        q = self._session.query(AlertModel).filter(AlertModel.id.not_in(labelled))
+        if bank_id is not None:
+            q = q.filter(AlertModel.scope_bank_id == bank_id)
+        elif district_id is not None:
+            q = q.filter(AlertModel.scope_district_id == district_id)
+        elif state_id is not None:
+            q = q.filter(AlertModel.scope_state_id == state_id)
+        return self._load(q.order_by(AlertModel.created_at.desc()).limit(limit).all())
+
     def save(self, alert: Alert) -> None:
         """Upsert alert + any new timeline entries."""
         existing = self._session.get(AlertModel, alert.id)
@@ -206,6 +269,8 @@ class SqlAlertRepo:
             existing.expires_at = alert.expires_at
             existing.forecast_id = alert.forecast_id
             existing.masked = alert.masked
+            existing.priority = alert.priority
+            existing.budget_rank = alert.budget_rank
 
         # Persist any new timeline entries
         existing_ids: set[str] = {
@@ -228,6 +293,20 @@ class SqlAlertRepo:
         self._session.flush()
 
 
+def _outcome_from_row(row: OutcomeModel) -> Outcome:
+    return Outcome(
+        id=row.id,
+        alert_id=row.alert_id,
+        result=row.result,
+        observation_id=row.observation_id,
+        decided_at=to_sim_time(row.decided_at),
+        source=row.source,
+        actor_id=row.actor_id,
+        location_id=row.location_id,
+        reason=row.reason,
+    )
+
+
 class SqlOutcomeRepo:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -240,9 +319,30 @@ class SqlOutcomeRepo:
                 result=outcome.result,
                 observation_id=outcome.observation_id,
                 decided_at=outcome.decided_at,
+                source=outcome.source,
+                actor_id=outcome.actor_id,
+                location_id=outcome.location_id,
+                reason=outcome.reason,
             )
         )
         self._session.flush()
+
+    def list_for_alert(self, alert_id: str) -> list[Outcome]:
+        rows = (
+            self._session.query(OutcomeModel)
+            .filter_by(alert_id=alert_id)
+            .order_by(OutcomeModel.decided_at)
+        )
+        return [_outcome_from_row(r) for r in rows]
+
+    def find_officer(self, alert_id: str, result: str, location_id: str | None) -> Outcome | None:
+        """The officer outcome already recorded for (alert, result, location), if any."""
+        row = (
+            self._session.query(OutcomeModel)
+            .filter_by(alert_id=alert_id, source="officer", result=result, location_id=location_id)
+            .first()
+        )
+        return _outcome_from_row(row) if row is not None else None
 
 
 # ---------------------------------------------------------------------------

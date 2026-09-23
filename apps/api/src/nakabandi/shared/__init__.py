@@ -25,6 +25,8 @@ from nakabandi.shared.events import (
     EventBus,
     ForecastGenerated,
     HandlerError,
+    ObservationIngested,
+    OutcomeRecorded,
 )
 from nakabandi.shared.ids import new_id
 from nakabandi.shared.infrastructure.db import Base, UTCDateTime
@@ -56,6 +58,8 @@ __all__ = [
     "ActionRecorded",
     "AlertRaised",
     "ForecastGenerated",
+    "ObservationIngested",
+    "OutcomeRecorded",
     "EventBus",
     "HandlerError",
     "ClusterMerged",

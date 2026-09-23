@@ -27,6 +27,8 @@ def build_service(request: Request, session: Session) -> AlertService:
         lien_context=state.lien_context_factory(session),
         validate_lien=state.validate_lien_factory(session),
         scope_lookup=state.scope_lookup_factory(session),
+        observations=state.observation_source_factory(session),
+        confirmed=state.confirmed_cashout,
         bus=state.event_bus_factory(session),
     )
 

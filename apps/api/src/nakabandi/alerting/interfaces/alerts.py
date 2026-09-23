@@ -6,6 +6,8 @@ GET /alerts respects scope (filtered by principal's scope).
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
@@ -13,8 +15,10 @@ from nakabandi.access import Principal, get_principal
 from nakabandi.alerting.domain.action import Action
 from nakabandi.alerting.domain.alert import Alert
 from nakabandi.alerting.domain.delivery import Delivery
+from nakabandi.alerting.domain.outcome import Outcome
 from nakabandi.alerting.interfaces.actions import ActionModel, action_view
 from nakabandi.alerting.interfaces.deps import build_service, get_uow
+from nakabandi.alerting.interfaces.outcomes import OutcomeView, outcome_view
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
@@ -63,6 +67,7 @@ class AlertDetailModel(AlertSummaryModel):
     timeline: list[TimelineEntryModel]
     deliveries: list[DeliveryModel]
     actions: list[ActionModel]
+    outcomes: list[OutcomeView]  # officer and reconciled rows; the alert shows both (DOC 3 S3)
     allowed_actions: list[str]
 
 
@@ -99,6 +104,7 @@ def _detail(
     alert: Alert,
     deliveries: list[Delivery],
     actions: list[Action],
+    outcomes: list[Outcome],
     allowed_actions: list[str],
 ) -> AlertDetailModel:
     tl = [
@@ -126,6 +132,7 @@ def _detail(
             for d in deliveries
         ],
         actions=[action_view(a) for a in actions],
+        outcomes=[outcome_view(o) for o in outcomes],
         allowed_actions=allowed_actions,
     )
 
@@ -139,16 +146,20 @@ def _detail(
 def list_alerts(
     request: Request,
     status: str | None = None,
+    view: Literal["queue", "backlog", "all", "review"] = "queue",
     cursor: str | None = None,
     limit: int = 50,
     principal: Principal = Depends(get_principal),
 ) -> PageModel:
-    """GET /api/v1/alerts — paginated; filtered by principal scope (LC-4 Page<AlertSummary>)."""
+    """GET /api/v1/alerts — paginated; filtered by principal scope (LC-4 Page<AlertSummary>).
+
+    `view`: "queue" (default) is what the alert budget shows; "backlog" the deferred alerts that
+    stay reachable; "all" both; "review" the officer's uncertainty-ordered feedback queue."""
     with get_uow(request) as uow:
         assert uow.session is not None
         svc = build_service(request, uow.session)
         alerts, next_cursor = svc.list_alerts(
-            principal, status=status, cursor=cursor, limit=min(limit, 200)
+            principal, status=status, view=view, cursor=cursor, limit=min(limit, 200)
         )
     return PageModel(items=[_summary(a) for a in alerts], next_cursor=next_cursor)
 
@@ -158,6 +169,7 @@ def _detail_for(svc, principal: Principal, alert: Alert) -> AlertDetailModel:  #
         alert,
         svc.list_deliveries_for_alert(alert.id),
         svc.list_actions(alert.id),
+        svc.list_outcomes(alert.id),
         svc.allowed_actions(principal, alert),
     )
 

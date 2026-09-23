@@ -95,6 +95,10 @@ class Alert:
     scope_state_id: str | None = None
     scope_district_id: str | None = None
     scope_bank_id: str | None = None
+    # DOC 3 M4 budget: priority = confidence x log1p(amount) x interception_probability, fixed at
+    # raise time; budget_rank is the alert's place (1 = first) in its queue for its shift.
+    priority: float = 0.0
+    budget_rank: int | None = None
     timeline: list[TimelineEntry] = field(default_factory=list)
 
     # ------------------------------------------------------------------

@@ -32,6 +32,7 @@ from nakabandi.alerting.interfaces.actions import router as actions_router
 from nakabandi.alerting.interfaces.alerts import router as alerts_router
 from nakabandi.alerting.interfaces.integrations import router as integrations_router
 from nakabandi.alerting.interfaces.outbox_view import router as outbox_router
+from nakabandi.alerting.interfaces.outcomes import router as outcomes_router
 from nakabandi.alerting.interfaces.stream import router as stream_router
 from nakabandi.analytics import AnalyticsService
 from nakabandi.analytics.interfaces.routers import router as analytics_router
@@ -61,7 +62,12 @@ from nakabandi.shared.infrastructure.db import (
     make_session_factory,
 )
 from nakabandi.shared.logging import configure_logging
-from nakabandi.wiring import GeoCatalogAdapter, ProjectionSourceAdapter
+from nakabandi.wiring import (
+    ConfirmedCashOutPending,
+    GeoCatalogAdapter,
+    ObservationSourceAdapter,
+    ProjectionSourceAdapter,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -132,7 +138,22 @@ def create_app() -> FastAPI:
                 ),
             ).register_projectors(bus)
 
-        app.state.bus_registrars = [register_analytics]
+        def register_reconcile(bus: EventBus, session: Session) -> None:
+            """ReconcileOutcome listens for ingested cash-outs (DOC 3 M4 on_observation)."""
+            AlertService(
+                session=session,
+                clock=app.state.clock,
+                policy=policy,
+                scheduler=app.state.scheduler,
+                role_permissions=app.state.role_permissions,
+                sse_hub=app.state.sse_hub,
+                observations=ObservationSourceAdapter(session),
+                bus=bus,
+            ).register_subscribers(bus)
+
+        app.state.bus_registrars = [register_analytics, register_reconcile]
+        app.state.observation_source_factory = ObservationSourceAdapter
+        app.state.confirmed_cashout = ConfirmedCashOutPending()  # swap for graph.apply_confirmed
 
         def event_bus_for(session: Session) -> EventBus:
             bus = EventBus()
@@ -249,6 +270,7 @@ def create_app() -> FastAPI:
     app.include_router(audit_router, prefix="/api/v1")
     app.include_router(alerts_router, prefix="/api/v1")
     app.include_router(actions_router, prefix="/api/v1")
+    app.include_router(outcomes_router, prefix="/api/v1")
     app.include_router(integrations_router, prefix="/api/v1")
     app.include_router(outbox_router, prefix="/api/v1")
     app.include_router(stream_router, prefix="/api/v1")

@@ -13,6 +13,7 @@ import structlog
 from nakabandi_contracts.enums import AlertStatus
 
 from nakabandi.alerting.application.ports import ActionRepo, AlertRepo
+from nakabandi.alerting.application.reconcile import ReconcileOutcome
 from nakabandi.alerting.domain.action import ActionStatus
 from nakabandi.alerting.domain.alert import Alert, TimelineEntry
 from nakabandi.shared import Clock, Policy, Scheduler, SimTime, new_id
@@ -158,6 +159,7 @@ class RebuildTimers:
         clock: Clock,
         review: ReviewLien | None = None,
         action_repo: ActionRepo | None = None,
+        reconcile: ReconcileOutcome | None = None,
     ) -> None:
         self._repo = alert_repo
         self._escalate = escalate
@@ -166,6 +168,7 @@ class RebuildTimers:
         self._clock = clock
         self._review = review
         self._actions = action_repo
+        self._reconcile = reconcile
 
     def run(self) -> int:
         """Rebuild timers for all open/escalated alerts. Returns count rebuilt."""
@@ -186,6 +189,12 @@ class RebuildTimers:
             self._expire.schedule(alert.id, alert.expires_at)
 
             rebuilt += 1
+
+        # Miss timers cover every alert still without a reconciled outcome, whatever its status: an
+        # expired or closed alert still gets its miss (or its late hit) decided.
+        if self._reconcile is not None:
+            for alert in self._repo.list_awaiting_outcome():
+                self._reconcile.schedule_miss(alert)
 
         # Lien-review timers live on actions, not on alerts (an actioned alert is not "open")
         if self._review is not None and self._actions is not None:

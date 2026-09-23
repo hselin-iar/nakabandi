@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, CheckConstraint, ForeignKey, Index, Integer, String
+from sqlalchemy import JSON, CheckConstraint, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nakabandi.shared import Base, UTCDateTime
@@ -48,6 +48,8 @@ class AlertModel(Base):
     scope_state_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     scope_district_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     scope_bank_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    priority: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    budget_rank: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class AlertTimelineModel(Base):
@@ -74,6 +76,10 @@ class OutcomeModel(Base):
     result: Mapped[str] = mapped_column(String, nullable=False)
     observation_id: Mapped[str | None] = mapped_column(String, nullable=True)
     decided_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    source: Mapped[str] = mapped_column(String, nullable=False, default="reconciled", index=True)
+    actor_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    location_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    reason: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class ActionModel(Base):

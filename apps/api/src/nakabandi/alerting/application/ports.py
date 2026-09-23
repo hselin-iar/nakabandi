@@ -19,6 +19,19 @@ class AlertRepo(Protocol):
 
     def list_open(self) -> list[Any]: ...
 
+    def list_queue(self, district_id: str | None, start: Any, end: Any) -> list[Any]: ...
+
+    def list_awaiting_outcome(self, target_id: str | None = None) -> list[Any]: ...
+
+    def list_for_review(
+        self,
+        *,
+        state_id: str | None = None,
+        district_id: str | None = None,
+        bank_id: str | None = None,
+        limit: int = 1000,
+    ) -> list[Any]: ...
+
     def list_by_scope(
         self,
         *,
@@ -26,6 +39,7 @@ class AlertRepo(Protocol):
         district_id: str | None = None,
         bank_id: str | None = None,
         status: str | None = None,
+        view: str = "all",
         cursor: str | None = None,
         limit: int = 50,
     ) -> tuple[list[Any], str | None]:
@@ -39,6 +53,33 @@ class OutcomeRepo(Protocol):
     """Read/write access to the outcomes table."""
 
     def save(self, outcome: Any) -> None: ...
+    def list_for_alert(self, alert_id: Id) -> list[Any]: ...
+    def find_officer(self, alert_id: Id, result: str, location_id: Id | None) -> Any | None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ObservedCashOut:
+    """An ingested cash-out, as ReconcileOutcome needs it."""
+
+    id: Id
+    location_id: Id
+    event_at: Any  # SimTime
+
+
+class ObservationSource(Protocol):
+    """Where ReconcileOutcome looks up what an ObservationIngested event (IDs only, LC-3) refers
+    to. Implemented over intake in main.py's wiring."""
+
+    def observations(self, observation_ids: list[Id]) -> list[ObservedCashOut]: ...
+
+
+class ConfirmedCashOutPort(Protocol):
+    """graph.apply_confirmed (DOC 3 S3): an officer-confirmed cash-out location becomes an
+    observation with source="police_report" at `at`, so the cluster's affinity updates at once."""
+
+    def apply_confirmed(self, cluster_id: Id, location_id: Id, at: Any) -> bool:
+        """True if the graph accepted it; False if this process cannot apply it (yet)."""
+        ...
 
 
 class DirectoryPort(Protocol):
@@ -94,6 +135,10 @@ class LienContextPort(Protocol):
         ...
 
     def complaint_ref(self, complaint_id: Id) -> str | None: ...
+
+    def complaint_summary(self, complaint_id: Id) -> Any | None:
+        """Category and amount_paise of a complaint (an intake ComplaintSummary), or None."""
+        ...
 
     def traced_accounts(self, complaint_id: Id) -> list[Any]:
         """Every account the complaint reached: objects with bank_id and account_ref."""
