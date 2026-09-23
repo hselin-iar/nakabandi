@@ -1,8 +1,8 @@
 # TRACK B — Algorithms & Simulator
 OWNER:            Algo dev + coding agent
-CURRENT_STEP:     B5 — Live Runner & Control API
-LAST_COMPLETED:   B4 — Forecast v0 (MP3 / Sync 3 confirmed)
-STATUS:           ACTIVE
+CURRENT_STEP:     B6 — Training Models (Batch)
+LAST_COMPLETED:   B5 — Live Runner & Control API
+STATUS:           CHECKPOINT
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 7 — after B5 (live runner) and A5; gates C8 demo console (DOC4 §4.1a)
 
@@ -25,8 +25,26 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [B4] — normalise() uses softmax, not simple sum-normalise. This is important: raw heuristic scores can be negative, so dividing by the sum would fail. Softmax maps arbitrary reals to (0,1) safely.
 [B4] — MixtureTimingModel.fit EM initialises by splitting at the log-delay median. Must guard against empty sub-partitions (all samples above or below split) and std=0 (use max(std, 0.05)).
 [B4/MP3] — Sync 3 confirmed by Systems Lead; real facades (graph, forecast, interception) verified against golden pipeline test (297/297 green, 18 contracts); merged feat/track-a into feat/track-b cleanly (no conflicts, 84 files, 5127 insertions).
+[B5] — control_api module-level state (_runner, _world, _clock) must be set by the CLI before uvicorn starts; set_runner() / set_store() are the injection points. FastAPI TestClient shares the same module-level globals, so fixture order matters.
+[B5] — _frac_day_to_iso in batches.py is an alias for frac_day_to_dt which returns datetime, not str; batch functions (to_complaint_batch etc.) take datetime for sim_time.
+[B5] — District.lat/lon (not centre_lat/centre_lon); Registry.districts is list[District] not dict — use next() linear scan.
+[B5] — TruthStore.save_cluster uses OR IGNORE prefix (idempotent on re-injection of same cluster_id). truth_store.py noqa: TID251 on datetime.now() calls — world-sim has no injected Clock, it IS the clock boundary.
+[B5] — TimingConfig validates mixture weights sum to 1.0; test fixture needs both fast+slow components summing to 1.0.
 
-## B4 — Done When Evidence (DOC4)
+## B5 — Done When Evidence (DOC4)
+- [x] L1 LiveRunner.pause() → PAUSED; resume() → RUNNING; speed clamp [1,60] tested
+- [x] L2 inject_cluster while paused: appends to world.clusters; truth_store record verified
+- [x] L3 TruthStore: begin_run/save_complaints/save_cashouts/get_complaint_truth/get_cashouts_in_range/save_cluster/get_clusters all round-trip
+- [x] L4 Control API /control/status returns correct shape (state, sim_time, speed, seed, scenario, counts, last_error)
+- [x] L5 Control API /control/speed rejects factor<1 and >60 (422)
+- [x] L6 Control API /control/inject-cluster returns 409 when IDLE
+- [x] L7 guided_demo_script() ascending elapsed_h; history_warmup/inject_cluster/outcome kinds present
+- [x] L8 ClockState shared: speed mutation visible to /control/status
+- [x] L9 TruthStore.reset() wipes all tables
+- [x] L10 Oracle API /oracle/complaints/{ref}/truth returns 404 for unknown ref
+- [x] `npm run ci` green — 323/323 passed, 18 contracts kept, 0 pyright errors
+- [x] Committed on feat/track-b at 3d17f51; pushed to origin
+
 - [x] Probabilities sum to 1 ± 1e-6 at every level — asserted in GenerateForecast + 3 test cases (F10)
 - [x] Cell probability equals sum of its location probs — tested exactly (F3)
 - [x] Abstention monotone in threshold (F4)
