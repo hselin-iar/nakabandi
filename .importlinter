@@ -326,3 +326,28 @@ forbidden_modules =
     nakabandi
     worldsim
 allow_indirect_imports = True
+
+# Row 8: hidden-truth firewall — only evaluation may import the oracle client.
+# Cross-track learning [A1→B7]: evaluation/oracle_client.py must be locked down
+# so no other module (not even other evaluation sub-modules via re-export) can sneak
+# an oracle import past the boundary.
+[importlinter:contract:oracle-firewall]
+name = only evaluation may import the oracle client
+type = forbidden
+source_modules =
+    nakabandi.intake
+    nakabandi.graph
+    nakabandi.forecast
+    nakabandi.interception
+    nakabandi.alerting
+    nakabandi.casework
+    nakabandi.access
+    nakabandi.audit
+    nakabandi.geo
+    nakabandi.analytics
+    nakabandi.pipeline
+    nakabandi.shared
+    nakabandi.main
+forbidden_modules =
+    nakabandi.evaluation.oracle_client
+allow_indirect_imports = True

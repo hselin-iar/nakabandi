@@ -540,9 +540,11 @@ name = "nakabandi-workspace"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "joblib" },
     { name = "nakabandi-api" },
     { name = "nakabandi-contracts" },
     { name = "nakabandi-world-sim" },
+    { name = "scikit-learn" },
 ]
 
 [package.dev-dependencies]
@@ -562,9 +564,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "joblib", specifier = ">=1.6.0" },
     { name = "nakabandi-api", editable = "apps/api" },
     { name = "nakabandi-contracts", editable = "packages/contracts" },
     { name = "nakabandi-world-sim", editable = "apps/world-sim" },
+    { name = "scikit-learn", specifier = ">=1.9.1" },
 ]
 
 [package.metadata.requires-dev]
