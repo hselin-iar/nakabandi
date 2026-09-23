@@ -1,8 +1,8 @@
 /**
- * providers.tsx — wraps the app in QueryClient, Router, Toast and Auth providers.
- * DOC 3 Web App Shell: app/providers.tsx (QueryClient, router, toast, stream provider placeholder)
+ * providers.tsx — wraps the app in QueryClient, Router, Toast, Auth and Stream providers.
+ * DOC 3 Web App Shell: app/providers.tsx (QueryClient, router, toast, stream provider)
  *
- * STUB STRATEGY (C1): stream provider is a placeholder (wired in C3).
+ * C3: StreamProviderPlaceholder replaced with the real SSE StreamProvider.
  */
 
 import React from "react";
@@ -10,6 +10,7 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./auth/AuthContext";
+import { StreamProvider } from "../shared/stream/useStream";
 
 /** TanStack Query client with sensible defaults for the app. */
 const queryClient = new QueryClient({
@@ -29,20 +30,12 @@ const queryClient = new QueryClient({
   },
 });
 
-/**
- * StreamProviderPlaceholder — will be replaced by the real SSE provider in C3.
- * For now it is a pass-through so the component tree is already shaped correctly.
- */
-function StreamProviderPlaceholder({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
-}
-
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <StreamProviderPlaceholder>
+          <StreamProvider>
             {children}
             {/* Toast container — positioned top-right, accessible */}
             <Toaster
@@ -56,9 +49,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 },
               }}
             />
-          </StreamProviderPlaceholder>
+          </StreamProvider>
         </AuthProvider>
       </QueryClientProvider>
     </BrowserRouter>
   );
 }
+
