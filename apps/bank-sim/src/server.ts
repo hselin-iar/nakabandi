@@ -118,7 +118,11 @@ async function main(): Promise<void> {
   });
 }
 
-main().catch((err: unknown) => {
-  console.error("[bank-sim] Startup failed:", err);
-  process.exit(1);
-});
+// Start listening only when run as the program (`tsx src/server.ts`), never when a test imports
+// createApp(): otherwise every test file that imports this module tries to bind the same port.
+if (require.main === module) {
+  main().catch((err: unknown) => {
+    console.error("[bank-sim] Startup failed:", err);
+    process.exit(1);
+  });
+}
