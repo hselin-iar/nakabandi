@@ -11,19 +11,20 @@ export default defineConfig({
     setupFiles: ["src/shared/test/setup.ts"],
   },
   server: {
-    // Proxy /api, /sim-control and /bank to the backend processes when running locally
-    // (see README "Running the full stack locally"); each must be started separately.
+    // Proxy /api, /sim-control and /bank to the backend processes when running locally.
+    // Ports avoid conflicts with other projects: API on 8001 (not 8000), etc.
+    // docker-compose.yml maps container:8000 → host:8001 for exactly this reason.
     proxy: {
       "/api": {
-        target: "http://localhost:8000",
+        target: "http://localhost:8001",
         changeOrigin: true,
       },
       "/sim-control": {
-        target: "http://localhost:8100",
+        target: "http://localhost:8101",
         changeOrigin: true,
       },
       "/bank": {
-        target: "http://localhost:4000",
+        target: "http://localhost:4001",
         changeOrigin: true,
       },
     },
