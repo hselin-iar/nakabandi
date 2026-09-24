@@ -22,6 +22,7 @@ import { Suspense, lazy } from "react";
 // ---------------------------------------------------------------------------
 
 const AlertsInbox = lazy(() => import("../features/alerts/AlertsInbox"));
+const DashboardPage = lazy(() => import("../features/dashboard/DashboardPage"));
 const MapPage = lazy(() => import("../features/map/MapPage"));
 const ClustersPage = lazy(() => import("../features/clusters/ClustersPage"));
 const CasesPage = lazy(() => import("../features/cases/CasesPage"));
@@ -65,7 +66,7 @@ export function AppRoutes() {
             <Shell>
               <Suspense fallback={<PageLoading />}>
                 <Routes>
-                  <Route index element={<Navigate to="/alerts" replace />} />
+                  <Route index element={<DashboardPage />} />
 
                   <Route path="alerts" element={<AlertsInbox />} />
                   <Route path="alerts/:id" element={<AlertsInbox />} />
