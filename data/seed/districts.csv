@@ -1,0 +1,158 @@
+district_id,district_name,state_code,state_name,division,headquarters,approx_population_2011,area_sq_km,urbanisation_level,cybercrime_complaint_weight
+HR-AMB,Ambala,HR,Haryana,Ambala,Ambala,1136784,1574,medium,0.0388
+HR-BHI,Bhiwani,HR,Haryana,Rohtak,Bhiwani,1126833,3432,low,0.0384
+HR-CHA,Charkhi Dadri,HR,Haryana,Rohtak,Charkhi Dadri,502276,1370,low,0.0171
+HR-FAR,Faridabad,HR,Haryana,Faridabad,Faridabad,1798954,742,high,0.0982
+HR-FAT,Fatehabad,HR,Haryana,Hisar,Fatehabad,941522,2538,low,0.0321
+HR-GUR,Gurugram,HR,Haryana,Gurugram,Gurugram,1514085,1253,high,0.1293
+HR-HIS,Hisar,HR,Haryana,Hisar,Hisar,1112815,2633,medium,0.038
+HR-JHA,Jhajjar,HR,Haryana,Rohtak,Jhajjar,956907,1834,low,0.0326
+HR-JIN,Jind,HR,Haryana,Hisar,Jind,1332042,2702,low,0.0454
+HR-KAI,Kaithal,HR,Haryana,Karnal,Kaithal,1072861,2317,low,0.0366
+HR-KAR,Karnal,HR,Haryana,Karnal,Karnal,1506323,2520,medium,0.0822
+HR-KUR,Kurukshetra,HR,Haryana,Ambala,Kurukshetra,964231,1530,medium,0.0329
+HR-MAH,Mahendragarh,HR,Haryana,Gurugram,Narnaul,921680,1859,low,0.0314
+HR-NUH,Nuh,HR,Haryana,Faridabad,Nuh,1089406,1874,low,0.0372
+HR-PAL,Palwal,HR,Haryana,Faridabad,Palwal,1040493,1359,low,0.0355
+HR-PAN,Panchkula,HR,Haryana,Ambala,Panchkula,558890,898,medium,0.0305
+HR-PAT,Panipat,HR,Haryana,Karnal,Panipat,1202811,1268,medium,0.041
+HR-REW,Rewari,HR,Haryana,Gurugram,Rewari,896129,1582,low,0.0306
+HR-ROH,Rohtak,HR,Haryana,Rohtak,Rohtak,1058683,1745,medium,0.0361
+HR-SIR,Sirsa,HR,Haryana,Hisar,Sirsa,1295114,4277,low,0.0442
+HR-SON,Sonipat,HR,Haryana,Rohtak,Sonipat,1480080,2122,medium,0.0505
+HR-YAM,Yamunanagar,HR,Haryana,Ambala,Yamunanagar,1214162,1768,medium,0.0414
+JH-BOK,Bokaro,JH,Jharkhand,North Chotanagpur,Bokaro Steel City,2062330,2883,medium,0.0777
+JH-CHA,Chatra,JH,Jharkhand,North Chotanagpur,Chatra,1042886,3718,low,0.0246
+JH-DEO,Deoghar,JH,Jharkhand,Santhal Pargana,Deoghar,1492073,2477,low,0.0562
+JH-DHA,Dhanbad,JH,Jharkhand,North Chotanagpur,Dhanbad,2684487,2040,high,0.1011
+JH-DUM,Dumka,JH,Jharkhand,Santhal Pargana,Dumka,1321442,3761,low,0.0311
+JH-ESI,East Singhbhum,JH,Jharkhand,Kolhan,Jamshedpur,2293919,3562,medium,0.0864
+JH-GAR,Garhwa,JH,Jharkhand,Palamu,Garhwa,1322784,4093,low,0.0311
+JH-GIR,Giridih,JH,Jharkhand,North Chotanagpur,Giridih,2445474,4854,low,0.0576
+JH-GOD,Godda,JH,Jharkhand,Santhal Pargana,Godda,1313551,2266,low,0.0309
+JH-GUM,Gumla,JH,Jharkhand,South Chotanagpur,Gumla,1025213,5360,low,0.0241
+JH-HAZ,Hazaribagh,JH,Jharkhand,North Chotanagpur,Hazaribagh,1734495,3555,low,0.0408
+JH-JAM,Jamtara,JH,Jharkhand,Santhal Pargana,Jamtara,791042,1811,low,0.0186
+JH-KHU,Khunti,JH,Jharkhand,South Chotanagpur,Khunti,531885,2535,low,0.0125
+JH-KOD,Koderma,JH,Jharkhand,North Chotanagpur,Kodarma,716259,1655,low,0.0169
+JH-LAT,Latehar,JH,Jharkhand,Palamu,Latehar,726978,4291,low,0.0171
+JH-LOH,Lohardaga,JH,Jharkhand,South Chotanagpur,Lohardaga,461790,1502,low,0.0109
+JH-PAK,Pakur,JH,Jharkhand,Santhal Pargana,Pakur,900422,1811,low,0.0212
+JH-PAL,Palamu,JH,Jharkhand,Palamu,Medininagar,1939869,4393,low,0.0457
+JH-RAM,Ramgarh,JH,Jharkhand,North Chotanagpur,Ramgarh Cantonment,949443,1341,medium,0.0224
+JH-RAN,Ranchi,JH,Jharkhand,South Chotanagpur,Ranchi,2914253,5097,medium,0.1714
+JH-SAH,Sahibganj,JH,Jharkhand,Santhal Pargana,Sahibganj,1150567,2063,low,0.0271
+JH-SKH,Saraikela-Kharsawan,JH,Jharkhand,Kolhan,Saraikela,1065056,2657,low,0.0251
+JH-SIM,Simdega,JH,Jharkhand,South Chotanagpur,Simdega,599578,3774,low,0.0141
+JH-WSI,West Singhbhum,JH,Jharkhand,Kolhan,Chaibasa,1502338,7224,low,0.0354
+MH-AHM,Ahmednagar,MH,Maharashtra,Nashik,Ahmednagar,4543159,17048,low,0.0267
+MH-AKO,Akola,MH,Maharashtra,Amravati,Akola,1813906,5428,medium,0.0107
+MH-AMR,Amravati,MH,Maharashtra,Amravati,Amravati,2888445,12235,medium,0.017
+MH-AUR,Aurangabad,MH,Maharashtra,Aurangabad,Aurangabad,3701282,10100,medium,0.0349
+MH-BEE,Beed,MH,Maharashtra,Aurangabad,Beed,2585049,10693,low,0.0152
+MH-BHA,Bhandara,MH,Maharashtra,Nagpur,Bhandara,1200334,3717,low,0.01
+MH-BUL,Buldhana,MH,Maharashtra,Amravati,Buldhana,2586258,9661,low,0.0152
+MH-CHA,Chandrapur,MH,Maharashtra,Nagpur,Chandrapur,2204307,11443,medium,0.013
+MH-DHU,Dhule,MH,Maharashtra,Nashik,Dhule,2050862,7195,low,0.0121
+MH-GAD,Gadchiroli,MH,Maharashtra,Nagpur,Gadchiroli,1072942,14412,low,0.01
+MH-GON,Gondia,MH,Maharashtra,Nagpur,Gondia,1322507,5234,low,0.01
+MH-HIN,Hingoli,MH,Maharashtra,Aurangabad,Hingoli,1177345,4526,low,0.01
+MH-JAL,Jalgaon,MH,Maharashtra,Nashik,Jalgaon,4229917,11765,medium,0.0249
+MH-JAA,Jalna,MH,Maharashtra,Aurangabad,Jalna,1959046,7687,low,0.0115
+MH-KOL,Kolhapur,MH,Maharashtra,Pune,Kolhapur,3876001,7685,medium,0.0228
+MH-LAT,Latur,MH,Maharashtra,Aurangabad,Latur,2454196,7157,low,0.0144
+MH-MCT,Mumbai City,MH,Maharashtra,Konkan,Mumbai,3085411,157,high,0.0454
+MH-MSB,Mumbai Suburban,MH,Maharashtra,Konkan,Bandra,9356962,446,high,0.1377
+MH-NAG,Nagpur,MH,Maharashtra,Nagpur,Nagpur,4653570,9892,high,0.0438
+MH-NAN,Nanded,MH,Maharashtra,Aurangabad,Nanded,3361292,10528,low,0.0198
+MH-NAR,Nandurbar,MH,Maharashtra,Nashik,Nandurbar,1648295,5955,low,0.01
+MH-NAS,Nashik,MH,Maharashtra,Nashik,Nashik,6107187,15582,medium,0.0575
+MH-OSM,Osmanabad,MH,Maharashtra,Aurangabad,Osmanabad,1657576,7569,low,0.01
+MH-PAL,Palghar,MH,Maharashtra,Konkan,Palghar,2990116,5344,high,0.0176
+MH-PAR,Parbhani,MH,Maharashtra,Aurangabad,Parbhani,1836086,6251,medium,0.0108
+MH-PUN,Pune,MH,Maharashtra,Pune,Pune,9429408,15643,high,0.1388
+MH-RAI,Raigad,MH,Maharashtra,Konkan,Alibag,2634200,7152,medium,0.0155
+MH-RAT,Ratnagiri,MH,Maharashtra,Konkan,Ratnagiri,1615069,8208,low,0.01
+MH-SAN,Sangli,MH,Maharashtra,Pune,Sangli,2822143,8578,low,0.0166
+MH-SAT,Satara,MH,Maharashtra,Pune,Satara,3003741,10480,low,0.0177
+MH-SIN,Sindhudurg,MH,Maharashtra,Konkan,Oros,849651,5207,low,0.01
+MH-SOL,Solapur,MH,Maharashtra,Pune,Solapur,4317756,14895,medium,0.0254
+MH-THA,Thane,MH,Maharashtra,Konkan,Thane,8070032,4214,high,0.1187
+MH-WAR,Wardha,MH,Maharashtra,Nagpur,Wardha,1300774,6310,medium,0.01
+MH-WAS,Washim,MH,Maharashtra,Amravati,Washim,1197160,5150,low,0.01
+MH-YAV,Yavatmal,MH,Maharashtra,Amravati,Yavatmal,2772348,13582,low,0.0163
+UP-AGR,Agra,UP,Uttar Pradesh,Agra,Agra,4418797,4041,medium,0.028
+UP-ALI,Aligarh,UP,Uttar Pradesh,Aligarh,Aligarh,3673889,3788,medium,0.0145
+UP-AMB,Ambedkar Nagar,UP,Uttar Pradesh,Ayodhya,Akbarpur,2397888,2350,low,0.01
+UP-AME,Amethi,UP,Uttar Pradesh,Ayodhya,Gauriganj,2050133,2329,low,0.01
+UP-AMR,Amroha,UP,Uttar Pradesh,Moradabad,Amroha,1840221,2249,low,0.01
+UP-AUR,Auraiya,UP,Uttar Pradesh,Kanpur,Auraiya,1379545,2016,low,0.01
+UP-AYO,Ayodhya,UP,Uttar Pradesh,Ayodhya,Ayodhya,2470996,2522,low,0.01
+UP-AZA,Azamgarh,UP,Uttar Pradesh,Azamgarh,Azamgarh,4613913,4054,low,0.0183
+UP-BAG,Bagpat,UP,Uttar Pradesh,Meerut,Baghpat,1303048,1321,low,0.01
+UP-BAH,Bahraich,UP,Uttar Pradesh,Devipatan,Bahraich,3487731,2981,low,0.0138
+UP-BAL,Ballia,UP,Uttar Pradesh,Azamgarh,Ballia,3239774,3349,low,0.0128
+UP-BAR,Balrampur,UP,Uttar Pradesh,Devipatan,Balrampur,2148665,4408,low,0.01
+UP-BAN,Banda,UP,Uttar Pradesh,Chitrakoot,Banda,1799410,4402,low,0.01
+UP-BAI,Barabanki,UP,Uttar Pradesh,Ayodhya,Barabanki,3260699,4120,low,0.0129
+UP-BAY,Bareilly,UP,Uttar Pradesh,Bareilly,Bareilly,4448359,2688,medium,0.0176
+UP-BAS,Basti,UP,Uttar Pradesh,Basti,Basti,2464464,4561,low,0.01
+UP-BHA,Bhadohi,UP,Uttar Pradesh,Mirzapur,Bhadohi,1715183,1646,low,0.01
+UP-BIJ,Bijnor,UP,Uttar Pradesh,Moradabad,Bijnor,3682713,4262,low,0.0146
+UP-BUD,Budaun,UP,Uttar Pradesh,Bareilly,Budaun,3127621,4234,low,0.0124
+UP-BUL,Bulandshahr,UP,Uttar Pradesh,Meerut,Bulandshahr,3499171,4441,low,0.0139
+UP-CHA,Chandauli,UP,Uttar Pradesh,Varanasi,Chandauli,1952756,2541,low,0.01
+UP-CHI,Chitrakoot,UP,Uttar Pradesh,Chitrakoot,Chitrakoot,991730,3216,low,0.01
+UP-DEO,Deoria,UP,Uttar Pradesh,Gorakhpur,Deoria,3100946,2540,low,0.0123
+UP-ETA,Etah,UP,Uttar Pradesh,Aligarh,Etah,1774480,2431,low,0.01
+UP-ETH,Etawah,UP,Uttar Pradesh,Kanpur,Etawah,1581810,2311,low,0.01
+UP-FAR,Farrukhabad,UP,Uttar Pradesh,Kanpur,Fatehgarh,1885204,2181,low,0.01
+UP-FAT,Fatehpur,UP,Uttar Pradesh,Prayagraj,Fatehpur,2632733,4152,low,0.0104
+UP-FIR,Firozabad,UP,Uttar Pradesh,Agra,Firozabad,2498156,2407,medium,0.01
+UP-GBN,Gautam Buddha Nagar,UP,Uttar Pradesh,Meerut,Greater Noida,1648115,720,high,0.0163
+UP-GHA,Ghaziabad,UP,Uttar Pradesh,Meerut,Ghaziabad,3343334,1179,high,0.0212
+UP-GHR,Ghazipur,UP,Uttar Pradesh,Varanasi,Ghazipur,3620268,3377,low,0.0143
+UP-GON,Gonda,UP,Uttar Pradesh,Devipatan,Gonda,3433919,4003,low,0.0136
+UP-GOR,Gorakhpur,UP,Uttar Pradesh,Gorakhpur,Gorakhpur,4440895,3321,low,0.0176
+UP-HAM,Hamirpur,UP,Uttar Pradesh,Chitrakoot,Hamirpur,1104285,4021,low,0.01
+UP-HAP,Hapur,UP,Uttar Pradesh,Meerut,Hapur,1338311,649,high,0.01
+UP-HAR,Hardoi,UP,Uttar Pradesh,Lucknow,Hardoi,4092845,5986,low,0.0162
+UP-HAT,Hathras,UP,Uttar Pradesh,Aligarh,Hathras,1564708,1840,low,0.01
+UP-JAL,Jalaun,UP,Uttar Pradesh,Jhansi,Orai,1689974,4565,low,0.01
+UP-JAU,Jaunpur,UP,Uttar Pradesh,Varanasi,Jaunpur,4494204,4038,low,0.0178
+UP-JHA,Jhansi,UP,Uttar Pradesh,Jhansi,Jhansi,1998603,5024,medium,0.01
+UP-KAN,Kannauj,UP,Uttar Pradesh,Kanpur,Kannauj,1656616,2093,low,0.01
+UP-KND,Kanpur Dehat,UP,Uttar Pradesh,Kanpur,Akbarpur,1796184,3021,low,0.01
+UP-KNP,Kanpur Nagar,UP,Uttar Pradesh,Kanpur,Kanpur,4581268,3155,high,0.029
+UP-KAS,Kasganj,UP,Uttar Pradesh,Aligarh,Kasganj,1436719,1955,low,0.01
+UP-KAU,Kaushambi,UP,Uttar Pradesh,Prayagraj,Manjhanpur,1599596,1779,low,0.01
+UP-KUS,Kushinagar,UP,Uttar Pradesh,Gorakhpur,Padarauna,4021243,2905,low,0.0159
+UP-LAK,Lakhimpur Kheri,UP,Uttar Pradesh,Lucknow,Kheri,3564544,7680,low,0.0141
+UP-LAL,Lalitpur,UP,Uttar Pradesh,Jhansi,Lalitpur,1221592,5039,low,0.01
+UP-LKO,Lucknow,UP,Uttar Pradesh,Lucknow,Lucknow,4589838,2528,high,0.0452
+UP-MAH,Maharajganj,UP,Uttar Pradesh,Gorakhpur,Maharajganj,2684703,2952,low,0.0106
+UP-MAA,Mahoba,UP,Uttar Pradesh,Chitrakoot,Mahoba,875958,3144,low,0.01
+UP-MAI,Mainpuri,UP,Uttar Pradesh,Agra,Mainpuri,1868529,2760,low,0.01
+UP-MAT,Mathura,UP,Uttar Pradesh,Agra,Mathura,2547184,3340,medium,0.0101
+UP-MAU,Mau,UP,Uttar Pradesh,Azamgarh,Mau,2205968,1713,low,0.01
+UP-MEE,Meerut,UP,Uttar Pradesh,Meerut,Meerut,3443689,2559,medium,0.0218
+UP-MIR,Mirzapur,UP,Uttar Pradesh,Mirzapur,Mirzapur,2496970,4405,low,0.01
+UP-MOR,Moradabad,UP,Uttar Pradesh,Moradabad,Moradabad,3126507,2233,medium,0.0124
+UP-MUZ,Muzaffarnagar,UP,Uttar Pradesh,Saharanpur,Muzaffarnagar,2869934,2742,medium,0.0114
+UP-PIL,Pilibhit,UP,Uttar Pradesh,Bareilly,Pilibhit,2031007,3686,low,0.01
+UP-PRA,Pratapgarh,UP,Uttar Pradesh,Prayagraj,Pratapgarh,3209141,3717,low,0.0127
+UP-PRJ,Prayagraj,UP,Uttar Pradesh,Prayagraj,Prayagraj,5954391,5482,low,0.0377
+UP-RAE,Rae Bareli,UP,Uttar Pradesh,Lucknow,Rae Bareli,2903507,3937,low,0.0115
+UP-RAM,Rampur,UP,Uttar Pradesh,Moradabad,Rampur,2335819,2367,low,0.01
+UP-SAH,Saharanpur,UP,Uttar Pradesh,Saharanpur,Saharanpur,3466382,3689,medium,0.0137
+UP-SAM,Sambhal,UP,Uttar Pradesh,Moradabad,Bahjoi,1578213,1015,medium,0.01
+UP-SAN,Sant Kabir Nagar,UP,Uttar Pradesh,Basti,Khalilabad,2199774,2390,low,0.01
+UP-SHA,Shahjahanpur,UP,Uttar Pradesh,Bareilly,Shahjahanpur,3006538,4388,low,0.0119
+UP-SHI,Shamli,UP,Uttar Pradesh,Saharanpur,Shamli,1273578,1266,medium,0.01
+UP-SHR,Shravasti,UP,Uttar Pradesh,Devipatan,Bhinga,1117361,1640,low,0.01
+UP-SID,Siddharthnagar,UP,Uttar Pradesh,Basti,Siddharthnagar,2559297,2895,low,0.0101
+UP-SIT,Sitapur,UP,Uttar Pradesh,Lucknow,Sitapur,4483992,5743,low,0.0178
+UP-SON,Sonbhadra,UP,Uttar Pradesh,Mirzapur,Robertsganj,1862559,6905,low,0.01
+UP-SUL,Sultanpur,UP,Uttar Pradesh,Ayodhya,Sultanpur,2249036,2457,low,0.01
+UP-UNN,Unnao,UP,Uttar Pradesh,Lucknow,Unnao,3108367,4558,low,0.0123
+UP-VAR,Varanasi,UP,Uttar Pradesh,Varanasi,Varanasi,3676841,1535,medium,0.0233

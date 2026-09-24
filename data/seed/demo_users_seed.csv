@@ -1,0 +1,8 @@
+user_id,name,role,username,demo_password,scope_state_code,scope_district_id,scope_bank_id,locale,notes
+USR-001,Aarav Kulkarni,i4c_analyst,analyst1,demo-pass-analyst,,,,en,All-India scope (I4C). Fictional demo user.
+USR-002,Ritu Verma,state_investigator,inv_up1,demo-pass-investigator,UP,,,hi,Scoped to UP. Fictional demo user.
+USR-003,Shadab Qureshi,district_officer,officer_lko,demo-pass-officer,UP,UP-LKO,,en,Scoped to Lucknow district. Fictional demo user.
+USR-004,Meena Iyer,bank_nodal,nodal_sbi,demo-pass-nodal,,,BNK-001,en,Scoped to SBI only. Fictional demo user.
+USR-005,Kabir Anand,demo_operator,operator1,demo-pass-operator,,,,en,Demo console / sim control. Fictional demo user.
+USR-006,Nandini Bhosale,admin,admin1,demo-pass-admin,,,,en,Full access. Fictional demo user.
+USR-007,Devendra Prasad,supervisor,supervisor_up,demo-pass-supervisor,UP,,,hi,Escalation testing; same permissions as state_investigator. Fictional demo user.
