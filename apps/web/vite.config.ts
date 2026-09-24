@@ -29,6 +29,7 @@ export default defineConfig({
     },
   },
   build: {
+    cssMinify: "esbuild",
     // Route-level code splitting (DOC 3 performance)
     rollupOptions: {
       output: {
