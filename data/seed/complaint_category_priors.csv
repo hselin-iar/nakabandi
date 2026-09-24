@@ -1,0 +1,17 @@
+category_id,category_label_en,category_label_hi,share_pct,typical_amount_min_paise,typical_amount_max_paise,typical_amount_median_paise,ends_in_cashout,typical_layer_count,typical_cashout_channels,notes
+upi_phishing,UPI Phishing / OTP Fraud,यूपीआई फिशिंग / ओटीपी धोखाधड़ी,22.0,10000,20000000,5000000,true,3,"ATM,AGENT",Share is analytical estimate (no official category split published); amounts assumed from I4C/press trend reporting
+digital_arrest,Digital Arrest / Fake LEA Impersonation,डिजिटल अरेस्ट / फर्जी पुलिस धोखाधड़ी,6.4,5000000,200000000,10000000,true,5,"ATM,BRANCH","Share REAL: RS USQ 1505 (12.03.2025) 123,672 incidents of 1,918,865 financial-fraud complaints in 2024 (LS USQ 344, 22.07.2025); 2024 defrauded amount Rs 1,935.51 crore (avg ~Rs 1.56 lakh)"
+investment_fraud,Fake Investment / Trading App Fraud,फर्जी निवेश / ट्रेडिंग ऐप धोखाधड़ी,14.0,5000000,500000000,25000000,false,4,BRANCH,Estimated share; typically largest by value in I4C reporting; often stays digital (crypto/pipes) - ends_in_cashout false per spec guidance
+loan_fraud,Fake Loan App / Advance Fee Fraud,फर्जी लोन ऐप / अग्रिम शुल्क धोखाधड़ी,7.0,2000000,50000000,8000000,true,3,"ATM,AGENT",Estimated share
+matrimonial_fraud,Matrimonial / Romance Scam,मैट्रिमोनियल / रोमांस धोखाधड़ी,2.5,5000000,100000000,15000000,true,4,"ATM,BRANCH",Estimated share
+job_fraud,Fake Job Offer Fraud,फर्जी नौकरी धोखाधड़ी,8.0,1000000,20000000,4000000,true,3,"ATM,AGENT",Estimated share
+sextortion,Sextortion / Honey Trap,सेक्स्टॉर्शन / हनी ट्रैप,3.5,5000000,50000000,1500000,true,3,"ATM,AGENT",Estimated share
+kyc_fraud,Fake KYC Update / Bank Impersonation,फर्जी केवाईसी / बैंक प्रतिरूपण धोखाधड़ी,9.0,500000,50000000,6000000,true,3,ATM,Estimated share
+courier_fraud,Fake Courier / Customs Fraud,फर्जी कूरियर / सीमा शुल्क धोखाधड़ी,6.0,2000000,200000000,20000000,true,4,"ATM,BRANCH",Estimated share; widely flagged by I4C advisories 2024-25
+sim_swap,SIM Swap / Mobile Banking Takeover,सिम स्वैप / मोबाइल बैंकिंग अधिग्रहण,2.0,1000000,100000000,10000000,true,3,ATM,Estimated share
+atm_skimming,ATM Skimming / Card Cloning,एटीएम स्किमिंग / कार्ड क्लोनिंग,1.5,500000,20000000,3000000,true,2,ATM,Estimated share
+gaming_fraud,Online Gaming / Betting Fraud,ऑनलाइन गेमिंग / सट्टा धोखाधड़ी,2.0,1000000,100000000,8000000,false,3,ATM,Estimated share; partly stays in gaming/crypto wallets
+customer_care_fraud,Fake Customer Care / Search-listing Fraud,फर्जी कस्टमर केयर धोखाधड़ी,5.6,1000000,50000000,5000000,true,3,"ATM,AGENT",Estimated share
+ecommerce_fraud,E-commerce / Marketplace Fraud (OLX-type),ई-कॉमर्स / मार्केटप्लेस धोखाधड़ी,5.0,500000,10000000,2500000,true,3,ATM,Estimated share
+qr_code_fraud,QR Code / Collect-request Fraud,क्यूआर कोड धोखाधड़ी,4.0,500000,10000000,2000000,true,2,"ATM,AGENT",Estimated share
+card_fraud,Debit/Credit Card Fraud (non-skimming),डेबिट/क्रेडिट कार्ड धोखाधड़ी,1.5,1000000,50000000,5000000,true,3,"ATM,BRANCH",Estimated share

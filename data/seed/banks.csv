@@ -1,0 +1,55 @@
+bank_id,name,short_code,bank_type,headquarter_state,atm_network_size,aeps_enabled,notes
+BNK-001,State Bank of India,SBI,public_sector,NATIONAL,large,true,Largest PSB; RBI scheduled list (rbi.org.in)
+BNK-002,Punjab National Bank,PNB,public_sector,NATIONAL,large,true,Includes merged OBC + United Bank of India (Apr 2020)
+BNK-003,Bank of Baroda,BOB,public_sector,NATIONAL,large,true,Includes merged Dena + Vijaya Bank (Apr 2019)
+BNK-004,Canara Bank,CANARA,public_sector,NATIONAL,large,true,Includes merged Syndicate Bank (Apr 2020)
+BNK-005,Union Bank of India,UNION,public_sector,NATIONAL,large,true,Includes merged Andhra + Corporation Bank (Apr 2020)
+BNK-006,Bank of India,BOI,public_sector,NATIONAL,large,true,
+BNK-007,Indian Bank,INDIAN,public_sector,NATIONAL,large,true,Includes merged Allahabad Bank (Apr 2020)
+BNK-008,Central Bank of India,CBI,public_sector,NATIONAL,medium,true,
+BNK-009,Indian Overseas Bank,IOB,public_sector,NATIONAL,medium,true,
+BNK-010,UCO Bank,UCO,public_sector,NATIONAL,medium,true,
+BNK-011,Bank of Maharashtra,BOM,public_sector,MH,medium,true,"HQ Pune, Maharashtra"
+BNK-012,Punjab and Sind Bank,PSB,public_sector,NATIONAL,medium,true,
+BNK-013,HDFC Bank,HDFC,private,NATIONAL,large,true,Largest private bank by ATM count
+BNK-014,ICICI Bank,ICICI,private,NATIONAL,large,true,
+BNK-015,Axis Bank,AXIS,private,NATIONAL,large,true,
+BNK-016,Kotak Mahindra Bank,KOTAK,private,NATIONAL,medium,true,
+BNK-017,Yes Bank,YES,private,NATIONAL,medium,true,
+BNK-018,IDFC First Bank,IDFC,private,NATIONAL,medium,true,
+BNK-019,IndusInd Bank,INDUSIND,private,NATIONAL,medium,true,
+BNK-020,Federal Bank,FEDERAL,private,NATIONAL,medium,true,
+BNK-021,RBL Bank,RBL,private,NATIONAL,medium,true,
+BNK-022,Bandhan Bank,BANDHAN,private,NATIONAL,medium,true,Strong east/north-east BC network
+BNK-023,IDBI Bank,IDBI,private,NATIONAL,medium,true,Reclassified private sector (2019)
+BNK-024,South Indian Bank,SIB,private,NATIONAL,medium,true,
+BNK-025,Karur Vysya Bank,KVB,private,NATIONAL,small,true,
+BNK-026,City Union Bank,CUB,private,NATIONAL,small,true,
+BNK-027,Karnataka Bank,KBL,private,NATIONAL,small,true,
+BNK-028,Tamilnad Mercantile Bank,TMB,private,NATIONAL,small,true,
+BNK-029,CSB Bank,CSB,private,NATIONAL,small,true,
+BNK-030,Dhanlaxmi Bank,DHAN,private,NATIONAL,small,true,
+BNK-031,DCB Bank,DCB,private,NATIONAL,small,true,
+BNK-032,Nainital Bank,NB,private,NATIONAL,small,true,Subsidiary of Bank of Baroda; Uttarakhand/UP focus
+BNK-033,India Post Payments Bank,IPPB,payments,NATIONAL,small,true,Small own ATM footprint; very large postal BC/agent network
+BNK-034,Airtel Payments Bank,APB,payments,NATIONAL,small,true,Agent-led network
+BNK-035,Fino Payments Bank,FPB,payments,NATIONAL,small,true,Agent-led network
+BNK-036,Jio Payments Bank,JPB,payments,NATIONAL,small,true,
+BNK-037,Paytm Payments Bank,PPBL,payments,NATIONAL,small,true,Operations restricted by RBI order (Mar 2024)
+BNK-038,NSDL Payments Bank,NSDL,payments,NATIONAL,small,true,
+BNK-039,AU Small Finance Bank,AU,private,NATIONAL,medium,true,SFB; absorbed Fincare SFB (Apr 2024)
+BNK-040,Ujjivan Small Finance Bank,UJJIVAN,private,NATIONAL,small,true,SFB
+BNK-041,Utkarsh Small Finance Bank,UTKARSH,private,UP,small,true,"SFB, HQ Varanasi UP"
+BNK-042,Equitas Small Finance Bank,EQUITAS,private,NATIONAL,small,true,SFB
+BNK-043,ESAF Small Finance Bank,ESAF,private,NATIONAL,small,true,SFB
+BNK-044,Suryoday Small Finance Bank,SURYODAY,private,NATIONAL,small,true,SFB
+BNK-045,Jana Small Finance Bank,JANA,private,NATIONAL,small,true,SFB
+BNK-046,Shivalik Small Finance Bank,SHIVALIK,private,UP,small,true,"SFB, HQ Kanpur UP (ex Shivalik Mercantile Co-op Bank)"
+BNK-047,Maharashtra Gramin Bank,MGB,rrb,MH,small,true,RRB (BoM-sponsored); Vidarbha Konkan Gramin Bank merged 1 May 2025 (One State-One RRB)
+BNK-048,Uttar Pradesh Gramin Bank,UPGB,rrb,UP,small,true,"RRB formed 1 May 2025 by merging Aryavart Bank, Baroda U.P. Bank and Prathama U.P. Gramin Bank"
+BNK-049,Sarva Haryana Gramin Bank,SHGB,rrb,HR,small,true,"RRB (PNB-sponsored), sole RRB for Haryana"
+BNK-050,Jharkhand Gramin Bank,JRGB,rrb,JH,small,true,RRB formed 1 May 2025 by merging Jharkhand Rajya Gramin Bank and Vananchal Gramin Bank
+BNK-051,Saraswat Co-operative Bank,SARASWAT,cooperative,MH,small,true,Largest urban co-op bank; on NFS/AePS switch
+BNK-052,Cosmos Co-operative Bank,COSMOS,cooperative,MH,small,true,HQ Pune; on NFS/AePS switch
+BNK-053,Bharat Co-operative Bank,BHARATCOOP,cooperative,MH,small,true,HQ Mumbai
+BNK-054,TJSB Sahakari Bank,TJSB,cooperative,MH,small,true,HQ Thane
