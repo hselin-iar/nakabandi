@@ -8,6 +8,7 @@ import { createRoot } from "react-dom/client";
 import { Providers } from "./app/providers";
 import { AppRoutes } from "./app/routes";
 import "./shared/tokens/tokens.css";
+import "./shared/tokens/neo-utils.css";
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Root element #root not found in index.html");

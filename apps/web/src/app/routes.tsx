@@ -27,6 +27,8 @@ const ClustersPage = lazy(() => import("../features/clusters/ClustersPage"));
 const CasesPage = lazy(() => import("../features/cases/CasesPage"));
 const EvaluationPage = lazy(() => import("../features/evaluation/EvaluationPage"));
 const OpsPage = lazy(() => import("../features/ops/OpsPage"));
+const OutboxPage = lazy(() => import("../features/outbox/OutboxPage"));
+const AuditPage = lazy(() => import("../features/audit/AuditPage"));
 const DemoPage = lazy(() => import("../features/demo/DemoPage"));
 
 /** Generic page-level loading fallback. */
@@ -57,7 +59,7 @@ export function AppRoutes() {
 
       {/* Protected: require authentication (and optionally a permission) */}
       <Route
-        path="/"
+        path="/*"
         element={
           <RoleGuard>
             <Shell>
@@ -70,6 +72,14 @@ export function AppRoutes() {
 
                   <Route path="map" element={<MapPage />} />
 
+                  <Route
+                    path="clusters"
+                    element={
+                      <RoleGuard require="VIEW_CASES">
+                        <ClustersPage />
+                      </RoleGuard>
+                    }
+                  />
                   <Route
                     path="clusters/:id"
                     element={
@@ -118,7 +128,7 @@ export function AppRoutes() {
                     path="outbox"
                     element={
                       <RoleGuard require="VIEW_AUDIT">
-                        <EvaluationPage />
+                        <OutboxPage />
                       </RoleGuard>
                     }
                   />
@@ -127,7 +137,7 @@ export function AppRoutes() {
                     path="audit"
                     element={
                       <RoleGuard require="VIEW_AUDIT">
-                        <EvaluationPage />
+                        <AuditPage />
                       </RoleGuard>
                     }
                   />
@@ -135,7 +145,7 @@ export function AppRoutes() {
                   <Route
                     path="demo"
                     element={
-                      <RoleGuard require="SIM_CONTROL">
+                      <RoleGuard allowedRoles={["demo_operator", "admin"]}>
                         <DemoPage />
                       </RoleGuard>
                     }

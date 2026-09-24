@@ -37,6 +37,10 @@ export function apiError(e: unknown): UiError {
     return { code: String(e.status), message: `HTTP ${e.status}` };
   }
 
+  if (e instanceof Error) {
+    return { code: "network_error", message: e.message };
+  }
+
   if (e && typeof e === "object") {
     const body = e as ApiErrorBody;
 
@@ -66,10 +70,6 @@ export function apiError(e: unknown): UiError {
     if (typeof body.detail === "string") {
       return { code: "error", message: body.detail };
     }
-  }
-
-  if (e instanceof Error) {
-    return { code: "network_error", message: e.message };
   }
 
   return { code: "unknown", message: "An unexpected error occurred." };
