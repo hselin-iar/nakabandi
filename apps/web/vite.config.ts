@@ -10,6 +10,13 @@ export default defineConfig({
     exclude: ["tests/e2e/**", "node_modules/**"],
     setupFiles: ["src/shared/test/setup.ts"],
   },
+  // maplibre-gl uses a Web Worker internally. Vite's dependency pre-bundling inlines
+  // the worker as a blob: URL that MapLibre cannot resolve at runtime, causing
+  // "Worker failed to load" and a blank canvas.
+  // Excluding it from optimizeDeps lets MapLibre use its own bundled worker URL.
+  optimizeDeps: {
+    exclude: ["maplibre-gl"],
+  },
   server: {
     // Proxy /api, /sim-control and /bank to the backend processes when running locally.
     // Ports avoid conflicts with other projects: API on 8001 (not 8000), etc.

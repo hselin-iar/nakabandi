@@ -147,7 +147,7 @@ export default function MapPage() {
     adapterRef.current = adapter;
 
     adapter
-      .init(mapContainerRef.current, { center: [79.5, 24.5], zoom: 5 })
+      .init(mapContainerRef.current, { center: [79.5, 24.5], zoom: 5.5 })
       .then(() => {
         if (!isMounted) return;
 

@@ -26,6 +26,20 @@ import {
   ALERTS_POINT_LAYER_ID,
 } from "../layers/alertsLayer";
 
+// ---------------------------------------------------------------------------
+// MapLibre GL v6 + Vite worker fix
+// ---------------------------------------------------------------------------
+// maplibre-gl v6 ships as ESM. Vite's dependency pre-bundler inlines the
+// internal worker URL as a blob:, which breaks at runtime. The fix is to:
+//   1. Exclude maplibre-gl from optimizeDeps (vite.config.ts already does this)
+//   2. Tell MapLibre the correct worker URL via its exported setWorkerUrl()
+//
+// Using Vite's ?worker&url suffix gives us a properly bundled, cache-busted
+// URL that MapLibre can spawn as a real Worker thread.
+// @ts-ignore — Vite virtual module; no TS types for ?url query
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker?url";
+maplibregl.setWorkerUrl(workerUrl as string);
+
 export const BOUNDARIES_SOURCE_ID = "nk-boundaries-source";
 export const BOUNDARIES_FILL_LAYER_ID = "nk-boundaries-fill";
 export const BOUNDARIES_LINE_LAYER_ID = "nk-boundaries-line";
@@ -150,8 +164,8 @@ export class MapLibreAdapter implements MapAdapter {
         type: "fill",
         source: BOUNDARIES_SOURCE_ID,
         paint: {
-          "fill-color": "#1e293b",
-          "fill-opacity": 0.35,
+          "fill-color": "#1e3a5f",   // visible blue-tinted state fill
+          "fill-opacity": 0.6,
         },
       });
 
@@ -160,9 +174,9 @@ export class MapLibreAdapter implements MapAdapter {
         type: "line",
         source: BOUNDARIES_SOURCE_ID,
         paint: {
-          "line-color": "#475569",
-          "line-width": 1.5,
-          "line-dasharray": [2, 2],
+          "line-color": "#94a3b8",   // slate-400 — clearly visible
+          "line-width": 2,
+          "line-dasharray": [3, 2],
         },
       });
     }
