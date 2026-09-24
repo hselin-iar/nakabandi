@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     static_dir: Path | None = Field(default=None, validation_alias="STATIC_DIR")
     """The built SPA's directory (DOC 4 Step A5: "api container, SPA static files"). Unset
     outside the Docker image, where Dockerfile.api builds apps/web and sets it."""
+    evidence_store_path: Path = Field(default=Path("data/evidence_packs"))
+    """DOC 2 §2.2 "local filesystem volume for generated packs" (A12, casework.evidence)."""
+    evidence_font_path: Path | None = None
+    """A Devanagari-capable TrueType font for evidence-pack PDFs (DOC 3 S2). Unset falls back to
+    Helvetica (Latin-only) — this build ships no such font file (A12, see Learnings)."""
 
     @field_validator("nightly_reset_at")
     @classmethod

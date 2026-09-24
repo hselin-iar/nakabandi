@@ -40,6 +40,9 @@ from nakabandi.alerting.interfaces.stream import router as stream_router
 from nakabandi.analytics import AnalyticsService
 from nakabandi.analytics.interfaces.routers import router as analytics_router
 from nakabandi.audit.interfaces.routers import router as audit_router
+from nakabandi.casework import CaseService
+from nakabandi.casework.evidence.file_store import LocalFileStore
+from nakabandi.casework.interfaces.routers import router as casework_router
 from nakabandi.geo import LocationScopeLookup
 from nakabandi.geo.interfaces.routers import router as geo_router
 from nakabandi.graph import CashOutFact, ClusterService
@@ -87,6 +90,8 @@ from nakabandi.shared.infrastructure.db import (
 from nakabandi.shared.logging import configure_logging
 from nakabandi.wiring import (
     AlertDetailSourceAdapter,
+    CaseworkClusterSource,
+    CaseworkComplaintSource,
     GeoCatalogAdapter,
     GraphConfirmedCashOut,
     ObservationSourceAdapter,
@@ -190,10 +195,32 @@ def create_app() -> FastAPI:
 
         app.state.alert_service_factory = alert_service_for
         app.state.registry_cache = RegistryCache()
+        app.state.evidence_file_store = LocalFileStore(settings.evidence_store_path)
+
+        def case_service_for(session: Session, bus: EventBus | None = None) -> CaseService:
+            """THE way a CaseService is built for a unit of work (DOC 3 A12, mirrors
+            alert_service_for)."""
+            return CaseService(
+                session,
+                clock=app.state.clock,
+                cluster_source=CaseworkClusterSource(session),
+                complaint_source=CaseworkComplaintSource(session),
+                alert_source=alert_service_for(session, bus),
+                role_permissions=app.state.role_permissions,
+                file_store=app.state.evidence_file_store,
+                debounce_min=policy.casework.bundle_debounce_min,
+                font_path=settings.evidence_font_path,
+            )
+
+        app.state.case_service_factory = case_service_for
 
         def register_reconcile(bus: EventBus, session: Session) -> None:
             """ReconcileOutcome listens for ingested cash-outs (DOC 3 M4 on_observation)."""
             alert_service_for(session, bus).register_subscribers(bus)
+
+        def register_casework(bus: EventBus, session: Session) -> None:
+            """BundleCluster listens for ClusterUpdated, debounced (DOC 3 S1)."""
+            case_service_for(session, bus).register_subscribers(bus)
 
         def register_graph(bus: EventBus, session: Session) -> None:
             """Keep each cluster's location affinity current as cash-outs are observed, and
@@ -238,7 +265,12 @@ def create_app() -> FastAPI:
             bus.subscribe(ObservationIngested, safe(on_observations))  # type: ignore[arg-type]
             bus.subscribe(ClusterMerged, safe(on_merge))  # type: ignore[arg-type]
 
-        app.state.bus_registrars = [register_analytics, register_reconcile, register_graph]
+        app.state.bus_registrars = [
+            register_analytics,
+            register_reconcile,
+            register_graph,
+            register_casework,
+        ]
         app.state.observation_source_factory = ObservationSourceAdapter
 
         def pipeline_for(session: Session, bus: EventBus):  # noqa: ANN202
@@ -471,6 +503,7 @@ def create_app() -> FastAPI:
     app.include_router(outbox_router, prefix="/api/v1")
     app.include_router(stream_router, prefix="/api/v1")
     app.include_router(ops_router, prefix="/api/v1")
+    app.include_router(casework_router, prefix="/api/v1")
 
     @app.get("/api/v1/system/health")
     def health() -> dict[str, str]:

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import os
-import signal
 import socket
 import sqlite3
 import subprocess
@@ -97,7 +96,7 @@ class Api:
 
     def kill9(self) -> None:
         assert self.proc is not None
-        self.proc.send_signal(signal.SIGKILL)
+        self.proc.kill()
         self.proc.wait(timeout=10)
 
     def stop(self) -> None:

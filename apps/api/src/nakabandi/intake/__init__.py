@@ -27,8 +27,10 @@ from nakabandi.intake.application.use_cases import (
     IngestRegistry,
 )
 from nakabandi.intake.infrastructure.lien_lookup import (
+    AccountInfo,
     AccountTrace,
     ComplaintDetail,
+    ComplaintFact,
     ComplaintSummary,
     LienContextLookup,
     ObservationSummary,
@@ -49,8 +51,10 @@ __all__ = [
     "IngestHooks",
     "LienContextLookup",
     "AccountTrace",
+    "AccountInfo",
     "ComplaintSummary",
     "ComplaintDetail",
+    "ComplaintFact",
     "ObservationSummary",
     "TracedAccount",
 ]
