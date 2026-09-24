@@ -12,6 +12,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import { isLeaRole, ClusterGraph } from "../clusters/ClusterGraph";
+import { useCluster } from "../clusters/api/useClusters";
 import { formatInr, formatSimTime } from "../../shared/lib/format";
 import { Timeline } from "../../shared/ui/Timeline";
 import { MaskedRef } from "../../shared/ui/MaskedRef";
@@ -87,6 +88,10 @@ function SafeBriefRenderer({ markdown }: { markdown: string }) {
 export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
   const { principal } = usePrincipal();
   const isLea = isLeaRole(principal?.role);
+  // The cluster topology lives behind its own endpoint (DOC 3 S1); compose it in here rather
+  // than embedding it in the Case response.
+  const { data: cluster } = useCluster(caseData.cluster_ref);
+  const graphData = caseData.graph_data ?? (cluster ? { nodes: cluster.nodes, edges: cluster.edges } : undefined);
 
   // Guarantee that the disclaimer is always present at the end
   const briefText = caseData.brief_md.includes(REQUIRED_FIR_DISCLAIMER)
@@ -395,7 +400,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
         {/* Right Column: Cluster Graph, Locations & Timeline */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Embedded Cytoscape Cluster Graph (Shared Component) */}
-          {caseData.graph_data && (
+          {graphData && (
             <div
               className="nk-panel"
               style={{
@@ -417,7 +422,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                   Syndicate Graph Topology
                 </h3>
                 <span style={{ fontSize: "11px", color: "#94a3b8" }}>
-                  {caseData.graph_data.nodes.length} nodes
+                  {graphData.nodes.length} nodes
                 </span>
               </div>
               <div
@@ -427,7 +432,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                   overflow: "hidden",
                 }}
               >
-                <ClusterGraph data={caseData.graph_data} height={360} />
+                <ClusterGraph data={graphData} height={360} />
               </div>
             </div>
           )}

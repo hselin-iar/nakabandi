@@ -14,12 +14,12 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import MapPage from "../MapPage";
 import { AuthContext } from "../../../app/auth/AuthContext";
-import type { Principal } from "../../../shared/api/schema.d.ts";
+import type { Principal } from "../../../shared/api/types.ts";
 import { MapLibreAdapter } from "../maplibre/MapLibreAdapter";
 
 const mockOfficerPrincipal: Principal = {
   user_id: "USR-MAP-01",
-  username: "officer_map",
+  name: "officer_map",
   role: "district_officer",
   scope: { state_id: "DL" },
   permissions: ["VIEW_ALERTS"],
@@ -36,8 +36,9 @@ function renderWithProviders(ui: React.ReactNode) {
         principal: mockOfficerPrincipal,
         isAuthenticated: true,
         can: (p) => mockOfficerPrincipal.permissions.includes(p),
-        loginAs: () => {},
-        logout: () => {},
+        isReady: true,
+        login: async () => {},
+        logout: async () => {},
       }}
     >
       <QueryClientProvider client={qc}>

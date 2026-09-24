@@ -9,11 +9,11 @@ import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DemoConsole } from "../DemoConsole";
 import { AuthContext } from "../../../app/auth/AuthContext";
-import type { Principal } from "../../../shared/api/schema.d.ts";
+import type { Principal } from "../../../shared/api/types.ts";
 
 const mockDemoOperator: Principal = {
   user_id: "demo-operator",
-  username: "demo_operator_1",
+  name: "demo_operator_1",
   role: "demo_operator",
   scope: {},
   permissions: ["VIEW_ALERTS", "VIEW_CASES", "VIEW_EVALUATION", "SIM_CONTROL"],
@@ -21,7 +21,7 @@ const mockDemoOperator: Principal = {
 
 const mockAdmin: Principal = {
   user_id: "demo-admin",
-  username: "admin_1",
+  name: "admin_1",
   role: "admin",
   scope: {},
   permissions: ["VIEW_ALERTS", "VIEW_CASES", "VIEW_EVALUATION", "SIM_CONTROL"],
@@ -37,7 +37,8 @@ function renderDemoConsole(principal = mockDemoOperator) {
         principal,
         isAuthenticated: true,
         can: (p) => principal.permissions.includes(p),
-        loginAs: vi.fn(),
+        isReady: true,
+        login: vi.fn(),
         logout: vi.fn(),
       }}
     >

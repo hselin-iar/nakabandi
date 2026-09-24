@@ -19,10 +19,10 @@ const STATUS_META: Record<
   DeliveryStatus,
   { label: string; colorClass: string; icon: string }
 > = {
-  delivered: { label: "Delivered", colorClass: "nk-dlv-status--delivered", icon: "✓" },
-  pending:   { label: "Pending",   colorClass: "nk-dlv-status--pending",   icon: "◷" },
-  retrying:  { label: "Retrying",  colorClass: "nk-dlv-status--retrying",  icon: "↻" },
-  failed:    { label: "Failed",    colorClass: "nk-dlv-status--failed",    icon: "✗" },
+  sent:    { label: "Delivered", colorClass: "nk-dlv-status--delivered", icon: "✓" },
+  pending: { label: "Pending",   colorClass: "nk-dlv-status--pending",   icon: "◷" },
+  failed:  { label: "Retrying",  colorClass: "nk-dlv-status--retrying",  icon: "↻" },
+  dead:    { label: "Failed",    colorClass: "nk-dlv-status--failed",    icon: "✗" },
 };
 
 function DeliveryStatusBadge({ status }: { status: DeliveryStatus }) {
@@ -55,10 +55,10 @@ function DeliveryRow({ d }: { d: Delivery }) {
           }
         }}
         aria-expanded={expanded}
-        data-testid={`outbox-row-${d.delivery_id}`}
+        data-testid={`outbox-row-${d.id}`}
       >
         <td className="nk-table__td">
-          <code className="nk-mono nk-size-12">{d.delivery_id}</code>
+          <code className="nk-mono nk-size-12">{d.id}</code>
         </td>
         <td className="nk-table__td">
           <code className="nk-mono nk-size-12">{d.alert_id}</code>
@@ -67,10 +67,10 @@ function DeliveryRow({ d }: { d: Delivery }) {
           <code className="nk-mono nk-size-12">{d.channel}</code>
         </td>
         <td className="nk-table__td">
-          <DeliveryStatusBadge status={d.status} />
+          <DeliveryStatusBadge status={d.status as DeliveryStatus} />
         </td>
         <td className="nk-table__td nk-table__td--right">
-          {d.attempt_count}
+          {d.attempts}
         </td>
         <td className="nk-table__td nk-outbox-time">
           {new Date(d.created_at).toLocaleString("en-IN", {
@@ -78,8 +78,8 @@ function DeliveryRow({ d }: { d: Delivery }) {
           })}
         </td>
         <td className="nk-table__td nk-outbox-time">
-          {d.delivered_at
-            ? new Date(d.delivered_at).toLocaleString("en-IN", {
+          {d.sent_at
+            ? new Date(d.sent_at).toLocaleString("en-IN", {
                 day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false,
               })
             : <span className="nk-text-secondary">—</span>}
@@ -91,7 +91,7 @@ function DeliveryRow({ d }: { d: Delivery }) {
 
       {/* Expanded body */}
       {expanded && (
-        <tr className="nk-outbox-body-row" data-testid={`outbox-body-${d.delivery_id}`}>
+        <tr className="nk-outbox-body-row" data-testid={`outbox-body-${d.id}`}>
           <td colSpan={8} className="nk-outbox-body-cell">
             <div className="nk-outbox-body-header">
               <span>rendered_body</span>
@@ -142,7 +142,7 @@ export default function OutboxPage() {
     );
   }
 
-  const failedCount = deliveries.filter((d) => d.status === "failed").length;
+  const failedCount = deliveries.filter((d) => d.status === "failed" || d.status === "dead").length;
 
   return (
     <main className="nk-outbox-page" data-testid="outbox-page">
@@ -172,7 +172,7 @@ export default function OutboxPage() {
           </thead>
           <tbody>
             {deliveries.map((d) => (
-              <DeliveryRow key={d.delivery_id} d={d} />
+              <DeliveryRow key={d.id} d={d} />
             ))}
           </tbody>
         </table>

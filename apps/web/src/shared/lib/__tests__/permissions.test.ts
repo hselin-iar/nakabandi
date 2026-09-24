@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from "vitest";
 import { can, permissionsForRole, scopeContains } from "../permissions";
-import type { Principal } from "../../api/schema.d.ts";
+import type { Principal } from "../../api/types.ts";
 
 function makePrincipal(
   role: Principal["role"],
@@ -13,7 +13,7 @@ function makePrincipal(
 ): Principal {
   return {
     user_id: "test",
-    username: "test",
+    name: "test",
     role,
     scope,
     permissions: permissionsForRole(role) as Principal["permissions"],

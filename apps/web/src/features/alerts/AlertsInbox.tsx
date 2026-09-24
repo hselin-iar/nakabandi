@@ -23,7 +23,8 @@ import { MaskedRef } from "../../shared/ui/MaskedRef";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
 import { Button } from "../../shared/ui/Button";
-import type { AlertSummary, Severity, AlertStatus } from "../../shared/api/schema.d.ts";
+import type { AlertStatus, LadderLevel, Severity } from "../../shared/api/enums.ts";
+import type { AlertSummary } from "../../shared/api/types.ts";
 
 export default function AlertsInbox() {
   const { id: urlAlertId } = useParams<{ id?: string }>();
@@ -74,7 +75,7 @@ export default function AlertsInbox() {
         header: "Severity",
         sortable: true,
         width: "9rem",
-        cell: (row) => <SeverityBadge severity={row.severity} />,
+        cell: (row) => <SeverityBadge severity={row.severity as Severity} />,
       },
       {
         key: "id",
@@ -97,9 +98,9 @@ export default function AlertsInbox() {
         cell: (row) => (
           <div className="nk-alert-target-cell">
             <span className="font-medium text-primary">
-              {row.target.name ?? row.target.id}
+              {String(row.target.name ?? row.target.id ?? "")}
             </span>
-            <span className="nk-text-xs nk-tag">{row.target.kind}</span>
+            <span className="nk-text-xs nk-tag">{String(row.target.kind ?? "")}</span>
           </div>
         ),
       },
@@ -115,14 +116,14 @@ export default function AlertsInbox() {
         header: "Status",
         sortable: true,
         width: "8rem",
-        cell: (row) => <StatusBadge status={row.status} />,
+        cell: (row) => <StatusBadge status={row.status as AlertStatus} />,
       },
       {
         key: "ladder_level",
         header: "Ladder",
         sortable: true,
         width: "9rem",
-        cell: (row) => <LadderBadge level={row.ladder_level} />,
+        cell: (row) => <LadderBadge level={row.ladder_level as LadderLevel} />,
       },
       {
         key: "expires_at",

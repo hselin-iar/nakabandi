@@ -9,11 +9,11 @@ import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import EvaluationPage from "../EvaluationPage";
 import { AuthContext } from "../../../app/auth/AuthContext";
-import type { Principal } from "../../../shared/api/schema.d.ts";
+import type { Principal } from "../../../shared/api/types.ts";
 
 const mockAnalyst: Principal = {
   user_id: "USR-ANA-01",
-  username: "i4c_analyst_1",
+  name: "i4c_analyst_1",
   role: "i4c_analyst",
   scope: {},
   permissions: ["VIEW_EVALUATION", "VIEW_ALERTS"],
@@ -29,8 +29,9 @@ function renderEvalPage() {
         principal: mockAnalyst,
         isAuthenticated: true,
         can: (p) => mockAnalyst.permissions.includes(p),
-        loginAs: () => {},
-        logout: () => {},
+        isReady: true,
+        login: async () => {},
+        logout: async () => {},
       }}
     >
       <QueryClientProvider client={qc}>

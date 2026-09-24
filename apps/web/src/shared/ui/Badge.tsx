@@ -7,7 +7,7 @@
  */
 
 import React from "react";
-import type { Severity, Verdict, LadderLevel, AlertStatus } from "../api/schema.d.ts";
+import type { Severity, Verdict, LadderLevel, AlertStatus } from "../api/enums.ts";
 
 // ---------------------------------------------------------------------------
 // Base badge

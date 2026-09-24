@@ -22,10 +22,15 @@ export default function ClustersPage() {
   const selectedRef = id || (clusters.length > 0 ? clusters[0]?.cluster_ref : undefined);
 
   const {
-    data: cluster,
+    data: clusterDetail,
     isLoading: isLoadingCluster,
     isError: isClusterError,
   } = useCluster(selectedRef);
+
+  // The list (GET /clusters) and the detail (GET /clusters/{id}) are separate real endpoints
+  // with disjoint fields (DOC 4 A12): merge them so the page has both in one object.
+  const summary = clusters.find((c) => c.cluster_ref === selectedRef);
+  const cluster = clusterDetail ? { ...summary, ...clusterDetail } : null;
 
   const [inspectedNode, setInspectedNode] = useState<ClusterNode | null>(null);
 
@@ -167,7 +172,7 @@ export default function ClustersPage() {
                 borderRadius: 4,
               }}
             >
-              Novelty: {(cluster.novelty * 100).toFixed(0)}%
+              Novelty: {((cluster.novelty ?? 0) * 100).toFixed(0)}%
             </span>
           </div>
         </div>
@@ -177,7 +182,7 @@ export default function ClustersPage() {
           <div>
             <div style={{ fontSize: "11px", color: "#94a3b8" }}>Total Disputed</div>
             <div style={{ fontSize: "18px", fontWeight: 700, color: "#38bdf8" }}>
-              {formatInr(cluster.total_paise)}
+              {formatInr(cluster.total_paise ?? 0)}
             </div>
           </div>
 
@@ -191,7 +196,7 @@ export default function ClustersPage() {
           <div>
             <div style={{ fontSize: "11px", color: "#94a3b8" }}>First / Last Activity</div>
             <div style={{ fontSize: "12px", color: "#cbd5e1" }}>
-              {formatSimTime(cluster.first_seen)}
+              {cluster.first_seen ? formatSimTime(cluster.first_seen) : "—"}
             </div>
           </div>
         </div>

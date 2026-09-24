@@ -14,9 +14,8 @@
 import React, { useState } from "react";
 import { useDemoControl, useDemoUsers } from "./api/useDemoControl";
 import { usePrincipal } from "../../app/auth/usePrincipal";
-import { permissionsForRole } from "../../shared/lib/permissions";
 import { formatSimTime } from "../../shared/lib/format";
-import type { Role, Principal } from "../../shared/api/schema.d.ts";
+import type { DemoUser } from "./types";
 import type { InjectClusterRequest } from "./types";
 
 const DISTRICT_PRESETS = [
@@ -29,7 +28,7 @@ const DISTRICT_PRESETS = [
 const SPEED_PRESETS = [1, 5, 10, 30, 60];
 
 export function DemoConsole() {
-  const { principal, loginAs } = usePrincipal();
+  const { principal, login } = usePrincipal();
   const isAdmin = principal?.role === "admin";
 
   const {
@@ -162,18 +161,17 @@ export function DemoConsole() {
     }
   }
 
-  function handleQuickLogin(user: { username: string; role: string; display_name: string }) {
-    const role = user.role as Role;
-    const permissions = permissionsForRole(role);
-    const updatedPrincipal: Principal = {
-      user_id: `usr-${user.username}`,
-      username: user.username,
-      role,
-      scope: {},
-      permissions: [...permissions],
-    };
-    loginAs(updatedPrincipal);
-    setActionNotice(`Switched role to ${user.display_name} (${role})`);
+  async function handleQuickLogin(user: DemoUser) {
+    if (!user.password) {
+      setActionNotice("Cannot switch: demo credentials unavailable (server list did not load).");
+      return;
+    }
+    try {
+      await login(user.username, user.password);
+      setActionNotice(`Switched role to ${user.display_name} (${user.role})`);
+    } catch {
+      setActionNotice(`Failed to switch role to ${user.display_name}.`);
+    }
   }
 
   return (
@@ -548,18 +546,13 @@ export function DemoConsole() {
           <p className="nk-demo-loading">Loading demo users from server…</p>
         ) : (
           <div className="nk-demo-user-grid">
-            {(demoUsers && demoUsers.length > 0
-              ? demoUsers
-              : [
-                  { username: "demo_operator_1", role: "demo_operator", display_name: "Demo Operator" },
-                  { username: "admin_1", role: "admin", display_name: "System Admin" },
-                  { username: "state_investigator_1", role: "state_investigator", display_name: "State Investigator (UP)" },
-                  { username: "district_officer_1", role: "district_officer", display_name: "District Officer (LKO)" },
-                  { username: "bank_nodal_1", role: "bank_nodal", display_name: "Bank Nodal (HDFC)" },
-                  { username: "i4c_analyst_1", role: "i4c_analyst", display_name: "I4C Analyst" },
-                ]
-            ).map((user) => {
-              const isCurrent = principal?.username === user.username;
+            {(demoUsers ?? []).length === 0 && (
+              <p className="nk-demo-loading">
+                No demo users available — GET /auth/demo-users did not return any.
+              </p>
+            )}
+            {(demoUsers ?? []).map((user) => {
+              const isCurrent = principal?.role === user.role;
               return (
                 <button
                   key={user.username}

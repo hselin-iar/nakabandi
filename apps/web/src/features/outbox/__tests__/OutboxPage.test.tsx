@@ -9,17 +9,63 @@ import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import OutboxPage from "../OutboxPage";
 import { AuthContext } from "../../../app/auth/AuthContext";
-import type { Principal } from "../../../shared/api/schema.d.ts";
+import { apiClient } from "../../../shared/api/client";
+import type { Principal } from "../../../shared/api/types.ts";
+import type { Delivery } from "../../../shared/api/types.ts";
+
+vi.mock("../../../shared/api/client", () => ({
+  apiClient: { GET: vi.fn(), POST: vi.fn() },
+}));
+
+function delivery(overrides: Partial<Delivery>): Delivery {
+  return {
+    id: "DLV-0001",
+    alert_id: "ALT-2026-001",
+    action_id: "ACT-2026-001",
+    channel: "bank_webhook",
+    provider: "bank-sim",
+    webhook_kind: "hold_request",
+    recipient: "bank-sim",
+    status: "sent",
+    attempts: 1,
+    next_attempt_at: "2026-09-23T11:00:02Z",
+    created_at: "2026-09-23T11:00:00Z",
+    sent_at: "2026-09-23T11:00:02Z",
+    last_error: null,
+    rendered_body: JSON.stringify({ event: "hold_requested", alert_id: "ALT-2026-001" }),
+    ...overrides,
+  };
+}
+
+const FIXTURE_DELIVERIES: Delivery[] = [
+  delivery({ id: "DLV-0001", status: "sent" }),
+  delivery({ id: "DLV-0002", channel: "sms", status: "sent", rendered_body: "SMS body" }),
+  delivery({
+    id: "DLV-0003",
+    alert_id: "ALT-2026-002",
+    status: "dead",
+    attempts: 3,
+    sent_at: null,
+    last_error: "Connection refused: bank-sim returned 503",
+  }),
+  delivery({ id: "DLV-0004", channel: "outbox_sms", status: "failed", attempts: 2, sent_at: null }),
+  delivery({ id: "DLV-0005", channel: "email", status: "pending", attempts: 0, sent_at: null }),
+];
 
 const mockAnalyst: Principal = {
   user_id: "USR-ANA-01",
-  username: "i4c_analyst_1",
+  name: "i4c_analyst_1",
   role: "i4c_analyst",
   scope: {},
   permissions: ["VIEW_AUDIT", "VIEW_ALERTS"],
 };
 
 function renderOutboxPage() {
+  vi.mocked(apiClient.GET).mockResolvedValue({
+    data: { items: FIXTURE_DELIVERIES, next_cursor: null, dead_count: 1 },
+    error: undefined,
+  } as unknown as never);
+
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
@@ -29,8 +75,9 @@ function renderOutboxPage() {
         principal: mockAnalyst,
         isAuthenticated: true,
         can: (p) => mockAnalyst.permissions.includes(p),
-        loginAs: () => {},
-        logout: () => {},
+        isReady: true,
+        login: async () => {},
+        logout: async () => {},
       }}
     >
       <QueryClientProvider client={qc}>
@@ -68,7 +115,7 @@ describe("OutboxPage (Step C7)", () => {
     renderOutboxPage();
     await screen.findByTestId("outbox-table");
 
-    // Fixture has: delivered (×2), failed (×1), retrying (×1), pending (×1)
+    // Fixture has: sent (×2 -> "Delivered"), dead (×1 -> "Failed"), failed (×1 -> "Retrying"), pending (×1)
     const allDelivered = screen.getAllByText("Delivered");
     expect(allDelivered.length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Failed")).toBeTruthy();
@@ -85,17 +132,16 @@ describe("OutboxPage (Step C7)", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("outbox-body-DLV-0001")).toBeTruthy();
-      // Should show rendered_body (JSON with hold_requested)
       expect(screen.getByText(/hold_requested/)).toBeTruthy();
     });
   });
 
-  it("shows the last_error for a failed delivery when expanded", async () => {
+  it("shows the last_error for a dead delivery when expanded", async () => {
     renderOutboxPage();
     await screen.findByTestId("outbox-table");
 
-    const failedRow = screen.getByTestId("outbox-row-DLV-0003");
-    fireEvent.click(failedRow);
+    const deadRow = screen.getByTestId("outbox-row-DLV-0003");
+    fireEvent.click(deadRow);
 
     await waitFor(() => {
       expect(screen.getByTestId("outbox-body-DLV-0003")).toBeTruthy();

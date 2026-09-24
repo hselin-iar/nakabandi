@@ -127,7 +127,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
 import { NavLink } from "react-router-dom";
 import { usePrincipal as useP } from "../auth/usePrincipal";
-import type { Permission, Role } from "../../shared/api/schema.d.ts";
+import type { Permission, Role } from "../../shared/api/enums.ts";
 
 interface NavItem {
   to: string;

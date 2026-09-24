@@ -2,9 +2,11 @@
  * useEvaluation.ts — Fixture data + TanStack Query hook for Evaluation Harness.
  * DOC 3 § Evaluation Harness · DOC 4 Step C7
  *
- * STUB STRATEGY (DOC4 C7): hand-written fixture matching the documented
- * endpoint shape. Swap the data source for a real API call when Track B
- * Step B7 (Evaluation Harness) lands.
+ * HONEST GAP, not a "lands later" stub: apps/api/src/nakabandi/evaluation/ exists as an
+ * offline Python harness (runner.py, report.py, sweeps.py) but no track has ever registered a
+ * live REST endpoint for it in main.py — there is nothing for this hook to call. This stays
+ * fixture-based until a real evaluation API route is built; that's separate work, not something
+ * this pass could wire up.
  *
  * Two runs are provided so the evaluation page can display them side-by-side:
  *   FIXTURE_EVAL_FEEDBACK_OFF — baseline run (feedback loop disabled)
@@ -12,7 +14,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import type { MetricName } from "../../../shared/api/schema.d.ts";
+import type { MetricName } from "../../../shared/api/enums.ts";
 
 // ---------------------------------------------------------------------------
 // Types

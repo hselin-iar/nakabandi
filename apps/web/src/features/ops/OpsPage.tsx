@@ -206,7 +206,7 @@ export default function OpsPage() {
         )}
         <p className="nk-ops-page__subtitle">
           Captured at {new Date(metrics.captured_at).toLocaleString("en-IN")}
-          {" · "}Sim speed ×{metrics.sim_speed_ratio.toFixed(1)}
+          {metrics.sim_speed_ratio != null && ` · Sim speed ×${metrics.sim_speed_ratio.toFixed(1)}`}
         </p>
       </header>
 
@@ -229,14 +229,16 @@ export default function OpsPage() {
           warn={metrics.delivery_failures_24h > 0}
           testId="ops-stat-failures"
         />
-        <StatCard
-          label="Sim Speed"
-          value={`×${metrics.sim_speed_ratio.toFixed(1)}`}
-          testId="ops-stat-sim-speed"
-        />
+        {metrics.sim_speed_ratio != null && (
+          <StatCard
+            label="Sim Speed"
+            value={`×${metrics.sim_speed_ratio.toFixed(1)}`}
+            testId="ops-stat-sim-speed"
+          />
+        )}
       </section>
 
-      {/* Events/s time series */}
+      {/* Events/s time series (session-local: accumulates from when this page opened) */}
       <section className="nk-ops-section" aria-label="Events per second">
         <EpsChart series={metrics.eps_series} />
       </section>
@@ -246,10 +248,12 @@ export default function OpsPage() {
         <LatencyChart stages={metrics.stage_latencies} />
       </section>
 
-      {/* Channel health */}
-      <section className="nk-ops-section" aria-label="Channel health">
-        <ChannelTable channels={metrics.channel_health} />
-      </section>
+      {/* Channel health: not broken down by channel on the backend yet */}
+      {metrics.channel_health.length > 0 && (
+        <section className="nk-ops-section" aria-label="Channel health">
+          <ChannelTable channels={metrics.channel_health} />
+        </section>
+      )}
     </main>
   );
 }

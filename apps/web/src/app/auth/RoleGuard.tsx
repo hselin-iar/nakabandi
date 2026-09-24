@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { usePrincipal } from "./usePrincipal";
-import type { Permission, Role } from "../../shared/api/schema.d.ts";
+import type { Permission, Role } from "../../shared/api/enums.ts";
 
 interface RoleGuardProps {
   /** Optional: also require a specific permission. */
@@ -18,7 +18,11 @@ interface RoleGuardProps {
  */
 export function RoleGuard({ require: requiredPerm, allowedRoles, children }: RoleGuardProps) {
   const location = useLocation();
-  const { isAuthenticated, principal, can } = usePrincipal();
+  const { isAuthenticated, isReady, principal, can } = usePrincipal();
+
+  if (!isReady) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;

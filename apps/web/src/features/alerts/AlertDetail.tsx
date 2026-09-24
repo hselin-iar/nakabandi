@@ -22,7 +22,7 @@ import { useAlert, useAlertAction } from "./api/useAlerts";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import { can } from "../../shared/lib/permissions";
 import { formatSimTime } from "../../shared/lib/format";
-import type { ActionType } from "../../shared/api/schema.d.ts";
+import type { ActionType, AlertStatus, LadderLevel, Severity } from "../../shared/api/enums.ts";
 
 interface AlertDetailProps {
   alertId: string | null;
@@ -120,9 +120,9 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
           {/* Badges & Scores */}
           <div className="nk-detail-top-card">
             <div className="nk-detail-badges">
-              <SeverityBadge severity={alert.severity} />
-              <StatusBadge status={alert.status} />
-              <LadderBadge level={alert.ladder_level} />
+              <SeverityBadge severity={alert.severity as Severity} />
+              <StatusBadge status={alert.status as AlertStatus} />
+              <LadderBadge level={alert.ladder_level as LadderLevel} />
             </div>
 
             <div className="nk-detail-metrics-row">
@@ -296,11 +296,11 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
               items={[
                 {
                   key: "Target Facility",
-                  value: alert.target.name ?? alert.target.id,
+                  value: String(alert.target.name ?? alert.target.id ?? ""),
                 },
                 {
                   key: "Facility Kind",
-                  value: alert.target.kind,
+                  value: String(alert.target.kind ?? ""),
                 },
                 {
                   key: "Cluster Association",

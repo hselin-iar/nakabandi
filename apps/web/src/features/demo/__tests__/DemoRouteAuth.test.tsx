@@ -13,12 +13,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppRoutes } from "../../../app/routes";
 import { AuthContext } from "../../../app/auth/AuthContext";
 import { permissionsForRole } from "../../../shared/lib/permissions";
-import type { Role, Principal } from "../../../shared/api/schema.d.ts";
+import type { Role } from "../../../shared/api/enums.ts";
+import type { Principal } from "../../../shared/api/types.ts";
 
 function createPrincipal(role: Role): Principal {
   return {
     user_id: `user-${role}`,
-    username: `${role}_1`,
+    name: `${role}_1`,
     role,
     scope: {},
     permissions: [...permissionsForRole(role)],
@@ -36,7 +37,8 @@ function renderRouteAtDemo(principal: Principal | null = createPrincipal("demo_o
         principal,
         isAuthenticated: principal !== null,
         can: (p) => principal?.permissions.includes(p) ?? false,
-        loginAs: vi.fn(),
+        isReady: true,
+        login: vi.fn(),
         logout: vi.fn(),
       }}
     >

@@ -11,7 +11,7 @@
 
 import React, { useState } from "react";
 import { useAuditLog, verifyChain } from "./api/useAudit";
-import type { VerifyResult } from "./api/useAudit";
+import type { VerifyResponse } from "../../shared/api/types.ts";
 import { EmptyState } from "../../shared/ui/EmptyState";
 
 // ---------------------------------------------------------------------------
@@ -19,10 +19,11 @@ import { EmptyState } from "../../shared/ui/EmptyState";
 // ---------------------------------------------------------------------------
 
 interface VerifyBannerProps {
-  result: VerifyResult;
+  result: VerifyResponse;
+  rowCount: number;
 }
 
-function VerifyBanner({ result }: VerifyBannerProps) {
+function VerifyBanner({ result, rowCount }: VerifyBannerProps) {
   if (result.ok) {
     return (
       <div
@@ -34,7 +35,7 @@ function VerifyBanner({ result }: VerifyBannerProps) {
       >
         <span className="nk-verify-banner__icon" aria-hidden="true">✓</span>
         <span>
-          Chain verified — {result.checked_rows} rows, all hashes intact.
+          Chain verified — {rowCount} rows, head hash {result.head_hash?.slice(0, 12)}…
         </span>
       </div>
     );
@@ -50,8 +51,7 @@ function VerifyBanner({ result }: VerifyBannerProps) {
     >
       <span className="nk-verify-banner__icon" aria-hidden="true">✗</span>
       <span>
-        Chain integrity failure — first bad row at{" "}
-        <strong>seq {result.first_bad_seq}</strong> (checked {result.checked_rows} rows).
+        Chain integrity failure — first bad row at <strong>seq {result.first_bad_seq}</strong>.
       </span>
     </div>
   );
@@ -63,7 +63,7 @@ function VerifyBanner({ result }: VerifyBannerProps) {
 
 export default function AuditPage() {
   const { data: entries, isLoading, error } = useAuditLog();
-  const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null);
+  const [verifyResult, setVerifyResult] = useState<VerifyResponse | null>(null);
   const [verifying, setVerifying] = useState(false);
 
   async function handleVerify() {
@@ -126,7 +126,7 @@ export default function AuditPage() {
       </header>
 
       {/* Verify result banner */}
-      {verifyResult && <VerifyBanner result={verifyResult} />}
+      {verifyResult && <VerifyBanner result={verifyResult} rowCount={entries.length} />}
 
       {/* Audit table */}
       <div className="nk-table-wrapper" data-testid="audit-table">
@@ -153,16 +153,16 @@ export default function AuditPage() {
                   {entry.seq}
                 </td>
                 <td className="nk-table__td">
-                  <code className="nk-mono nk-size-12">{entry.event_type}</code>
+                  <code className="nk-mono nk-size-12">{entry.action}</code>
                 </td>
                 <td className="nk-table__td nk-size-14">
                   {entry.actor_id}
                 </td>
                 <td className="nk-table__td">
-                  <code className="nk-mono nk-size-12">{entry.object_ref}</code>
+                  <code className="nk-mono nk-size-12">{entry.entity_type}:{entry.entity_id}</code>
                 </td>
                 <td className="nk-table__td nk-audit-time">
-                  {new Date(entry.recorded_at).toLocaleString("en-IN", {
+                  {new Date(entry.at).toLocaleString("en-IN", {
                     day: "2-digit",
                     month: "short",
                     hour: "2-digit",
@@ -174,10 +174,10 @@ export default function AuditPage() {
                 <td className="nk-table__td">
                   <code
                     className="nk-mono nk-size-12 nk-audit-hash"
-                    title={entry.row_hash}
-                    aria-label={`Hash prefix: ${entry.row_hash.slice(0, 12)}…`}
+                    title={entry.hash}
+                    aria-label={`Hash prefix: ${entry.hash.slice(0, 12)}…`}
                   >
-                    {entry.row_hash.slice(0, 12)}…
+                    {entry.hash.slice(0, 12)}…
                   </code>
                 </td>
               </tr>
