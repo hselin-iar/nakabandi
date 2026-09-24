@@ -10,6 +10,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import React from "react";
+import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import OpsPage from "../OpsPage";
 import { AuthContext } from "../../../app/auth/AuthContext";
@@ -62,7 +63,9 @@ function renderOpsPage() {
       }}
     >
       <QueryClientProvider client={qc}>
-        <OpsPage />
+        <MemoryRouter>
+          <OpsPage />
+        </MemoryRouter>
       </QueryClientProvider>
     </AuthContext.Provider>,
   );

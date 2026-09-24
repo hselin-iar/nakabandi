@@ -12,16 +12,18 @@
  */
 
 import React, { useState } from "react";
+import { format } from "date-fns";
 import { useDemoControl, useDemoUsers } from "./api/useDemoControl";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import { formatSimTime } from "../../shared/lib/format";
+import { Select } from "../../shared/ui/Select";
 import type { DemoUser } from "./types";
 import type { InjectClusterRequest } from "./types";
 
 const DISTRICT_PRESETS = [
   { id: "UP-LKO", label: "Lucknow (UP-LKO)" },
   { id: "MH-MUM", label: "Mumbai (MH-MUM)" },
-  { id: "RJ-JPR", label: "Jaipur (RJ-JPR)" },
+  { id: "JH-RAN", label: "Ranchi (JH-RAN)" },
   { id: "HR-GGN", label: "Gurugram (HR-GGN)" },
 ];
 
@@ -425,18 +427,12 @@ export function DemoConsole() {
             <div className="nk-demo-form-group">
               <label htmlFor="inject-district-input">District ID</label>
               <div className="nk-demo-combo">
-                <select
+                <Select
                   id="inject-district-select"
-                  className="nk-select"
                   value={injectDistrict}
-                  onChange={(e) => setInjectDistrict(e.target.value)}
-                >
-                  {DISTRICT_PRESETS.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.label}
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={setInjectDistrict}
+                  options={DISTRICT_PRESETS.map((d) => ({ value: d.id, label: d.label }))}
+                />
                 <input
                   id="inject-district-input"
                   className="nk-input"
@@ -483,22 +479,20 @@ export function DemoConsole() {
 
             <div className="nk-demo-form-group">
               <label htmlFor="inject-locality-select">Locality Pattern</label>
-              <select
+              <Select
                 id="inject-locality-select"
-                className="nk-select"
-                data-testid="inject-locality-select"
+                testId="inject-locality-select"
                 value={injectLocality}
-                onChange={(e) =>
-                  setInjectLocality(
-                    e.target.value as "district" | "multi_district" | "state" | "multi_state",
-                  )
+                onValueChange={(v) =>
+                  setInjectLocality(v as "district" | "multi_district" | "state" | "multi_state")
                 }
-              >
-                <option value="district">district (single district)</option>
-                <option value="multi_district">multi_district (neighbouring)</option>
-                <option value="state">state (statewide)</option>
-                <option value="multi_state">multi_state (cross-border)</option>
-              </select>
+                options={[
+                  { value: "district", label: "district (single district)" },
+                  { value: "multi_district", label: "multi_district (neighbouring)" },
+                  { value: "state", label: "state (statewide)" },
+                  { value: "multi_state", label: "multi_state (cross-border)" },
+                ]}
+              />
             </div>
           </div>
 
@@ -616,7 +610,7 @@ export function DemoConsole() {
                 {requestLog.map((log) => (
                   <tr key={log.id} data-testid="request-log-row">
                     <td className="nk-mono nk-demo-log-time">
-                      {log.timestamp.slice(11, 19)}
+                      {format(new Date(log.timestamp), "HH:mm:ss")}
                     </td>
                     <td>
                       <span className={`nk-demo-method-tag nk-demo-method-tag--${log.method.toLowerCase()}`}>

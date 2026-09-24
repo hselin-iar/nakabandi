@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import { isLeaRole, ClusterGraph } from "../clusters/ClusterGraph";
 import { useCluster } from "../clusters/api/useClusters";
-import { formatInr, formatSimTime } from "../../shared/lib/format";
+import { formatInr, formatSimTime, humanizeStatus } from "../../shared/lib/format";
 import { Timeline } from "../../shared/ui/Timeline";
 import { MaskedRef } from "../../shared/ui/MaskedRef";
 import { REQUIRED_FIR_DISCLAIMER } from "./api/useCases";
@@ -139,7 +139,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
               borderRadius: 4,
             }}
           >
-            {caseData.status.replace("_", " ")}
+            {humanizeStatus(caseData.status)}
           </span>
           {caseData.single_complaint && (
             <span

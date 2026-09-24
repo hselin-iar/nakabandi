@@ -30,6 +30,15 @@ services:
     build:
       context: ..
       dockerfile: infra/Dockerfile.worldsim
+    environment:
+      # Internal Docker network address, not a secret. WORLDSIM_SERVICE_KEY reuses the same
+      # machine-client secret api already authenticates world-sim with (DOC 4 §4.4) — no
+      # separate value needed in infra/.env.
+      WORLDSIM_API_URL: http://api:8000
+      WORLDSIM_SERVICE_KEY: ${API_SERVICE_KEY}
+    depends_on:
+      api:
+        condition: service_healthy
     expose:
       - "8100"
     restart: unless-stopped

@@ -9,6 +9,7 @@
 
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import React from "react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -63,7 +64,7 @@ describe("MapPage & Risk Heatmap Dashboard (Step C5)", () => {
 
     expect(screen.getByText("GIS Risk Heatmap Dashboard")).toBeTruthy();
     expect(
-      screen.getByText(/Spatial forecast intensity & persistence rollups across UP, MH, RJ, and HR/i),
+      screen.getByText(/Spatial forecast intensity & persistence rollups across UP, MH, HR, and JH/i),
     ).toBeTruthy();
 
     // Table fallback banner
@@ -72,7 +73,7 @@ describe("MapPage & Risk Heatmap Dashboard (Step C5)", () => {
     // Table displays cells across the four demo states
     expect(await screen.findByText("Connaught Place Hub (DL/UP)")).toBeTruthy();
     expect(screen.getByText("Bandra-Kurla Complex (MH)")).toBeTruthy();
-    expect(screen.getByText("Jaipur Central Corridor (RJ)")).toBeTruthy();
+    expect(screen.getByText("Ranchi Central Corridor (JH)")).toBeTruthy();
     expect(screen.getByText("Cyber City Gurugram (HR)")).toBeTruthy();
 
     // Legend renders
@@ -84,8 +85,9 @@ describe("MapPage & Risk Heatmap Dashboard (Step C5)", () => {
     renderWithProviders(<MapPage />);
     await screen.findByText("Bandra-Kurla Complex (MH)");
 
-    const stateSelect = screen.getByLabelText("Filter by state");
-    fireEvent.change(stateSelect, { target: { value: "MH" } });
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("Filter by state"));
+    await user.click(await screen.findByRole("option", { name: /Maharashtra \(MH\)/i }));
 
     // Maharashtra cells should remain
     expect(await screen.findByText("Bandra-Kurla Complex (MH)")).toBeTruthy();
@@ -93,7 +95,7 @@ describe("MapPage & Risk Heatmap Dashboard (Step C5)", () => {
 
     // Other state cells should be excluded after debounce resolves
     await waitFor(() => {
-      expect(screen.queryByText("Jaipur Central Corridor (RJ)")).toBeNull();
+      expect(screen.queryByText("Ranchi Central Corridor (JH)")).toBeNull();
       expect(screen.queryByText("Cyber City Gurugram (HR)")).toBeNull();
     });
   });
@@ -102,9 +104,10 @@ describe("MapPage & Risk Heatmap Dashboard (Step C5)", () => {
     renderWithProviders(<MapPage />);
     await screen.findByText("Connaught Place Hub (DL/UP)");
 
-    const confSelect = screen.getByLabelText("Filter by min confidence");
     // Filter to >= 90% (0.9)
-    fireEvent.change(confSelect, { target: { value: "0.9" } });
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("Filter by min confidence"));
+    await user.click(await screen.findByRole("option", { name: /90% Critical Only/i }));
 
     // Connaught Place is 94% (0.94) -> remains
     expect(await screen.findByText("Connaught Place Hub (DL/UP)")).toBeTruthy();

@@ -9,6 +9,7 @@ import { Providers } from "./app/providers";
 import { AppRoutes } from "./app/routes";
 import "./shared/tokens/tokens.css";
 import "./shared/tokens/neo-utils.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Root element #root not found in index.html");

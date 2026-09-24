@@ -7,9 +7,11 @@
  */
 
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useOutboxDeliveries } from "./api/useOutbox";
 import type { Delivery, DeliveryStatus } from "./api/useOutbox";
 import { EmptyState } from "../../shared/ui/EmptyState";
+import { formatSimTime } from "../../shared/lib/format";
 
 // ---------------------------------------------------------------------------
 // Delivery status badge
@@ -61,7 +63,9 @@ function DeliveryRow({ d }: { d: Delivery }) {
           <code className="nk-mono nk-size-12">{d.id}</code>
         </td>
         <td className="nk-table__td">
-          <code className="nk-mono nk-size-12">{d.alert_id}</code>
+          <Link to={`/alerts/${d.alert_id}`} className="nk-mono nk-size-12" onClick={(e) => e.stopPropagation()}>
+            {d.alert_id}
+          </Link>
         </td>
         <td className="nk-table__td">
           <code className="nk-mono nk-size-12">{d.channel}</code>
@@ -73,16 +77,10 @@ function DeliveryRow({ d }: { d: Delivery }) {
           {d.attempts}
         </td>
         <td className="nk-table__td nk-outbox-time">
-          {new Date(d.created_at).toLocaleString("en-IN", {
-            day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false,
-          })}
+          {formatSimTime(d.created_at)}
         </td>
         <td className="nk-table__td nk-outbox-time">
-          {d.sent_at
-            ? new Date(d.sent_at).toLocaleString("en-IN", {
-                day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false,
-              })
-            : <span className="nk-text-secondary">—</span>}
+          {d.sent_at ? formatSimTime(d.sent_at) : <span className="nk-text-secondary">—</span>}
         </td>
         <td className="nk-table__td nk-text-secondary nk-size-12">
           {expanded ? "▲" : "▼"}
@@ -94,7 +92,7 @@ function DeliveryRow({ d }: { d: Delivery }) {
         <tr className="nk-outbox-body-row" data-testid={`outbox-body-${d.id}`}>
           <td colSpan={8} className="nk-outbox-body-cell">
             <div className="nk-outbox-body-header">
-              <span>rendered_body</span>
+              <span>Message preview</span>
               {d.last_error && (
                 <span className="nk-outbox-last-error" role="alert">
                   ⚠ Last error: {d.last_error}

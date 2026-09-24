@@ -4,6 +4,7 @@
  */
 
 import React from "react";
+import { Select } from "../../shared/ui/Select";
 import type { HeatmapFilters, HeatmapLevel, Region } from "./types";
 
 interface FilterPanelProps {
@@ -51,17 +52,18 @@ export function FilterPanel({
         <label htmlFor="filter-level" className="nk-filter-label">
           Resolution
         </label>
-        <select
+        <Select
           id="filter-level"
-          aria-label="Resolution level"
-          className="nk-select nk-select--sm"
+          ariaLabel="Resolution level"
+          size="sm"
           value={filters.level}
-          onChange={(e) => onChange({ level: e.target.value as HeatmapLevel })}
-        >
-          <option value="district">District Rollup</option>
-          <option value="cell">Equirectangular Cell (~27km)</option>
-          <option value="location">Bank Infrastructure Point</option>
-        </select>
+          onValueChange={(v) => onChange({ level: v as HeatmapLevel })}
+          options={[
+            { value: "district", label: "District Rollup" },
+            { value: "cell", label: "Equirectangular Cell (~27km)" },
+            { value: "location", label: "Bank Infrastructure Point" },
+          ]}
+        />
       </div>
 
       {/* 3. State Selector */}
@@ -69,25 +71,22 @@ export function FilterPanel({
         <label htmlFor="filter-state" className="nk-filter-label">
           State
         </label>
-        <select
+        <Select
           id="filter-state"
-          aria-label="Filter by state"
-          className="nk-select nk-select--sm"
+          ariaLabel="Filter by state"
+          size="sm"
           value={filters.state ?? "all"}
-          onChange={(e) =>
+          onValueChange={(v) =>
             onChange({
-              state: e.target.value === "all" ? undefined : e.target.value,
+              state: v === "all" ? undefined : v,
               district: undefined, // Reset district when state changes
             })
           }
-        >
-          <option value="all">All 4 Demo States</option>
-          {states.map((st) => (
-            <option key={st.id} value={st.id}>
-              {st.name} ({st.id})
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: "all", label: "All 4 Demo States" },
+            ...states.map((st) => ({ value: st.id, label: `${st.name} (${st.id})` })),
+          ]}
+        />
       </div>
 
       {/* 4. District Selector */}
@@ -95,25 +94,22 @@ export function FilterPanel({
         <label htmlFor="filter-district" className="nk-filter-label">
           District
         </label>
-        <select
+        <Select
           id="filter-district"
-          aria-label="Filter by district"
-          className="nk-select nk-select--sm"
+          ariaLabel="Filter by district"
+          size="sm"
           value={filters.district ?? "all"}
-          onChange={(e) =>
+          onValueChange={(v) =>
             onChange({
-              district: e.target.value === "all" ? undefined : e.target.value,
+              district: v === "all" ? undefined : v,
             })
           }
           disabled={availableDistricts.length === 0}
-        >
-          <option value="all">All Districts</option>
-          {availableDistricts.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name} ({d.id})
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: "all", label: "All Districts" },
+            ...availableDistricts.map((d) => ({ value: d.id, label: `${d.name} (${d.id})` })),
+          ]}
+        />
       </div>
 
       {/* 5. Category Selector */}
@@ -121,23 +117,24 @@ export function FilterPanel({
         <label htmlFor="filter-category" className="nk-filter-label">
           Scam Modus
         </label>
-        <select
+        <Select
           id="filter-category"
-          aria-label="Filter by category"
-          className="nk-select nk-select--sm"
+          ariaLabel="Filter by category"
+          size="sm"
           value={filters.category ?? "all"}
-          onChange={(e) =>
+          onValueChange={(v) =>
             onChange({
-              category: e.target.value === "all" ? undefined : e.target.value,
+              category: v === "all" ? undefined : v,
             })
           }
-        >
-          <option value="all">All Modalities</option>
-          <option value="digital_arrest">Digital Arrest</option>
-          <option value="investment_scam">Investment Scam</option>
-          <option value="upi_phishing">UPI Phishing</option>
-          <option value="task_job_scam">Task / Job Scam</option>
-        </select>
+          options={[
+            { value: "all", label: "All Modalities" },
+            { value: "digital_arrest", label: "Digital Arrest" },
+            { value: "investment_scam", label: "Investment Scam" },
+            { value: "upi_phishing", label: "UPI Phishing" },
+            { value: "task_job_scam", label: "Task / Job Scam" },
+          ]}
+        />
       </div>
 
       {/* 6. Min Confidence Threshold */}
@@ -145,21 +142,22 @@ export function FilterPanel({
         <label htmlFor="filter-confidence" className="nk-filter-label">
           Min Confidence
         </label>
-        <select
+        <Select
           id="filter-confidence"
-          aria-label="Filter by min confidence"
-          className="nk-select nk-select--sm"
+          ariaLabel="Filter by min confidence"
+          size="sm"
           value={filters.min_confidence?.toString() ?? "0"}
-          onChange={(e) => {
-            const val = parseFloat(e.target.value);
+          onValueChange={(v) => {
+            const val = parseFloat(v);
             onChange({ min_confidence: val > 0 ? val : undefined });
           }}
-        >
-          <option value="0">All Probabilities</option>
-          <option value="0.5">≥ 50% Confidence</option>
-          <option value="0.75">≥ 75% Confidence</option>
-          <option value="0.9">≥ 90% Critical Only</option>
-        </select>
+          options={[
+            { value: "0", label: "All Probabilities" },
+            { value: "0.5", label: "≥ 50% Confidence" },
+            { value: "0.75", label: "≥ 75% Confidence" },
+            { value: "0.9", label: "≥ 90% Critical Only" },
+          ]}
+        />
       </div>
 
       {/* 7. Reset Action */}

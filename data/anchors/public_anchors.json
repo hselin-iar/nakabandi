@@ -30,14 +30,14 @@
   "geo": {
     "state_weights": {
       "value": {
-        "UP": 0.35,
-        "MH": 0.25,
-        "RJ": 0.22,
-        "HR": 0.18
+        "MH": 0.4060,
+        "UP": 0.4032,
+        "HR": 0.1580,
+        "JH": 0.0328
       },
       "confidence": "medium",
-      "source": "MHA Lok Sabha UQ 1906, 11 Mar 2025 — state-wise cybercrime counts (normalised to four demo states)",
-      "note": "Weights complaint origin, not cash-out location"
+      "source": "data/seed/state_cybercrime_weights.csv — MHA Rajya Sabha USQ 1200 (30.07.2025), NCRP 2024 incident counts, normalised to four demo states",
+      "note": "Curated geo (D5) swapped in on arrival, as this file's own top-level note anticipated. Weights complaint origin, not cash-out location. Demo states are now UP/MH/HR/JH (JH replaces RJ — the curated data only covers these four)."
     }
   },
 

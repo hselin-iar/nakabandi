@@ -111,10 +111,10 @@ describe("AuditPage (Step C7)", () => {
     renderAuditPage();
     await screen.findByTestId("audit-table");
 
-    const alertCreatedCells = screen.getAllByText("alert.created");
+    const alertCreatedCells = screen.getAllByText("Alert: Created");
     expect(alertCreatedCells.length).toBeGreaterThanOrEqual(1);
 
-    const requestHoldCells = screen.getAllByText("action.request_hold");
+    const requestHoldCells = screen.getAllByText("Action: Request hold");
     expect(requestHoldCells.length).toBeGreaterThanOrEqual(1);
 
     const systemActors = screen.getAllByText("SYSTEM");

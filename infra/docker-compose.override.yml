@@ -1,0 +1,8 @@
+# Local stand-in for Checkpoint 7's hosted-VM verification (no cloud VM provisioned yet).
+# Publishes the api port so scripts/stress.py can run from the host. Keeps the real named
+# volume for /data (a Windows bind mount there caused spurious SQLite lock contention over
+# virtiofs/9p — not representative of the hosted Linux VM). Not meant to be committed.
+services:
+  api:
+    ports:
+      - "8000:8000"

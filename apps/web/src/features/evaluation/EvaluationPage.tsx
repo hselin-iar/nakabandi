@@ -282,6 +282,7 @@ export default function EvaluationPage() {
             <input
               id="eval-compare-toggle"
               type="checkbox"
+              className="nk-checkbox"
               checked={compareMode}
               onChange={(e) => setCompareMode(e.target.checked)}
             />

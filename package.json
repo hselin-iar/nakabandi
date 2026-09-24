@@ -7,6 +7,7 @@
   "workspaces": ["apps/web", "apps/bank-sim"],
   "scripts": {
     "dev": "npm run dev --workspace apps/web",
+    "dev:sim": "uv run worldsim live --control-port 8100 --oracle-port 8002",
     "test": "uv run pytest && npm run test --workspace apps/web",
     "test:e2e": "npm run test:e2e --workspace apps/web",
     "ci": "npm run ci:py && npm run ci:web && npm run ci:bank-sim",

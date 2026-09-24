@@ -13,6 +13,8 @@ import React, { useState } from "react";
 import { useAuditLog, verifyChain } from "./api/useAudit";
 import type { VerifyResponse } from "../../shared/api/types.ts";
 import { EmptyState } from "../../shared/ui/EmptyState";
+import { humanizeAction, formatSimTime } from "../../shared/lib/format";
+import { roleLabel } from "../../shared/lib/roles";
 
 // ---------------------------------------------------------------------------
 // VerifyBanner
@@ -153,23 +155,17 @@ export default function AuditPage() {
                   {entry.seq}
                 </td>
                 <td className="nk-table__td">
-                  <code className="nk-mono nk-size-12">{entry.action}</code>
+                  {humanizeAction(entry.action)}
                 </td>
                 <td className="nk-table__td nk-size-14">
                   {entry.actor_id}
+                  <span className="nk-text-secondary nk-size-12"> · {roleLabel(entry.actor_role)}</span>
                 </td>
                 <td className="nk-table__td">
                   <code className="nk-mono nk-size-12">{entry.entity_type}:{entry.entity_id}</code>
                 </td>
                 <td className="nk-table__td nk-audit-time">
-                  {new Date(entry.at).toLocaleString("en-IN", {
-                    day: "2-digit",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                    hour12: false,
-                  })}
+                  {formatSimTime(entry.at, { includeSeconds: true })}
                 </td>
                 <td className="nk-table__td">
                   <code

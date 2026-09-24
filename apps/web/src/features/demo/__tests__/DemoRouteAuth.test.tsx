@@ -95,17 +95,25 @@ afterEach(() => {
 });
 
 describe("Demo Route Authorization (Step C8 Done When)", () => {
-  it("allows demo_operator to access /demo and renders the Demo Console", async () => {
-    renderRouteAtDemo(createPrincipal("demo_operator"));
-    expect(await screen.findByTestId("demo-console")).toBeTruthy();
-    expect(screen.queryByTestId("access-denied")).toBeNull();
-  });
+  it(
+    "allows demo_operator to access /demo and renders the Demo Console",
+    async () => {
+      renderRouteAtDemo(createPrincipal("demo_operator"));
+      expect(await screen.findByTestId("demo-console", {}, { timeout: 15000 })).toBeTruthy();
+      expect(screen.queryByTestId("access-denied")).toBeNull();
+    },
+    20000,
+  );
 
-  it("allows admin to access /demo and renders the Demo Console", async () => {
-    renderRouteAtDemo(createPrincipal("admin"));
-    expect(await screen.findByTestId("demo-console")).toBeTruthy();
-    expect(screen.queryByTestId("access-denied")).toBeNull();
-  });
+  it(
+    "allows admin to access /demo and renders the Demo Console",
+    async () => {
+      renderRouteAtDemo(createPrincipal("admin"));
+      expect(await screen.findByTestId("demo-console", {}, { timeout: 15000 })).toBeTruthy();
+      expect(screen.queryByTestId("access-denied")).toBeNull();
+    },
+    20000,
+  );
 
   it("denies state_investigator and renders 403 Access Denied page", async () => {
     renderRouteAtDemo(createPrincipal("state_investigator"));

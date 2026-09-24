@@ -5,7 +5,7 @@
 | File | Description | Rows |
 |------|-------------|------|
 | `atm_branch_agent_locations.csv` | Registry of ATM, bank branch, and AePS/BC agent cash-out points across MH, UP, HR, JH | 8,504 |
-| `demo_states.geojson` | Simplified polygon boundaries for UP, MH, RJ, HR for offline rendering | 4 features |
+| `demo_states.geojson` | Simplified polygon boundaries for UP, MH, HR, JH for offline rendering | 4 features |
 
 ## Sources & Licences
 
@@ -54,7 +54,11 @@ Public domain regulatory information.
 ### Bundled GeoJSON Boundaries (`demo_states.geojson`)
 - **Source**: Public domain boundary approximations derived from Survey of India public state boundary outlines, simplified to polygon geometries suitable for offline, bundle-safe rendering (<50KB total footprint).
 - **Licence**: ODC-By 1.0 / Open Government Data (OGD) Platform India compatible.
-- **Coverage**: Four demo states (UP, MH, RJ, HR).
+- **Coverage**: Four demo states (UP, MH, HR, JH — JH replaces RJ as of this data drop, since the
+  seed CSVs above only cover these four). The JH polygon is a hand-simplified approximation at
+  the same ~7-8 vertex precision as the other three (not traced from a precision boundary
+  dataset — no such offline dataset was available); good enough for the Map's fill/outline
+  rendering, not for anything geometrically exact.
 - **NFR Compliance (DOC 2 §2.7)**: Zero external CDN or tile-server network requests at runtime; offline-ready and bundled directly into client distributions.
 
 ## Synthetic Fills

@@ -9,17 +9,7 @@
 import { usePrincipal } from "../auth/usePrincipal";
 import { useStream, useSimTime } from "../../shared/stream/useStream";
 import { formatSimTime } from "../../shared/lib/format";
-
-
-// Role display labels (same map as LoginPage)
-const ROLE_LABELS: Record<string, string> = {
-  i4c_analyst: "I4C Analyst",
-  state_investigator: "State Investigator",
-  district_officer: "District Officer",
-  bank_nodal: "Bank Nodal",
-  demo_operator: "Demo Operator",
-  admin: "Admin",
-};
+import { roleLabel } from "../../shared/lib/roles";
 
 /**
  * Connection status dot — amber = degraded / polling, green = streaming.
@@ -98,7 +88,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {principal && (
               <>
                 <span className="nk-topbar__role" id="principal-role">
-                  {ROLE_LABELS[principal.role] ?? principal.role}
+                  {roleLabel(principal.role)}
                 </span>
                 <ConnectionDot status={status} />
                 <button
@@ -132,6 +122,7 @@ import type { Permission, Role } from "../../shared/api/enums.ts";
 interface NavItem {
   to: string;
   label: string;
+  description: string;
   id: string;
   icon: React.ReactNode;
   require?: Permission;
@@ -202,14 +193,14 @@ const Icons = {
 
 /** Navigation items. Each item is gated by permission or specific roles. */
 const NAV_ITEMS: readonly NavItem[] = [
-  { to: "/alerts", label: "Alerts", id: "nav-alerts", icon: Icons.Alerts, require: "VIEW_ALERTS" },
-  { to: "/clusters", label: "Clusters & Cases", id: "nav-clusters", icon: Icons.Clusters, require: "VIEW_CASES" },
-  { to: "/map", label: "Map", id: "nav-map", icon: Icons.Map, require: "VIEW_ALERTS" },
-  { to: "/evaluation", label: "Evaluation", id: "nav-evaluation", icon: Icons.Evaluation, require: "VIEW_EVALUATION" },
-  { to: "/ops", label: "Ops", id: "nav-ops", icon: Icons.Ops, require: "SIM_CONTROL" },
-  { to: "/outbox", label: "Outbox", id: "nav-outbox", icon: Icons.Outbox, require: "VIEW_AUDIT" },
-  { to: "/audit", label: "Audit", id: "nav-audit", icon: Icons.Audit, require: "VIEW_AUDIT" },
-  { to: "/demo", label: "Demo", id: "nav-demo", icon: Icons.Demo, allowedRoles: ["demo_operator", "admin"] },
+  { to: "/alerts", label: "Alerts", description: "Live fraud alerts awaiting action", id: "nav-alerts", icon: Icons.Alerts, require: "VIEW_ALERTS" },
+  { to: "/clusters", label: "Clusters & Cases", description: "Related-account networks bundled into investigation cases", id: "nav-clusters", icon: Icons.Clusters, require: "VIEW_CASES" },
+  { to: "/map", label: "Map", description: "Where fraud risk is concentrated right now", id: "nav-map", icon: Icons.Map, require: "VIEW_ALERTS" },
+  { to: "/evaluation", label: "Evaluation", description: "How accurate the forecasting model has been", id: "nav-evaluation", icon: Icons.Evaluation, require: "VIEW_EVALUATION" },
+  { to: "/ops", label: "Ops", description: "System health and processing throughput", id: "nav-ops", icon: Icons.Ops, require: "SIM_CONTROL" },
+  { to: "/outbox", label: "Outbox", description: "Notifications sent to banks, SMS and email", id: "nav-outbox", icon: Icons.Outbox, require: "VIEW_AUDIT" },
+  { to: "/audit", label: "Audit", description: "Tamper-evident log of every action taken", id: "nav-audit", icon: Icons.Audit, require: "VIEW_AUDIT" },
+  { to: "/demo", label: "Demo", description: "Simulator controls for demonstrations", id: "nav-demo", icon: Icons.Demo, allowedRoles: ["demo_operator", "admin"] },
 ];
 
 interface SideNavProps {
@@ -243,6 +234,7 @@ export function SideNav({ simLabel, connectionStatus }: SideNavProps) {
             <NavLink
               id={item.id}
               to={item.to}
+              title={item.description}
               className={({ isActive }) =>
                 `nk-sidenav__link${isActive ? " nk-sidenav__link--active" : ""}`
               }
@@ -261,6 +253,9 @@ export function SideNav({ simLabel, connectionStatus }: SideNavProps) {
           <span>{simLabel}</span>
           <ConnectionDot status={connectionStatus} />
         </div>
+        <p className="nk-sidenav__attribution">
+          ATM &amp; bank branch locations © OpenStreetMap contributors, ODbL.
+        </p>
       </div>
     </nav>
   );

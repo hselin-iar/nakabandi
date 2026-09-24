@@ -10,6 +10,8 @@ import { ClusterGraph } from "./ClusterGraph";
 import { formatInr, formatSimTime } from "../../shared/lib/format";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
+import { Select } from "../../shared/ui/Select";
+import { Tooltip } from "../../shared/ui/Tooltip";
 import type { ClusterNode } from "./types";
 
 export default function ClustersPage() {
@@ -66,13 +68,20 @@ export default function ClustersPage() {
     );
   }
 
-  const handleSelectCluster = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextRef = e.target.value;
+  const handleSelectCluster = (nextRef: string) => {
     navigate(`/clusters/${nextRef}`);
   };
 
   return (
     <div className="nk-clusters-page" data-testid="clusters-page" style={{ padding: "20px" }}>
+      <div style={{ marginBottom: 16 }}>
+        <h1 style={{ margin: 0, fontSize: "20px", color: "#f8fafc" }}>Cluster Topology Explorer</h1>
+        <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#94a3b8" }}>
+          A cluster is a set of accounts and transactions the system believes are working
+          together to move stolen funds. Select one below to inspect its network.
+        </p>
+      </div>
+
       {/* Header bar with Cluster selector & key metrics */}
       <div
         className="nk-clusters-header"
@@ -104,28 +113,16 @@ export default function ClustersPage() {
             >
               Select Cluster
             </label>
-            <select
+            <Select
               id="cluster-select"
-              data-testid="cluster-select"
+              testId="cluster-select"
               value={cluster.cluster_ref}
-              onChange={handleSelectCluster}
-              className="nk-input"
-              style={{
-                background: "#1e293b",
-                color: "#f8fafc",
-                border: "1px solid #334155",
-                borderRadius: 4,
-                padding: "6px 12px",
-                fontWeight: 600,
-                fontSize: "14px",
-              }}
-            >
-              {clusters.map((c) => (
-                <option key={c.cluster_ref} value={c.cluster_ref}>
-                  {c.cluster_ref} ({c.size} nodes — {c.status})
-                </option>
-              ))}
-            </select>
+              onValueChange={handleSelectCluster}
+              options={clusters.map((c) => ({
+                value: c.cluster_ref,
+                label: `${c.cluster_ref} (${c.size} nodes — ${c.status})`,
+              }))}
+            />
           </div>
 
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 14 }}>
@@ -162,18 +159,21 @@ export default function ClustersPage() {
               </span>
             )}
 
-            <span
-              style={{
-                fontSize: "12px",
-                color: "#fbbf24",
-                background: "rgba(245, 158, 11, 0.1)",
-                border: "1px solid rgba(245, 158, 11, 0.3)",
-                padding: "3px 8px",
-                borderRadius: 4,
-              }}
-            >
-              Novelty: {((cluster.novelty ?? 0) * 100).toFixed(0)}%
-            </span>
+            <Tooltip content="How different this cluster's behaviour is from previously-seen patterns. Higher novelty means the model has less past experience to judge it against.">
+              <span
+                style={{
+                  fontSize: "12px",
+                  color: "#fbbf24",
+                  background: "rgba(245, 158, 11, 0.1)",
+                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  padding: "3px 8px",
+                  borderRadius: 4,
+                  cursor: "help",
+                }}
+              >
+                Novelty: {((cluster.novelty ?? 0) * 100).toFixed(0)}%
+              </span>
+            </Tooltip>
           </div>
         </div>
 

@@ -334,6 +334,15 @@ body {
   color: var(--nk-sidebar-text);
 }
 
+.nk-sidenav__attribution {
+  margin: 0;
+  padding: 0 var(--nk-space-1);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--nk-sidebar-text);
+  opacity: 0.6;
+}
+
 /* ---- Main area (right of sidebar) ---- */
 .nk-shell__body {
   display: flex;
@@ -742,6 +751,153 @@ body {
 }
 
 .nk-btn__label--loading { opacity: 0.7; }
+
+/* -------------------------------------------------------------------------
+   Form Controls — text input, textarea, checkbox, and the themed Select
+   (Radix UI primitive; the closed trigger and the open option list are both
+   styled here since a native <select>'s open list cannot be styled at all)
+   ------------------------------------------------------------------------- */
+
+.nk-input,
+.nk-textarea {
+  display: block;
+  width: 100%;
+  font-family: var(--nk-font-sans);
+  font-size: var(--nk-size-14);
+  color: var(--nk-text-primary);
+  background: var(--nk-surface-subtle);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-md);
+  padding: var(--nk-space-2) var(--nk-space-3);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.nk-input::placeholder,
+.nk-textarea::placeholder {
+  color: var(--nk-text-muted);
+}
+
+.nk-input:focus,
+.nk-textarea:focus {
+  outline: none;
+  border-color: var(--nk-brand-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nk-focus-ring) 25%, transparent);
+}
+
+.nk-input:disabled,
+.nk-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nk-input--sm { padding: var(--nk-space-1) var(--nk-space-2); font-size: var(--nk-size-12); border-radius: var(--nk-radius-sm); }
+
+.nk-checkbox {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--nk-brand-primary);
+  cursor: pointer;
+}
+
+/* ---- Select trigger (closed box) ---- */
+
+.nk-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nk-space-2);
+  width: 100%;
+  font-family: var(--nk-font-sans);
+  font-size: var(--nk-size-14);
+  color: var(--nk-text-primary);
+  background: var(--nk-surface-subtle);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-md);
+  padding: var(--nk-space-2) var(--nk-space-3);
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.nk-select-trigger--sm { padding: var(--nk-space-1) var(--nk-space-2); font-size: var(--nk-size-12); border-radius: var(--nk-radius-sm); }
+
+.nk-select-trigger:hover { background: var(--nk-surface-sunken); }
+
+.nk-select-trigger:focus,
+.nk-select-trigger[data-state="open"] {
+  outline: none;
+  border-color: var(--nk-brand-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nk-focus-ring) 25%, transparent);
+}
+
+.nk-select-trigger[data-disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nk-select-trigger__icon {
+  color: var(--nk-text-secondary);
+  font-size: var(--nk-size-12);
+  flex-shrink: 0;
+}
+
+/* ---- Select content (the open option list — the part a native <select> can't style) ---- */
+
+.nk-select-content {
+  z-index: 60;
+  overflow: hidden;
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-md);
+  box-shadow: var(--nk-shadow-md);
+  min-width: var(--radix-select-trigger-width);
+}
+
+.nk-select-viewport {
+  padding: var(--nk-space-1);
+  max-height: 18rem;
+}
+
+.nk-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nk-space-2);
+  font-size: var(--nk-size-14);
+  color: var(--nk-text-primary);
+  border-radius: var(--nk-radius-sm);
+  padding: var(--nk-space-2) var(--nk-space-3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.nk-select-item[data-highlighted] {
+  outline: none;
+  background: var(--nk-brand-primary);
+  color: #fff;
+}
+
+.nk-select-item__indicator {
+  font-size: var(--nk-size-12);
+}
+
+/* ---- Tooltip ---- */
+
+.nk-tooltip-content {
+  z-index: 70;
+  max-width: 18rem;
+  font-family: var(--nk-font-sans);
+  font-size: var(--nk-size-12);
+  line-height: 1.4;
+  color: var(--nk-text-inverse);
+  background: var(--nk-sidebar-bg);
+  border-radius: var(--nk-radius-sm);
+  padding: var(--nk-space-2) var(--nk-space-3);
+  box-shadow: var(--nk-shadow-md);
+}
+
+.nk-tooltip-arrow {
+  fill: var(--nk-sidebar-bg);
+}
 
 /* -------------------------------------------------------------------------
    C3 — Badge

@@ -156,3 +156,33 @@ def test_golden_output_validates_against_schemas(cfg: SimConfig):
     assert cashouts_seen > 0, "No CashOutObservationBatch emitted"
     assert registry_seen == 1, f"Expected 1 RegistryUpdate, got {registry_seen}"
     assert ticks_seen == cfg.world.days, f"Expected {cfg.world.days} ticks, got {ticks_seen}"
+
+
+def test_registry_wire_shape_matches_geo_domain_parsing(cfg: SimConfig):
+    """Regression test for a real writer/reader mismatch found this session: `to_registry()`'s
+    banks/regions/cells used to send a shape `nakabandi.geo.domain.parsing.parse_bank/
+    parse_region/parse_cell` (apps/api/src/nakabandi/geo/domain/parsing.py) would reject on every
+    single row — `ApplyRegistry` catches the rejection per-row and moves on, so nothing ever
+    crashed, but no bank/region/cell row world-sim ever sent had actually been stored. world-sim
+    may not import `nakabandi.*` (DOC 3 M1's only-cross-import-is-contracts rule), so this
+    encodes that required-field contract directly rather than importing the real parser —
+    `parse_bank` needs id/name/short_code, `parse_region` needs id/level/name (parent_id and
+    geojson_ref may be null), `parse_cell` needs id/grid_km/row/col/district_id/centroid_lat/
+    centroid_lon.
+    """
+    rng = rng_for(cfg.seed, "world")
+    registry = build_registry(cfg, rng)
+    ru = to_registry(registry)
+
+    for i, b in enumerate(ru.banks):
+        for field in ("id", "name", "short_code"):
+            assert field in b and b[field] is not None, f"bank[{i}] missing '{field}'"
+
+    for i, r in enumerate(ru.regions):
+        for field in ("id", "level", "name"):
+            assert field in r and r[field] is not None, f"region[{i}] missing '{field}'"
+        assert r["level"] in ("state", "district")
+
+    for i, c in enumerate(ru.cells):
+        for field in ("id", "grid_km", "row", "col", "district_id", "centroid_lat", "centroid_lon"):
+            assert field in c and c[field] is not None, f"cell[{i}] missing '{field}'"

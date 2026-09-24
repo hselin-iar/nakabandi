@@ -7,6 +7,7 @@
  */
 
 import React from "react";
+import { Link } from "react-router-dom";
 import {
   ResponsiveContainer,
   BarChart,
@@ -20,6 +21,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useOpsMetrics } from "./api/useOps";
+import { formatSimTime } from "../../shared/lib/format";
 import type { StageLatency, ChannelHealth } from "./api/useOps";
 
 // ---------------------------------------------------------------------------
@@ -32,19 +34,30 @@ interface StatCardProps {
   unit?: string;
   warn?: boolean;
   testId?: string;
+  linkTo?: string;
 }
 
-function StatCard({ label, value, unit, warn, testId }: StatCardProps) {
-  return (
-    <div
-      className={`nk-ops-stat-card${warn ? " nk-ops-stat-card--warn" : ""}`}
-      data-testid={testId}
-    >
+function StatCard({ label, value, unit, warn, testId, linkTo }: StatCardProps) {
+  const body = (
+    <>
       <span className="nk-ops-stat-card__label">{label}</span>
       <span className="nk-ops-stat-card__value">
         {value}
         {unit && <span className="nk-ops-stat-card__unit"> {unit}</span>}
       </span>
+    </>
+  );
+  const className = `nk-ops-stat-card${warn ? " nk-ops-stat-card--warn" : ""}`;
+  if (linkTo) {
+    return (
+      <Link to={linkTo} className={className} data-testid={testId}>
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <div className={className} data-testid={testId}>
+      {body}
     </div>
   );
 }
@@ -132,7 +145,10 @@ function EpsChart({ series }: { series: { at: string; eps: number }[] }) {
 function ChannelTable({ channels }: { channels: ChannelHealth[] }) {
   return (
     <div className="nk-ops-channel-table-wrapper">
-      <h3 className="nk-ops-section-title">Outbox Channel Health</h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <h3 className="nk-ops-section-title">Outbox Channel Health</h3>
+        <Link to="/outbox" className="nk-text-xs">View full outbox →</Link>
+      </div>
       <table className="nk-table" data-testid="ops-channel-table">
         <thead>
           <tr>
@@ -205,7 +221,7 @@ export default function OpsPage() {
           </div>
         )}
         <p className="nk-ops-page__subtitle">
-          Captured at {new Date(metrics.captured_at).toLocaleString("en-IN")}
+          Captured at {formatSimTime(metrics.captured_at)}
           {metrics.sim_speed_ratio != null && ` · Sim speed ×${metrics.sim_speed_ratio.toFixed(1)}`}
         </p>
       </header>
@@ -222,6 +238,7 @@ export default function OpsPage() {
           value={metrics.outbox_depth}
           warn={metrics.outbox_depth > 50}
           testId="ops-stat-outbox-depth"
+          linkTo="/outbox"
         />
         <StatCard
           label="Delivery Failures (24 h)"

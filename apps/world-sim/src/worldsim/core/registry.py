@@ -7,7 +7,9 @@ districts using hard-coded district centroids (no network required), fills gaps 
 synthetic points (source="synthetic"), assigns grid cells and activity_index in [0,1]
 per location, and places response units.
 
-District centroids cover: UP, MH, RJ, HR — the four demo states.
+District centroids cover: UP, MH, JH, HR — the four demo states. This is the fallback used
+when `data/seed/` isn't present; `worldsim.cli._build_world` prefers real registry data from
+`worldsim.core.real_seed.load_real_registry` when it is.
 """
 
 from __future__ import annotations
@@ -36,6 +38,7 @@ class Bank:
     id: str
     name: str
     state_id: str
+    short_code: str
 
 
 @dataclass(frozen=True)
@@ -67,6 +70,7 @@ class Unit:
 class District:
     id: str
     state_id: str
+    state_name: str
     name: str
     lat: float  # centroid
     lon: float
@@ -78,6 +82,9 @@ class Cell:
     lat: float
     lon: float
     district_id: str
+    grid_km: float
+    row: int
+    col: int
 
 
 @dataclass
@@ -112,48 +119,163 @@ class Registry:
 
 _DISTRICTS: list[dict] = [
     # Uttar Pradesh
-    {"id": "UP-LKO", "state_id": "UP", "name": "Lucknow", "lat": 26.85, "lon": 80.95},
-    {"id": "UP-KNP", "state_id": "UP", "name": "Kanpur", "lat": 26.47, "lon": 80.33},
-    {"id": "UP-AGR", "state_id": "UP", "name": "Agra", "lat": 27.18, "lon": 78.01},
-    {"id": "UP-GZB", "state_id": "UP", "name": "Ghaziabad", "lat": 28.67, "lon": 77.45},
+    {
+        "id": "UP-LKO",
+        "state_id": "UP",
+        "state_name": "Uttar Pradesh",
+        "name": "Lucknow",
+        "lat": 26.85,
+        "lon": 80.95,
+    },
+    {
+        "id": "UP-KNP",
+        "state_id": "UP",
+        "state_name": "Uttar Pradesh",
+        "name": "Kanpur",
+        "lat": 26.47,
+        "lon": 80.33,
+    },
+    {
+        "id": "UP-AGR",
+        "state_id": "UP",
+        "state_name": "Uttar Pradesh",
+        "name": "Agra",
+        "lat": 27.18,
+        "lon": 78.01,
+    },
+    {
+        "id": "UP-GZB",
+        "state_id": "UP",
+        "state_name": "Uttar Pradesh",
+        "name": "Ghaziabad",
+        "lat": 28.67,
+        "lon": 77.45,
+    },
     # Maharashtra
-    {"id": "MH-MUM", "state_id": "MH", "name": "Mumbai", "lat": 19.08, "lon": 72.88},
-    {"id": "MH-PUN", "state_id": "MH", "name": "Pune", "lat": 18.52, "lon": 73.86},
-    {"id": "MH-NAG", "state_id": "MH", "name": "Nagpur", "lat": 21.15, "lon": 79.09},
-    {"id": "MH-NAS", "state_id": "MH", "name": "Nashik", "lat": 20.00, "lon": 73.79},
-    # Rajasthan
-    {"id": "RJ-JPR", "state_id": "RJ", "name": "Jaipur", "lat": 26.92, "lon": 75.79},
-    {"id": "RJ-JDH", "state_id": "RJ", "name": "Jodhpur", "lat": 26.29, "lon": 73.02},
-    {"id": "RJ-AJM", "state_id": "RJ", "name": "Ajmer", "lat": 26.45, "lon": 74.64},
-    {"id": "RJ-UDR", "state_id": "RJ", "name": "Udaipur", "lat": 24.58, "lon": 73.68},
+    {
+        "id": "MH-MUM",
+        "state_id": "MH",
+        "state_name": "Maharashtra",
+        "name": "Mumbai",
+        "lat": 19.08,
+        "lon": 72.88,
+    },
+    {
+        "id": "MH-PUN",
+        "state_id": "MH",
+        "state_name": "Maharashtra",
+        "name": "Pune",
+        "lat": 18.52,
+        "lon": 73.86,
+    },
+    {
+        "id": "MH-NAG",
+        "state_id": "MH",
+        "state_name": "Maharashtra",
+        "name": "Nagpur",
+        "lat": 21.15,
+        "lon": 79.09,
+    },
+    {
+        "id": "MH-NAS",
+        "state_id": "MH",
+        "state_name": "Maharashtra",
+        "name": "Nashik",
+        "lat": 20.00,
+        "lon": 73.79,
+    },
+    # Jharkhand
+    {
+        "id": "JH-RAN",
+        "state_id": "JH",
+        "state_name": "Jharkhand",
+        "name": "Ranchi",
+        "lat": 23.34,
+        "lon": 85.31,
+    },
+    {
+        "id": "JH-DHA",
+        "state_id": "JH",
+        "state_name": "Jharkhand",
+        "name": "Dhanbad",
+        "lat": 23.80,
+        "lon": 86.43,
+    },
+    {
+        "id": "JH-ESI",
+        "state_id": "JH",
+        "state_name": "Jharkhand",
+        "name": "East Singhbhum",
+        "lat": 22.80,
+        "lon": 86.18,
+    },
+    {
+        "id": "JH-BOK",
+        "state_id": "JH",
+        "state_name": "Jharkhand",
+        "name": "Bokaro",
+        "lat": 23.67,
+        "lon": 86.15,
+    },
     # Haryana
-    {"id": "HR-GGN", "state_id": "HR", "name": "Gurugram", "lat": 28.46, "lon": 77.03},
-    {"id": "HR-FBD", "state_id": "HR", "name": "Faridabad", "lat": 28.41, "lon": 77.31},
-    {"id": "HR-AMB", "state_id": "HR", "name": "Ambala", "lat": 30.38, "lon": 76.78},
-    {"id": "HR-HIS", "state_id": "HR", "name": "Hisar", "lat": 29.15, "lon": 75.72},
+    {
+        "id": "HR-GGN",
+        "state_id": "HR",
+        "state_name": "Haryana",
+        "name": "Gurugram",
+        "lat": 28.46,
+        "lon": 77.03,
+    },
+    {
+        "id": "HR-FBD",
+        "state_id": "HR",
+        "state_name": "Haryana",
+        "name": "Faridabad",
+        "lat": 28.41,
+        "lon": 77.31,
+    },
+    {
+        "id": "HR-AMB",
+        "state_id": "HR",
+        "state_name": "Haryana",
+        "name": "Ambala",
+        "lat": 30.38,
+        "lon": 76.78,
+    },
+    {
+        "id": "HR-HIS",
+        "state_id": "HR",
+        "state_name": "Haryana",
+        "name": "Hisar",
+        "lat": 29.15,
+        "lon": 75.72,
+    },
 ]
 
 _BANKS: list[dict] = [
-    {"id": "SBI", "name": "State Bank of India", "state_id": "*"},
-    {"id": "PNB", "name": "Punjab National Bank", "state_id": "*"},
-    {"id": "HDFC", "name": "HDFC Bank", "state_id": "*"},
-    {"id": "ICICI", "name": "ICICI Bank", "state_id": "*"},
-    {"id": "BOB", "name": "Bank of Baroda", "state_id": "*"},
+    {"id": "SBI", "name": "State Bank of India", "state_id": "*", "short_code": "SBI"},
+    {"id": "PNB", "name": "Punjab National Bank", "state_id": "*", "short_code": "PNB"},
+    {"id": "HDFC", "name": "HDFC Bank", "state_id": "*", "short_code": "HDFC"},
+    {"id": "ICICI", "name": "ICICI Bank", "state_id": "*", "short_code": "ICICI"},
+    {"id": "BOB", "name": "Bank of Baroda", "state_id": "*", "short_code": "BOB"},
 ]
 
 # Grid: ~0.25° cells (~27 km side)
 _CELL_SIZE_DEG: float = 0.25
+GRID_KM: float = _CELL_SIZE_DEG * 111.0  # ~27.75 km; 1 degree of latitude is ~111 km
+
+
+def _cell_row_col(lat: float, lon: float) -> tuple[int, int]:
+    return math.floor(lat / _CELL_SIZE_DEG), math.floor(lon / _CELL_SIZE_DEG)
 
 
 def _cell_id(lat: float, lon: float) -> str:
-    row = math.floor(lat / _CELL_SIZE_DEG)
-    col = math.floor(lon / _CELL_SIZE_DEG)
+    row, col = _cell_row_col(lat, lon)
     return f"C{row:+05d}_{col:+05d}"
 
 
 def _cell_centroid(lat: float, lon: float) -> tuple[float, float]:
-    row = math.floor(lat / _CELL_SIZE_DEG)
-    col = math.floor(lon / _CELL_SIZE_DEG)
+    row, col = _cell_row_col(lat, lon)
     return (
         (row + 0.5) * _CELL_SIZE_DEG,
         (col + 0.5) * _CELL_SIZE_DEG,
@@ -167,7 +289,8 @@ def _area_type(rng: np.random.Generator, district_name: str) -> AreaType:
         "Pune",
         "Lucknow",
         "Kanpur",
-        "Jaipur",
+        "Ranchi",
+        "Dhanbad",
         "Gurugram",
         "Faridabad",
         "Ghaziabad",
@@ -217,7 +340,16 @@ def build_registry(cfg: SimConfig, rng: np.random.Generator) -> Registry:
             cid = _cell_id(lat, lon)
             if cid not in cells_seen:
                 clat, clon = _cell_centroid(lat, lon)
-                cells_seen[cid] = Cell(id=cid, lat=clat, lon=clon, district_id=district.id)
+                crow, ccol = _cell_row_col(lat, lon)
+                cells_seen[cid] = Cell(
+                    id=cid,
+                    lat=clat,
+                    lon=clon,
+                    district_id=district.id,
+                    grid_km=GRID_KM,
+                    row=crow,
+                    col=ccol,
+                )
             loc = Location(
                 id=f"LOC-{district.id}-{i:04d}",
                 kind=kind,

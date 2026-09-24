@@ -1,26 +1,17 @@
-# Placeholder for apps/world-sim (DOC 4 Step A5: "world-sim (placeholder)") until Track B builds
-# the real control/oracle API (Steps B1, B5). Self-contained: does NOT copy from apps/world-sim,
-# which is Track B's own directory (DOC 4 §4.1b Ownership Map) — Track B develops it in
-# isolation and swaps this file wholesale when the real image is ready.
-FROM python:3.11-slim
-WORKDIR /app
-RUN cat <<'PY' > placeholder.py
-import http.server
-import json
+# NAKABANDI world-sim image (DOC 3 M1, DOC 4 Step B5): runs the real simulator's live control
+# server (`worldsim live`), which streams synthetic complaints into the API's /ingest routes.
+# Build context is the repo root (docker compose sets it below), since this needs both the
+# workspace root files and apps/world-sim/. Mirrors infra/Dockerfile.api's build pattern.
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+WORKDIR /repo
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1
 
+COPY pyproject.toml uv.lock ./
+COPY packages/contracts/ packages/contracts/
+COPY apps/world-sim/ apps/world-sim/
+RUN uv sync --frozen --no-dev --package nakabandi-world-sim
 
-class Handler(http.server.BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        self.wfile.write(json.dumps({"status": "placeholder", "service": "world-sim"}).encode())
+COPY config/ config/
 
-    def log_message(self, *args: object) -> None:
-        pass
-
-
-http.server.HTTPServer(("0.0.0.0", 8100), Handler).serve_forever()
-PY
-EXPOSE 8100
-CMD ["python", "placeholder.py"]
+EXPOSE 8100 8002
+CMD ["uv", "run", "worldsim", "live", "--config", "config/sim.default.yaml", "--control-port", "8100", "--oracle-port", "8002"]

@@ -126,6 +126,60 @@ export function formatSimTime(
  *   formatDuration(-60)       → "-1m 0s"
  *   formatDuration(0)         → "0s"
  */
+// ---------------------------------------------------------------------------
+// Status / action code humanization
+// ---------------------------------------------------------------------------
+
+const ALL_CAPS_WORDS = new Set(["fir", "kyc", "upi", "atm", "sim"]);
+
+/**
+ * Turn a snake_case status code into a readable label.
+ *
+ * @example
+ *   humanizeStatus("under_investigation") → "Under Investigation"
+ *   humanizeStatus("fir_recommended")      → "FIR Recommended"
+ */
+export function humanizeStatus(status: string): string {
+  return status
+    .split("_")
+    .filter(Boolean)
+    .map((word) =>
+      ALL_CAPS_WORDS.has(word.toLowerCase())
+        ? word.toUpperCase()
+        : word.charAt(0).toUpperCase() + word.slice(1),
+    )
+    .join(" ");
+}
+
+/**
+ * Turn a dotted, snake_case audit/timeline action code into a readable "Namespace: Verb"
+ * label instead of shouting the raw code in caps.
+ *
+ * @example
+ *   humanizeAction("alert.acknowledge")   → "Alert: Acknowledge"
+ *   humanizeAction("outcome.hit")         → "Outcome: Hit"
+ *   humanizeAction("alert.request_hold")  → "Alert: Request hold"
+ */
+export function humanizeAction(code: string): string {
+  const parts = code.split(".").filter(Boolean);
+  const verb = (parts.pop() ?? code).replace(/_/g, " ");
+  const verbLabel = verb.charAt(0).toUpperCase() + verb.slice(1);
+  if (parts.length === 0) return verbLabel;
+  const namespace = parts.join(".");
+  const namespaceLabel = namespace.charAt(0).toUpperCase() + namespace.slice(1);
+  return `${namespaceLabel}: ${verbLabel}`;
+}
+
+/**
+ * Whether a separate "kind" badge is worth showing next to a target's name — false when the
+ * name already spells out the kind (e.g. name "MG Road ATM" with kind "ATM" would otherwise
+ * render as "MG Road ATM ATM").
+ */
+export function shouldShowKindBadge(name: string, kind: string): boolean {
+  if (!kind) return false;
+  return !name.toLowerCase().includes(kind.toLowerCase());
+}
+
 export function formatDuration(seconds: number): string {
   if (seconds === 0) return "0s";
 

@@ -10,18 +10,9 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { apiClient } from "../../shared/api/client";
-import type { Role } from "../../shared/api/enums.ts";
 import type { DemoUserResponse } from "../../shared/api/types.ts";
 import { usePrincipal } from "./usePrincipal";
-
-const ROLE_LABELS: Record<Role, string> = {
-  i4c_analyst: "I4C Analyst",
-  state_investigator: "State Investigator",
-  district_officer: "District Officer",
-  bank_nodal: "Bank Nodal",
-  demo_operator: "Demo Operator",
-  admin: "Admin",
-};
+import { roleLabel } from "../../shared/lib/roles";
 
 export function LoginPage() {
   const { login, isAuthenticated } = usePrincipal();
@@ -74,7 +65,7 @@ export function LoginPage() {
                 className="nk-quick-login-btn"
                 onClick={() => handleQuickLogin(user)}
               >
-                <span className="nk-btn-role">{ROLE_LABELS[user.role as Role] ?? user.role}</span>
+                <span className="nk-btn-role">{roleLabel(user.role)}</span>
                 <span className="nk-btn-username">{user.display_name}</span>
               </button>
             ))}

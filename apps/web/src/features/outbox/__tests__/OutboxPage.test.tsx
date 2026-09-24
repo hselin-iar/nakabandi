@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
+import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import OutboxPage from "../OutboxPage";
 import { AuthContext } from "../../../app/auth/AuthContext";
@@ -81,7 +82,9 @@ function renderOutboxPage() {
       }}
     >
       <QueryClientProvider client={qc}>
-        <OutboxPage />
+        <MemoryRouter>
+          <OutboxPage />
+        </MemoryRouter>
       </QueryClientProvider>
     </AuthContext.Provider>,
   );

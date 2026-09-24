@@ -12,6 +12,8 @@ import { useAlerts, type AlertFilters } from "./api/useAlerts";
 import { AlertDetail } from "./AlertDetail";
 import { ReviewQueue } from "./ReviewQueue";
 import { DataTable, type Column } from "../../shared/ui/DataTable";
+import { Select } from "../../shared/ui/Select";
+import { shouldShowKindBadge } from "../../shared/lib/format";
 import {
   SeverityBadge,
   StatusBadge,
@@ -95,14 +97,16 @@ export default function AlertsInbox() {
         key: "target",
         header: "Target Facility",
         sortable: true,
-        cell: (row) => (
-          <div className="nk-alert-target-cell">
-            <span className="font-medium text-primary">
-              {String(row.target.name ?? row.target.id ?? "")}
-            </span>
-            <span className="nk-text-xs nk-tag">{String(row.target.kind ?? "")}</span>
-          </div>
-        ),
+        cell: (row) => {
+          const name = String(row.target.name ?? row.target.id ?? "");
+          const kind = String(row.target.kind ?? "");
+          return (
+            <div className="nk-alert-target-cell">
+              <span className="font-medium text-primary">{name}</span>
+              {shouldShowKindBadge(name, kind) && <span className="nk-text-xs nk-tag">{kind}</span>}
+            </div>
+          );
+        },
       },
       {
         key: "confidence",
@@ -226,18 +230,13 @@ export default function AlertsInbox() {
         </div>
 
         <div className="nk-filter-controls">
-          <select
-            className="nk-select nk-select--sm"
+          <Select
+            size="sm"
             value={severityFilter}
-            aria-label="Filter by severity"
-            onChange={(e) => setSeverityFilter(e.target.value as Severity | "all")}
-          >
-            {severityOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            ariaLabel="Filter by severity"
+            onValueChange={(v) => setSeverityFilter(v as Severity | "all")}
+            options={severityOptions}
+          />
 
           <input
             type="search"

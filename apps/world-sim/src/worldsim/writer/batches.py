@@ -17,6 +17,7 @@ ONLY cross-package import allowed for world-sim (DOC 3 M1 shared surfaces).
 from __future__ import annotations
 
 import hashlib
+import os
 from datetime import UTC, datetime, timedelta
 
 from nakabandi_contracts.ingest import (
@@ -39,8 +40,15 @@ from worldsim.core.registry import Registry
 # LC-1: batches are capped at 500 items
 BATCH_MAX: int = 500
 
-# Sim epoch: all fractional-day times are relative to this UTC moment
-_SIM_EPOCH: datetime = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
+# Sim epoch: all fractional-day times are relative to this UTC moment.
+# Defaults to 2026-01-15T06:00:00Z to align with data/seed/mini_ingest.jsonl;
+# can be overridden with the WORLDSIM_EPOCH env var.
+_SIM_EPOCH_RAW = os.environ.get("WORLDSIM_EPOCH")
+_SIM_EPOCH: datetime = (
+    datetime.fromisoformat(_SIM_EPOCH_RAW)
+    if _SIM_EPOCH_RAW
+    else datetime(2026, 1, 15, 6, 0, 0, tzinfo=UTC)
+)
 
 
 def frac_day_to_dt(frac_day: float) -> datetime:
@@ -147,9 +155,47 @@ def to_cashout_batch(
 
 
 def to_registry(registry: Registry, version: str = "v0") -> RegistryUpdate:
-    banks = [{"id": b.id, "name": b.name} for b in registry.banks]
-    regions = [{"id": s} for s in {d.state_id for d in registry.districts}]
-    cells = [{"id": c.id, "lat": c.lat, "lon": c.lon} for c in registry.cells]
+    banks = [{"id": b.id, "name": b.name, "short_code": b.short_code} for b in registry.banks]
+
+    # One region row per state (level="state", the Map's boundary polygon join key via
+    # geojson_ref) and one per district (level="district", parent_id links it to its state) —
+    # nakabandi.geo.domain.parsing.parse_region requires both "level" and "name" on every row.
+    states_seen: dict[str, str] = {}
+    regions: list[dict] = []
+    for d in registry.districts:
+        if d.state_id not in states_seen:
+            states_seen[d.state_id] = d.state_name
+            regions.append(
+                {
+                    "id": d.state_id,
+                    "level": "state",
+                    "name": d.state_name,
+                    "parent_id": None,
+                    "geojson_ref": d.state_id,
+                }
+            )
+        regions.append(
+            {
+                "id": d.id,
+                "level": "district",
+                "name": d.name,
+                "parent_id": d.state_id,
+                "geojson_ref": None,
+            }
+        )
+
+    cells = [
+        {
+            "id": c.id,
+            "grid_km": c.grid_km,
+            "row": c.row,
+            "col": c.col,
+            "district_id": c.district_id,
+            "centroid_lat": c.lat,
+            "centroid_lon": c.lon,
+        }
+        for c in registry.cells
+    ]
     locations = [
         RegistryLocation(
             id=loc.id,

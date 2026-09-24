@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DemoConsole } from "../DemoConsole";
@@ -221,8 +222,9 @@ describe("DemoConsole (Step C8)", () => {
     const sizeInput = screen.getByTestId("inject-size-input");
     fireEvent.change(sizeInput, { target: { value: "45" } });
 
-    const localitySelect = screen.getByTestId("inject-locality-select");
-    fireEvent.change(localitySelect, { target: { value: "multi_district" } });
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("inject-locality-select"));
+    await user.click(await screen.findByRole("option", { name: /multi_district \(neighbouring\)/i }));
 
     // Submit inject cluster form
     const injectBtn = screen.getByTestId("inject-cluster-btn");

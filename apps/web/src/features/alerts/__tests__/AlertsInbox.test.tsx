@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import React from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -193,8 +194,9 @@ describe("AlertsInbox", () => {
     renderWithProviders(<AlertsInbox />);
     await screen.findByText("ALT-2026-001");
 
-    const severitySelect = screen.getByLabelText("Filter by severity");
-    fireEvent.change(severitySelect, { target: { value: "CRITICAL" } });
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("Filter by severity"));
+    await user.click(await screen.findByRole("option", { name: "Critical" }));
 
     // ALT-2026-001 is CRITICAL
     expect(await screen.findByText("ALT-2026-001")).toBeTruthy();
