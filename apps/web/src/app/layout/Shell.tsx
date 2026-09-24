@@ -3,6 +3,7 @@
  * DOC 3 Web App Shell: layout/ → Shell.tsx
  *
  * C3: sim time from useSimTime() (stream-driven); connection dot from useStream().
+ * UI: Neomorphic Hybrid Fintech design — design.md
  */
 
 import { usePrincipal } from "../auth/usePrincipal";
@@ -58,34 +59,60 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="nk-shell">
-      <header className="nk-topbar" role="banner">
-        <span className="nk-topbar__brand">NAKABANDI</span>
+      {/* Dark Sidebar */}
+      <SideNav simLabel={simLabel} connectionStatus={status} />
 
-        <span className="nk-topbar__simtime" aria-label="Simulator time">
-          {simLabel}
-        </span>
-
-        <div className="nk-topbar__right">
-          {principal && (
-            <>
-              <span className="nk-topbar__role" id="principal-role">
-                {ROLE_LABELS[principal.role] ?? principal.role}
-              </span>
-              <ConnectionDot status={status} />
-              <button
-                id="topbar-logout-btn"
-                className="nk-topbar__logout"
-                onClick={logout}
-              >
-                Log out
-              </button>
-            </>
-          )}
-        </div>
-      </header>
-
+      {/* Right side: topbar + main */}
       <div className="nk-shell__body">
-        <SideNav />
+        <header className="nk-topbar" role="banner">
+          {/* Greeting / page context */}
+          <div className="nk-topbar__greeting">
+            <span className="nk-topbar__title">NAKABANDI</span>
+            <span className="nk-topbar__subtitle">Financial Crime Detection Platform</span>
+          </div>
+
+          {/* Center pill search */}
+          <div className="nk-topbar__search">
+            <svg
+              className="nk-topbar__search-icon"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="9" r="6" />
+              <path d="M15 15l-3.5-3.5" strokeLinecap="round" />
+            </svg>
+            <input
+              className="nk-topbar__search-input"
+              type="search"
+              placeholder="Search alerts, cases, refs…"
+              aria-label="Search"
+              id="topbar-search"
+            />
+          </div>
+
+          {/* Right: role pill, connection, logout */}
+          <div className="nk-topbar__right">
+            {principal && (
+              <>
+                <span className="nk-topbar__role" id="principal-role">
+                  {ROLE_LABELS[principal.role] ?? principal.role}
+                </span>
+                <ConnectionDot status={status} />
+                <button
+                  id="topbar-logout-btn"
+                  className="nk-topbar__logout"
+                  onClick={logout}
+                >
+                  Log out
+                </button>
+              </>
+            )}
+          </div>
+        </header>
+
         <main className="nk-main" id="main-content">
           {children}
         </main>
@@ -106,27 +133,102 @@ interface NavItem {
   to: string;
   label: string;
   id: string;
+  icon: React.ReactNode;
   require?: Permission;
   allowedRoles?: Role[];
 }
 
+/** SVG icon components — inline for zero-dependency icons */
+const Icons = {
+  Alerts: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 2a6 6 0 0 1 6 6c0 3.5 1.5 5 1.5 5H2.5S4 11.5 4 8a6 6 0 0 1 6-6Z" />
+      <path d="M8.5 17a1.5 1.5 0 0 0 3 0" />
+    </svg>
+  ),
+  Clusters: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="10" cy="10" r="2.5" />
+      <circle cx="4" cy="5" r="1.75" />
+      <circle cx="16" cy="5" r="1.75" />
+      <circle cx="4" cy="15" r="1.75" />
+      <circle cx="16" cy="15" r="1.75" />
+      <path d="M7.5 8.5 5.5 6.5M12.5 8.5l2-2M7.5 11.5l-2 2M12.5 11.5l2 2" />
+    </svg>
+  ),
+  Map: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="1,3 7,1 13,3 19,1 19,17 13,19 7,17 1,19" />
+      <line x1="7" y1="1" x2="7" y2="17" />
+      <line x1="13" y1="3" x2="13" y2="19" />
+    </svg>
+  ),
+  Evaluation: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="14" height="14" rx="2.5" />
+      <path d="M7 10l2 2 4-4" />
+    </svg>
+  ),
+  Ops: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="10" cy="10" r="2.5" />
+      <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" />
+    </svg>
+  ),
+  Outbox: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 13V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3" />
+      <path d="M3 13H7l1.5 2h3L13 13h4" />
+      <path d="M10 3v8M7 8l3 3 3-3" />
+    </svg>
+  ),
+  Audit: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 3H6a1 1 0 0 0-1 1v13l5-3 5 3V4a1 1 0 0 0-1-1Z" />
+    </svg>
+  ),
+  Demo: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4l12 6-12 6V4Z" />
+    </svg>
+  ),
+  Clock: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="10" cy="10" r="7.5" />
+      <path d="M10 6v4l2.5 2.5" />
+    </svg>
+  ),
+};
+
 /** Navigation items. Each item is gated by permission or specific roles. */
 const NAV_ITEMS: readonly NavItem[] = [
-  { to: "/alerts", label: "Alerts", id: "nav-alerts", require: "VIEW_ALERTS" },
-  { to: "/clusters", label: "Clusters & Cases", id: "nav-clusters", require: "VIEW_CASES" },
-  { to: "/map", label: "Map", id: "nav-map", require: "VIEW_ALERTS" },
-  { to: "/evaluation", label: "Evaluation", id: "nav-evaluation", require: "VIEW_EVALUATION" },
-  { to: "/ops", label: "Ops", id: "nav-ops", require: "SIM_CONTROL" },
-  { to: "/outbox", label: "Outbox", id: "nav-outbox", require: "VIEW_AUDIT" },
-  { to: "/audit", label: "Audit", id: "nav-audit", require: "VIEW_AUDIT" },
-  { to: "/demo", label: "Demo", id: "nav-demo", allowedRoles: ["demo_operator", "admin"] },
+  { to: "/alerts", label: "Alerts", id: "nav-alerts", icon: Icons.Alerts, require: "VIEW_ALERTS" },
+  { to: "/clusters", label: "Clusters & Cases", id: "nav-clusters", icon: Icons.Clusters, require: "VIEW_CASES" },
+  { to: "/map", label: "Map", id: "nav-map", icon: Icons.Map, require: "VIEW_ALERTS" },
+  { to: "/evaluation", label: "Evaluation", id: "nav-evaluation", icon: Icons.Evaluation, require: "VIEW_EVALUATION" },
+  { to: "/ops", label: "Ops", id: "nav-ops", icon: Icons.Ops, require: "SIM_CONTROL" },
+  { to: "/outbox", label: "Outbox", id: "nav-outbox", icon: Icons.Outbox, require: "VIEW_AUDIT" },
+  { to: "/audit", label: "Audit", id: "nav-audit", icon: Icons.Audit, require: "VIEW_AUDIT" },
+  { to: "/demo", label: "Demo", id: "nav-demo", icon: Icons.Demo, allowedRoles: ["demo_operator", "admin"] },
 ];
 
-export function SideNav() {
+interface SideNavProps {
+  simLabel: string;
+  connectionStatus: "streaming" | "polling" | "disconnected";
+}
+
+export function SideNav({ simLabel, connectionStatus }: SideNavProps) {
   const { can, principal } = useP();
 
   return (
     <nav className="nk-sidenav" aria-label="Main navigation">
+      {/* Brand mark */}
+      <div className="nk-sidenav__brand">
+        <div className="nk-sidenav__logo" aria-hidden="true">NK</div>
+        <span className="nk-sidenav__wordmark">Nakabandi</span>
+      </div>
+
+      {/* Nav links */}
       <ul className="nk-sidenav__list">
         {NAV_ITEMS.filter((item) => {
           if (item.allowedRoles) {
@@ -145,11 +247,21 @@ export function SideNav() {
                 `nk-sidenav__link${isActive ? " nk-sidenav__link--active" : ""}`
               }
             >
+              <span className="nk-sidenav__icon">{item.icon}</span>
               {item.label}
             </NavLink>
           </li>
         ))}
       </ul>
+
+      {/* Footer: sim time + connection status */}
+      <div className="nk-sidenav__footer">
+        <div className="nk-sidenav__simtime">
+          <span className="nk-sidenav__icon" style={{ opacity: 0.6 }}>{Icons.Clock}</span>
+          <span>{simLabel}</span>
+          <ConnectionDot status={connectionStatus} />
+        </div>
+      </div>
     </nav>
   );
 }

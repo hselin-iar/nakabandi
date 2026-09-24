@@ -1,0 +1,136 @@
+/* =========================================================================
+   NEOMORPHIC UTILITY CLASSES -- design.md section 4 & 5
+   These classes implement the shared UI language: floating cards, metric
+   tiles, progress bars, squircle badges, and tooltips.
+   ========================================================================= */
+
+/** .nk-card -- Floating neomorphic white card */
+.nk-card {
+  background: var(--nk-surface-raised);
+  border-radius: var(--nk-radius-xl);
+  border: 1px solid var(--nk-border-subtle);
+  box-shadow: var(--nk-shadow-md);
+  overflow: hidden;
+}
+
+.nk-card--sm {
+  border-radius: var(--nk-radius-lg);
+  box-shadow: var(--nk-shadow-sm);
+}
+
+/** Card hover micro-animation -- design.md section 6.1 */
+.nk-card--hoverable {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.nk-card--hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 20px 40px -8px rgba(18, 24, 40, 0.08),
+    0 8px 16px -4px rgba(18, 24, 40, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/** .nk-panel -- Padded neomorphic section card */
+.nk-panel {
+  background: var(--nk-surface-raised);
+  border-radius: var(--nk-radius-xl);
+  border: 1px solid var(--nk-border-subtle);
+  box-shadow: var(--nk-shadow-sm);
+  padding: var(--nk-space-6);
+}
+
+.nk-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--nk-space-4);
+  padding-bottom: var(--nk-space-4);
+  border-bottom: 1px solid var(--nk-border-subtle);
+}
+
+.nk-panel__title {
+  font-size: var(--nk-size-18);
+  font-weight: var(--nk-weight-700);
+  color: var(--nk-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.nk-panel__subtitle {
+  font-size: var(--nk-size-12);
+  font-weight: var(--nk-weight-600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--nk-text-secondary);
+  margin-top: 2px;
+}
+
+/** Pastel metric tile accents -- design.md section 5.3 */
+.nk-metric-tile {
+  border-radius: var(--nk-radius-lg);
+  padding: var(--nk-space-4) var(--nk-space-5);
+  border: 1px solid transparent;
+}
+
+.nk-metric-tile--lilac  { background: var(--nk-pastel-lilac-bg);  color: var(--nk-pastel-lilac-text); }
+.nk-metric-tile--lime   { background: var(--nk-pastel-lime-bg);   color: var(--nk-pastel-lime-text); }
+.nk-metric-tile--sky    { background: var(--nk-pastel-sky-bg);    color: var(--nk-pastel-sky-text); }
+.nk-metric-tile--peach  { background: var(--nk-pastel-peach-bg);  color: var(--nk-pastel-peach-text); }
+
+.nk-metric-tile__value {
+  font-size: var(--nk-size-24);
+  font-weight: var(--nk-weight-700);
+  line-height: 1.15;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
+}
+
+.nk-metric-tile__label {
+  font-size: var(--nk-size-11);
+  font-weight: var(--nk-weight-600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+  margin-bottom: var(--nk-space-1);
+}
+
+/** Progress bar -- thin 4px pill track (design.md section 5.3) */
+.nk-progress {
+  height: 4px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: var(--nk-radius-pill);
+  overflow: hidden;
+}
+
+.nk-progress__fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/** Squircle icon badge -- design.md section 5.6 */
+.nk-squircle {
+  border-radius: var(--nk-radius-nav);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nk-squircle--sm { width: 2rem;   height: 2rem; }
+.nk-squircle--md { width: 2.5rem; height: 2.5rem; }
+.nk-squircle--lg { width: 3rem;   height: 3rem; }
+
+/** Tooltip -- high-contrast mini pill (design.md section 6.4) */
+.nk-tooltip {
+  background: var(--nk-text-primary);
+  color: var(--nk-text-inverse);
+  border-radius: 0.5rem;
+  font-size: var(--nk-size-11);
+  font-weight: var(--nk-weight-500);
+  padding: 4px var(--nk-space-2);
+  white-space: nowrap;
+  pointer-events: none;
+}
