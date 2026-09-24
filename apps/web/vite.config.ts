@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    exclude: ["tests/e2e/**", "node_modules/**"],
   },
   server: {
     // Proxy /api to the FastAPI backend when running locally.
@@ -13,6 +15,14 @@ export default defineConfig({
     proxy: {
       "/api": {
         target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/sim-control": {
+        target: "http://localhost:8100",
+        changeOrigin: true,
+      },
+      "/bank": {
+        target: "http://localhost:4000",
         changeOrigin: true,
       },
     },

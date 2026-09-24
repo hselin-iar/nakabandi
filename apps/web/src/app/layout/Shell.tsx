@@ -68,7 +68,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="nk-topbar__right">
           {principal && (
             <>
-              <span className="nk-topbar__role">
+              <span className="nk-topbar__role" id="principal-role">
                 {ROLE_LABELS[principal.role] ?? principal.role}
               </span>
               <ConnectionDot status={status} />
