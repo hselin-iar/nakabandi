@@ -8,8 +8,8 @@
 seed: 42
 
 world:
-  days: 3
-  n_clusters: 6
+  days: 7
+  n_clusters: 20
 
 load:
   complaints_per_day: 600  # Appendix A: default 8,000 (national); golden uses district-scale slice ~600
@@ -22,8 +22,8 @@ network:
   layers_min: 2
   layers_max: 12
   layers_median: 4         # Appendix A: 2 to 12, median ~4
-  accounts_per_cluster: 80 # Appendix A: 10 to ~20,000, median ~100; golden uses 80 (mid-small)
-  bridge_rate: 0.05        # Appendix A: assumed small share; 5% exercises union-find
+  accounts_per_cluster: 120 # demo bump: 80→120 for visually denser graphs
+  bridge_rate: 0.15        # demo bump: 0.05→0.15; more shared-account bridges across clusters
   hop_visibility: 0.7      # Appendix A: assumed; 70% of deeper hops traced later
 
 caps:
@@ -53,8 +53,8 @@ channels:
 
 footprint:
   # Appendix A: unpublished; sweep local (one district) to dispersed (multi-state)
-  locality: district          # golden: same-district-ish (local)
-  size_per_cluster: 40        # Appendix A: sweep tens to hundreds; golden uses 40
+  locality: multi_district    # demo bump: district→multi_district for wider geographic spread
+  size_per_cluster: 60        # demo bump: 40→60 for more location coverage
 
 mule:
   lifetime_days: 30           # Appendix A: 1 to 180, median ~30

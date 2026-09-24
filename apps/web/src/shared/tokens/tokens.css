@@ -1,4 +1,4 @@
-﻿/**
+/**
  * tokens.css — design tokens as CSS custom properties.
  * DOC 3 Web App Shell: shared/tokens/tokens.css
  * Designer-owned: Track D Step D1 will replace placeholder values with real ones (Sync 6).
@@ -3132,3 +3132,350 @@ body {
   font-family: var(--nk-font-mono);
 }
 
+/* =========================================================================
+   PHASE 3 — ALERT VISUAL URGENCY
+   ========================================================================= */
+
+/* Critical row pulse: subtle red glow animation on table rows */
+@keyframes nk-critical-pulse {
+  0%   { box-shadow: inset 3px 0 0 #ef4444, 0 0 0 rgba(239, 68, 68, 0); }
+  50%  { box-shadow: inset 3px 0 0 #ef4444, 0 0 12px rgba(239, 68, 68, 0.18); }
+  100% { box-shadow: inset 3px 0 0 #ef4444, 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+@keyframes nk-high-pulse {
+  0%   { box-shadow: inset 3px 0 0 #f97316; }
+  50%  { box-shadow: inset 3px 0 0 #f97316, 0 0 8px rgba(249, 115, 22, 0.14); }
+  100% { box-shadow: inset 3px 0 0 #f97316; }
+}
+
+.nk-table__row--critical {
+  animation: nk-critical-pulse 2.4s ease-in-out infinite;
+  background: rgba(239, 68, 68, 0.03);
+}
+
+.nk-table__row--high {
+  animation: nk-high-pulse 3s ease-in-out infinite;
+  background: rgba(249, 115, 22, 0.02);
+}
+
+.nk-table__row--medium {
+  box-shadow: inset 3px 0 0 #f59e0b;
+}
+
+.nk-table__row--low {
+  box-shadow: inset 3px 0 0 #22c55e;
+}
+
+/* Geo badge — district/state pin beside target name */
+.nk-geo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--nk-font-mono);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(56, 182, 255, 0.12);
+  color: var(--nk-brand-primary);
+  border: 1px solid rgba(56, 182, 255, 0.25);
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+/* Countdown urgency gradient: low → normal, warn → amber, critical → red */
+.nk-countdown--urgent {
+  color: #ef4444;
+  font-weight: 700;
+  animation: nk-tick 1s step-end infinite;
+}
+
+@keyframes nk-tick {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.65; }
+}
+
+.nk-countdown--warn {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+/* KPI strip above the alerts table (Phase 2 prep) */
+.nk-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--nk-space-3);
+  margin-bottom: var(--nk-space-4);
+}
+
+.nk-kpi-card {
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-md);
+  padding: var(--nk-space-3) var(--nk-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nk-space-1);
+  box-shadow: var(--nk-shadow-sm);
+  transition: box-shadow 0.2s ease;
+}
+
+.nk-kpi-card:hover {
+  box-shadow: var(--nk-shadow-md);
+}
+
+.nk-kpi-card__label {
+  font-size: var(--nk-size-11);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--nk-text-muted);
+}
+
+.nk-kpi-card__value {
+  font-size: var(--nk-size-28);
+  font-weight: 700;
+  color: var(--nk-text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.nk-kpi-card__value--critical { color: #ef4444; }
+.nk-kpi-card__value--high     { color: #f97316; }
+.nk-kpi-card__value--medium   { color: #f59e0b; }
+.nk-kpi-card__value--good     { color: #22c55e; }
+.nk-kpi-card__value--brand    { color: var(--nk-brand-primary); }
+
+.nk-kpi-card__sub {
+  font-size: var(--nk-size-12);
+  color: var(--nk-text-secondary);
+}
+
+/* Pulsing live dot for kpi cards showing real-time values */
+@keyframes nk-live-dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.5); opacity: 0.6; }
+}
+
+.nk-live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: nk-live-dot-pulse 2s ease-in-out infinite;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.nk-live-dot--warn  { background: #f59e0b; }
+.nk-live-dot--crit  { background: #ef4444; }
+
+/* =========================================================================
+   PHASE 4 — CLUSTER GRAPH IMPROVEMENTS
+   ========================================================================= */
+
+/* Cluster health strip: metrics bar above the Cytoscape canvas */
+.nk-cluster-health-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--nk-space-3);
+  padding: var(--nk-space-3) var(--nk-space-4);
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-md);
+  margin-bottom: var(--nk-space-3);
+  box-shadow: var(--nk-shadow-sm);
+}
+
+.nk-cluster-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nk-cluster-metric__label {
+  font-size: var(--nk-size-10);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--nk-text-muted);
+}
+
+.nk-cluster-metric__value {
+  font-size: var(--nk-size-16);
+  font-weight: 700;
+  color: var(--nk-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.nk-cluster-metric__divider {
+  width: 1px;
+  height: 32px;
+  background: var(--nk-border-subtle);
+  align-self: center;
+}
+
+/* Bridge badge: shown when cluster is a bridge (shares accounts) */
+.nk-bridge-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--nk-size-11);
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(91, 60, 235, 0.12);
+  color: var(--nk-brand-accent);
+  border: 1px solid rgba(91, 60, 235, 0.3);
+}
+
+/* Channel mix mini-bar (inside health strip) */
+.nk-channel-mix {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  height: 16px;
+}
+
+.nk-channel-mix__seg {
+  height: 100%;
+  border-radius: 2px;
+  min-width: 4px;
+  transition: width 0.3s ease;
+}
+
+.nk-channel-mix__seg--atm    { background: var(--nk-brand-primary); }
+.nk-channel-mix__seg--branch { background: var(--nk-brand-accent); }
+.nk-channel-mix__seg--agent  { background: #22c55e; }
+
+/* Node inspector panel (below the graph) */
+.nk-node-inspector {
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-md);
+  padding: var(--nk-space-4);
+  margin-top: var(--nk-space-3);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--nk-space-3);
+  box-shadow: var(--nk-shadow-sm);
+  animation: nk-fade-in 0.2s ease;
+}
+
+@keyframes nk-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.nk-node-inspector__title {
+  grid-column: 1 / -1;
+  font-size: var(--nk-size-12);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--nk-text-muted);
+  margin-bottom: var(--nk-space-1);
+}
+
+.nk-node-inspector__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nk-node-inspector__field-label {
+  font-size: var(--nk-size-10);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--nk-text-muted);
+}
+
+.nk-node-inspector__field-value {
+  font-size: var(--nk-size-14);
+  font-weight: 600;
+  color: var(--nk-text-primary);
+  font-family: var(--nk-font-mono);
+}
+
+/* Cluster node kind color pills (matches Cytoscape node colours) */
+.nk-node-kind--victim        { color: #ef4444; }
+.nk-node-kind--intermediary  { color: #f59e0b; }
+.nk-node-kind--aggregator    { color: #f97316; }
+.nk-node-kind--exit          { color: #38b6ff; }
+.nk-node-kind--bridge        { color: var(--nk-brand-accent); }
+
+/* Cluster list sidebar (left side of clusters page) */
+.nk-clusters-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: var(--nk-space-4);
+  height: 100%;
+  min-height: 0;
+}
+
+@media (max-width: 800px) {
+  .nk-clusters-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nk-cluster-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nk-space-2);
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+  padding-right: var(--nk-space-1);
+}
+
+.nk-cluster-sidebar-item {
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-md);
+  padding: var(--nk-space-3);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.nk-cluster-sidebar-item:hover {
+  border-color: var(--nk-brand-primary);
+  box-shadow: 0 0 0 3px rgba(56, 182, 255, 0.1);
+}
+
+.nk-cluster-sidebar-item--active {
+  border-color: var(--nk-brand-primary);
+  background: rgba(56, 182, 255, 0.05);
+  box-shadow: 0 0 0 3px rgba(56, 182, 255, 0.15);
+}
+
+.nk-cluster-sidebar-item__id {
+  font-size: var(--nk-size-12);
+  font-family: var(--nk-font-mono);
+  font-weight: 700;
+  color: var(--nk-text-primary);
+}
+
+.nk-cluster-sidebar-item__district {
+  font-size: var(--nk-size-11);
+  color: var(--nk-text-muted);
+  margin-top: 2px;
+}
+
+.nk-cluster-sidebar-item__stats {
+  display: flex;
+  gap: var(--nk-space-2);
+  margin-top: var(--nk-space-2);
+  font-size: var(--nk-size-11);
+  color: var(--nk-text-secondary);
+}
+
+.nk-cluster-graph-area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nk-space-3);
+  min-width: 0;
+}

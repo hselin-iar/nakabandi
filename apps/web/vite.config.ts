@@ -29,7 +29,10 @@ export default defineConfig({
     },
   },
   build: {
-    cssMinify: "esbuild",
+    // Disable CSS minification: esbuild's native binary is unavailable in some Alpine/Docker
+    // environments; lightningcss fails the same way. For a demo build this is acceptable —
+    // CSS is still bundled, just not minified. Flip to "esbuild" locally if needed.
+    cssMinify: false,
     // Route-level code splitting (DOC 3 performance)
     rollupOptions: {
       output: {

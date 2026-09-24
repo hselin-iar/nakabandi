@@ -6,7 +6,7 @@
  * and robust automatic fallback to TableView on WebGL failure.
  */
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useHeatmap, FIXTURE_HOTSPOT_ALERTS } from "./useHeatmap";
 import { useRegions } from "./useRegions";
 import { useLocations } from "./useLocations";
@@ -65,6 +65,9 @@ export default function MapPage() {
   const [viewMode, setViewMode] = useState<"map" | "table">("map");
   const [webGlFailed, setWebGlFailed] = useState<boolean>(false);
   const [webGlErrorMsg, setWebGlErrorMsg] = useState<string>("");
+  // Flips to true once map.init() resolves — data-push effects depend on this
+  // so they re-run after the async init completes (fixes black-map timing race).
+  const [mapReady, setMapReady] = useState<boolean>(false);
 
   const [selectedHotspot, setSelectedHotspot] = useState<HotspotDetail | null>(
     null,
@@ -90,124 +93,8 @@ export default function MapPage() {
     return map;
   }, [locations, heatmapData, regions]);
 
-  // Initialize MapAdapter
-  useEffect(() => {
-    // If WebGL is not supported in this browser/environment (e.g. test or headless), fall back to table
-    if (!MapLibreAdapter.isSupported()) {
-      setWebGlFailed(true);
-      setWebGlErrorMsg("WebGL is unavailable in this environment");
-      setViewMode("table");
-      return;
-    }
-
-    if (!mapContainerRef.current) return;
-
-    let isMounted = true;
-    const adapter = new MapLibreAdapter();
-    adapterRef.current = adapter;
-
-    adapter
-      .init(mapContainerRef.current, { center: [79.5, 24.5], zoom: 5 })
-      .then(() => {
-        if (!isMounted) return;
-
-        // Set base boundaries from bundled GeoJSON with zero network tile requests
-        adapter.setLayerData(BOUNDARIES_FILL_LAYER_ID, bundledGeoJSON);
-
-        // Frame the demo states now that the map is actually ready — the [filters.state]
-        // effect below only re-fires on a later filter change, so without this the map never
-        // explicitly frames anything on first load.
-        if (filters.state && STATE_BOUNDS[filters.state]) {
-          adapter.fitTo(STATE_BOUNDS[filters.state]);
-        } else {
-          adapter.fitTo(ALL_STATES_BOUNDS);
-        }
-
-        // Click handler for cells
-        adapter.onFeatureClick(CELLS_FILL_LAYER_ID, (feature) => {
-          if (!feature || typeof feature !== "object" || !("properties" in feature)) return;
-          const props = (feature as { properties?: Record<string, unknown> }).properties;
-          if (!props) return;
-          handleOpenHotspot({
-            id: String(props.id),
-            kind: String(props.kind ?? "cell"),
-            name: String(props.name ?? props.id),
-            lat: Number(props.lat ?? 0),
-            lon: Number(props.lon ?? 0),
-            value: Number(props.value ?? 0),
-            alert_count: Number(props.alert_count ?? 0),
-          });
-        });
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setWebGlFailed(true);
-        setWebGlErrorMsg(err?.message || "Failed to initialize WebGL canvas");
-        setViewMode("table");
-      });
-
-    return () => {
-      isMounted = false;
-      adapter.destroy();
-      adapterRef.current = null;
-    };
-  }, [bundledGeoJSON]);
-
-  // Update map data when heatmap cells or boundaries change
-  useEffect(() => {
-    if (!adapterRef.current || !adapterRef.current.isReady() || !heatmapData) {
-      return;
-    }
-
-    const geojson = cellsToGeoJSON(heatmapData.cells);
-    adapterRef.current.setLayerData(CELLS_FILL_LAYER_ID, geojson);
-  }, [heatmapData]);
-
-  // Update map data when bank infrastructure locations load
-  useEffect(() => {
-    if (!adapterRef.current || !adapterRef.current.isReady() || !locations) return;
-    adapterRef.current.setLayerData(LOCATIONS_CIRCLE_LAYER_ID, locationsToGeoJSON(locations));
-  }, [locations]);
-
-  // Update map data when active alerts change
-  useEffect(() => {
-    if (!adapterRef.current || !adapterRef.current.isReady() || !alerts) return;
-    adapterRef.current.setLayerData(ALERTS_POINT_LAYER_ID, alertsToGeoJSON(alerts, targetCoords));
-  }, [alerts, targetCoords]);
-
-  // Adjust map bounds when state filter changes
-  useEffect(() => {
-    if (!adapterRef.current || !adapterRef.current.isReady()) return;
-
-    if (filters.state && STATE_BOUNDS[filters.state]) {
-      adapterRef.current.fitTo(STATE_BOUNDS[filters.state]);
-    } else {
-      adapterRef.current.fitTo(ALL_STATES_BOUNDS);
-    }
-  }, [filters.state]);
-
-  function handleFilterChange(updated: Partial<HeatmapFilters>) {
-    setFilters((prev) => ({ ...prev, ...updated }));
-  }
-
-  function handleResetFilters() {
-    setFilters({
-      layer: "live",
-      level: "cell",
-    });
-  }
-
-  function handleTimeOffsetChange(hours: number) {
-    setTimeOffsetHours(hours);
-    setIsPaused(hours !== 0);
-  }
-
-  function handleReturnToLive() {
-    setTimeOffsetHours(0);
-    setIsPaused(false);
-  }
-
-  function handleOpenHotspot(cell: {
+  // handleOpenHotspot must be defined before the init effect (used inside .then())
+  const handleOpenHotspot = useCallback(function handleOpenHotspot(cell: {
     id: string;
     kind: string;
     name: string;
@@ -238,6 +125,130 @@ export default function MapPage() {
       alert_count: cell.alert_count,
       contributing_alerts: matchingAlerts,
     });
+  }, []);
+
+  // Initialize MapAdapter
+  useEffect(() => {
+    // If WebGL is not supported in this browser/environment (e.g. test or headless), fall back to table
+    if (!MapLibreAdapter.isSupported()) {
+      setWebGlFailed(true);
+      setWebGlErrorMsg("WebGL is unavailable in this environment");
+      setViewMode("table");
+      return;
+    }
+
+    if (!mapContainerRef.current) return;
+
+    // Reset mapReady so dependent effects know a new adapter is initialising
+    setMapReady(false);
+
+    let isMounted = true;
+    const adapter = new MapLibreAdapter();
+    adapterRef.current = adapter;
+
+    adapter
+      .init(mapContainerRef.current, { center: [79.5, 24.5], zoom: 5 })
+      .then(() => {
+        if (!isMounted) return;
+
+        // Set base boundaries from bundled GeoJSON with zero network tile requests
+        adapter.setLayerData(BOUNDARIES_FILL_LAYER_ID, bundledGeoJSON);
+
+        // Frame the demo states
+        if (filters.state && STATE_BOUNDS[filters.state]) {
+          adapter.fitTo(STATE_BOUNDS[filters.state]);
+        } else {
+          adapter.fitTo(ALL_STATES_BOUNDS);
+        }
+
+        // Click handler for cells
+        adapter.onFeatureClick(CELLS_FILL_LAYER_ID, (feature) => {
+          if (!feature || typeof feature !== "object" || !("properties" in feature)) return;
+          const props = (feature as { properties?: Record<string, unknown> }).properties;
+          if (!props) return;
+          handleOpenHotspot({
+            id: String(props.id),
+            kind: String(props.kind ?? "cell"),
+            name: String(props.name ?? props.id),
+            lat: Number(props.lat ?? 0),
+            lon: Number(props.lon ?? 0),
+            value: Number(props.value ?? 0),
+            alert_count: Number(props.alert_count ?? 0),
+          });
+        });
+
+        // Signal that the map is ready — this re-triggers all data-push effects
+        // below, ensuring data that arrived before init() resolved is not lost.
+        setMapReady(true);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setWebGlFailed(true);
+        setWebGlErrorMsg(err?.message || "Failed to initialize WebGL canvas");
+        setViewMode("table");
+      });
+
+    return () => {
+      isMounted = false;
+      adapter.destroy();
+      adapterRef.current = null;
+      setMapReady(false);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bundledGeoJSON]);
+
+  // Push heatmap cells to the map whenever data or readiness changes.
+  // mapReady in deps ensures this fires even when heatmapData arrived before init().
+  useEffect(() => {
+    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady() || !heatmapData) {
+      return;
+    }
+    const geojson = cellsToGeoJSON(heatmapData.cells);
+    adapterRef.current.setLayerData(CELLS_FILL_LAYER_ID, geojson);
+  }, [mapReady, heatmapData]);
+
+  // Push bank infrastructure locations to the map.
+  useEffect(() => {
+    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady() || !locations) return;
+    adapterRef.current.setLayerData(LOCATIONS_CIRCLE_LAYER_ID, locationsToGeoJSON(locations));
+  }, [mapReady, locations]);
+
+  // Push alert point markers to the map.
+  useEffect(() => {
+    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady() || !alerts) return;
+    adapterRef.current.setLayerData(ALERTS_POINT_LAYER_ID, alertsToGeoJSON(alerts, targetCoords));
+  }, [mapReady, alerts, targetCoords]);
+
+  // Adjust map bounds when state filter changes
+  useEffect(() => {
+    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady()) return;
+
+    if (filters.state && STATE_BOUNDS[filters.state]) {
+      adapterRef.current.fitTo(STATE_BOUNDS[filters.state]);
+    } else {
+      adapterRef.current.fitTo(ALL_STATES_BOUNDS);
+    }
+  }, [mapReady, filters.state]);
+
+  function handleFilterChange(updated: Partial<HeatmapFilters>) {
+    setFilters((prev) => ({ ...prev, ...updated }));
+  }
+
+  function handleResetFilters() {
+    setFilters({
+      layer: "live",
+      level: "cell",
+    });
+  }
+
+  function handleTimeOffsetChange(hours: number) {
+    setTimeOffsetHours(hours);
+    setIsPaused(hours !== 0);
+  }
+
+  function handleReturnToLive() {
+    setTimeOffsetHours(0);
+    setIsPaused(false);
   }
 
   const cells = heatmapData?.cells ?? [];

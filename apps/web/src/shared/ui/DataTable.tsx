@@ -34,6 +34,8 @@ interface DataTableProps<T> {
   emptyState?: React.ReactNode;
   /** Optional row click handler. */
   onRowClick?: (row: T) => void;
+  /** Optional extra CSS class(es) per row. */
+  rowClassName?: (row: T, index: number) => string;
   className?: string;
   /** Caption for accessibility. */
   caption?: string;
@@ -53,6 +55,7 @@ export function DataTable<T>({
   getRowKey,
   emptyState,
   onRowClick,
+  rowClassName,
   className = "",
   caption,
 }: DataTableProps<T>) {
@@ -128,7 +131,7 @@ export function DataTable<T>({
             return (
               <tr
                 key={getRowKey(row, globalIndex)}
-                className={`nk-table__row${onRowClick ? " nk-table__row--clickable" : ""}`}
+                className={`nk-table__row${onRowClick ? " nk-table__row--clickable" : ""}${rowClassName ? " " + rowClassName(row, globalIndex) : ""}`}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 tabIndex={onRowClick ? 0 : undefined}
                 onKeyDown={

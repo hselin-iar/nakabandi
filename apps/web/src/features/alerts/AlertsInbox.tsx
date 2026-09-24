@@ -100,10 +100,14 @@ export default function AlertsInbox() {
         cell: (row) => {
           const name = String(row.target.name ?? row.target.id ?? "");
           const kind = String(row.target.kind ?? "");
+          // Extract district code from cluster_ref (e.g. "MH-MUM" from "CLU-MH-MUM-0042")
+          const districtMatch = String(row.cluster_ref ?? "").match(/([A-Z]{2}-[A-Z]{2,3})/i);
+          const district = districtMatch ? districtMatch[1].toUpperCase() : null;
           return (
             <div className="nk-alert-target-cell">
               <span className="font-medium text-primary">{name}</span>
               {shouldShowKindBadge(name, kind) && <span className="nk-text-xs nk-tag">{kind}</span>}
+              {district && <span className="nk-geo-badge">📍 {district}</span>}
             </div>
           );
         },
@@ -177,6 +181,15 @@ export default function AlertsInbox() {
     { label: "Low", value: "LOW" },
   ];
 
+  // KPI summary counts derived from loaded alerts (no extra API call)
+  const kpiCounts = useMemo(() => {
+    const open = alerts.filter((a) => a.status === "open").length;
+    const critical = alerts.filter((a) => a.severity === "CRITICAL").length;
+    const high = alerts.filter((a) => a.severity === "HIGH").length;
+    const clusters = new Set(alerts.map((a) => a.cluster_ref).filter(Boolean)).size;
+    return { open, critical, high, clusters };
+  }, [alerts]);
+
   return (
     <div className="nk-inbox-page">
       {/* Top Header & Triage Mode Toggle */}
@@ -198,6 +211,30 @@ export default function AlertsInbox() {
           </Button>
         </div>
       </header>
+
+      {/* KPI Summary Strip */}
+      <div className="nk-kpi-strip" aria-label="Alert summary statistics">
+        <div className="nk-kpi-card">
+          <span className="nk-kpi-card__label"><span className="nk-live-dot" aria-hidden="true" />Live Alerts</span>
+          <span className={`nk-kpi-card__value${kpiCounts.open > 0 ? " nk-kpi-card__value--brand" : ""}`}>{alerts.length}</span>
+          <span className="nk-kpi-card__sub">{kpiCounts.open} open</span>
+        </div>
+        <div className="nk-kpi-card">
+          <span className="nk-kpi-card__label">Critical</span>
+          <span className={`nk-kpi-card__value${kpiCounts.critical > 0 ? " nk-kpi-card__value--critical" : " nk-kpi-card__value--good"}`}>{kpiCounts.critical}</span>
+          <span className="nk-kpi-card__sub">immediate action</span>
+        </div>
+        <div className="nk-kpi-card">
+          <span className="nk-kpi-card__label">High Severity</span>
+          <span className={`nk-kpi-card__value${kpiCounts.high > 0 ? " nk-kpi-card__value--high" : " nk-kpi-card__value--good"}`}>{kpiCounts.high}</span>
+          <span className="nk-kpi-card__sub">elevated risk</span>
+        </div>
+        <div className="nk-kpi-card">
+          <span className="nk-kpi-card__label">Active Clusters</span>
+          <span className="nk-kpi-card__value nk-kpi-card__value--brand">{kpiCounts.clusters}</span>
+          <span className="nk-kpi-card__sub">mule networks</span>
+        </div>
+      </div>
 
       {/* Review Queue Triage Drawer / Panel */}
       {showReviewQueue && (
@@ -267,6 +304,13 @@ export default function AlertsInbox() {
             getRowKey={(row) => row.id}
             onRowClick={handleRowClick}
             caption="Active fraud interception alerts"
+            rowClassName={(row) => {
+              const s = String(row.severity ?? "").toUpperCase();
+              if (s === "CRITICAL") return "nk-table__row--critical";
+              if (s === "HIGH") return "nk-table__row--high";
+              if (s === "MEDIUM") return "nk-table__row--medium";
+              return "nk-table__row--low";
+            }}
             emptyState={
               <EmptyState
                 title="No alerts matching criteria"

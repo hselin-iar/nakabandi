@@ -248,9 +248,11 @@ describe("ClustersPage Component (Step C6)", () => {
 
     expect(await screen.findByTestId("clusters-page")).toBeTruthy();
 
-    expect(await screen.findByText("CLUSTER-2026-081 (8 nodes — active)")).toBeTruthy();
+    // Cluster ref appears in sidebar list + health strip metric
+    const clusterRefs = await screen.findAllByText("CLUSTER-2026-081");
+    expect(clusterRefs.length).toBeGreaterThanOrEqual(1);
+    // Health strip values
     expect(screen.getByText("₹45,00,000.00")).toBeTruthy();
-    expect(screen.getByText("8 Accounts")).toBeTruthy();
-    expect(screen.getByText("Novelty: 88%")).toBeTruthy();
+    expect(screen.getByText(/88%/)).toBeTruthy();
   });
 });

@@ -218,6 +218,143 @@ function FeedbackPlot({ runs }: { runs: EvalRun[] }) {
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// ProgressRing — animated SVG arc showing a 0-1 score as a ring
+// ---------------------------------------------------------------------------
+
+function ProgressRing({
+  value,
+  size = 80,
+  strokeWidth = 7,
+  label,
+  color = "var(--nk-brand-primary)",
+}: {
+  value: number;
+  size?: number;
+  strokeWidth?: number;
+  label: string;
+  color?: string;
+}) {
+  const r = (size - strokeWidth) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - Math.max(0, Math.min(1, value)));
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+        <circle
+          cx={size / 2} cy={size / 2} r={r}
+          fill="none" stroke="var(--nk-border-subtle)" strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2} cy={size / 2} r={r}
+          fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeDasharray={circ} strokeDashoffset={offset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          style={{ transition: "stroke-dashoffset 0.8s ease" }}
+        />
+        <text
+          x="50%" y="50%" dominantBaseline="middle" textAnchor="middle"
+          fill="var(--nk-text-primary)" fontSize={size * 0.22} fontWeight={700}
+          fontFamily="var(--nk-font-sans)"
+        >
+          {(value * 100).toFixed(0)}%
+        </text>
+      </svg>
+      <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--nk-text-muted)" }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// HeroScoreStrip — headline metrics displayed prominently above the table
+// ---------------------------------------------------------------------------
+
+function HeroScoreStrip({ run }: { run: EvalRun }) {
+  function get(name: string) {
+    return run.metrics.find((m) => m.name === name)?.value ?? null;
+  }
+  const f1        = get("interceptable_f1")       ?? get("f1_at_k")            ?? get("hit_rate_at_k");
+  const precision = get("interceptable_precision") ?? get("precision_at_k");
+  const recall    = get("interceptable_recall")    ?? get("recall_at_k");
+  const hitRate   = get("hit_rate_at_k");
+  const latency   = get("median_latency_s")        ?? get("latency_p50_s");
+
+  if (f1 === null) return null;
+
+  return (
+    <div
+      className="nk-eval-hero-strip"
+      aria-label="Headline model performance metrics"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--nk-space-6)",
+        flexWrap: "wrap",
+        background: "var(--nk-surface-raised)",
+        border: "1px solid var(--nk-border-subtle)",
+        borderRadius: "var(--nk-radius-lg)",
+        padding: "var(--nk-space-5) var(--nk-space-6)",
+        marginBottom: "var(--nk-space-5)",
+        boxShadow: "var(--nk-shadow-md)",
+      }}
+    >
+      {/* F1 ring */}
+      <ProgressRing value={f1} size={96} strokeWidth={8} label="F1 Score"
+        color={f1 >= 0.7 ? "#22c55e" : f1 >= 0.5 ? "#f59e0b" : "#ef4444"} />
+
+      <div style={{ width: 1, height: 72, background: "var(--nk-border-subtle)", flexShrink: 0 }} />
+
+      {/* Supporting metric pills */}
+      <div style={{ display: "flex", gap: "var(--nk-space-4)", flexWrap: "wrap", flex: 1 }}>
+        {[
+          { label: "Precision",  value: precision, color: "var(--nk-brand-primary)" },
+          { label: "Recall",     value: recall,    color: "#a78bfa" },
+          { label: "Hit Rate",   value: hitRate,   color: "#22d3ee" },
+        ].map(({ label, value, color }) =>
+          value !== null ? (
+            <div key={label} style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 100 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--nk-text-muted)" }}>
+                {label}
+              </span>
+              <span style={{ fontSize: 28, fontWeight: 700, color, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+                {(value * 100).toFixed(1)}%
+              </span>
+            </div>
+          ) : null
+        )}
+
+        {latency !== null && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 100 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--nk-text-muted)" }}>
+              Median Latency
+            </span>
+            <span style={{ fontSize: 28, fontWeight: 700, color: "#f59e0b", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+              {latency.toFixed(2)}s
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Run label + feedback indicator */}
+      <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--nk-text-primary)" }}>{run.label}</span>
+        <span style={{
+          fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
+          background: run.feedback_enabled ? "rgba(34,197,94,0.12)" : "rgba(148,163,184,0.1)",
+          color: run.feedback_enabled ? "#22c55e" : "var(--nk-text-muted)",
+          border: `1px solid ${run.feedback_enabled ? "rgba(34,197,94,0.3)" : "rgba(148,163,184,0.2)"}`,
+        }}>
+          {run.feedback_enabled ? "✓ Feedback on" : "Feedback off"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // EvaluationPage
 // ---------------------------------------------------------------------------
@@ -255,6 +392,9 @@ export default function EvaluationPage() {
           Numbers are computed by the evaluation harness — not the production API.
         </p>
       </header>
+
+      {/* Hero Score Strip — primary run */}
+      <HeroScoreStrip run={runA} />
 
       {/* Run selector */}
       <div className="nk-eval-controls" data-testid="eval-controls">
