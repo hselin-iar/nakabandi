@@ -1,10 +1,10 @@
 # TRACK C — Web & Bank Simulator
 OWNER:            Web dev + coding agent
-CURRENT_STEP:     C7 — Evaluation, Ops, Outbox & Audit Pages
-LAST_COMPLETED:   C6 — Clusters & Cases UI
+CURRENT_STEP:     C9 — Hero-Flow E2E Test
+LAST_COMPLETED:   C8 — Demo Console
 STATUS:           ACTIVE
 PAUSED_AT:        none
-NEXT SYNC POINT:  SYNC 6, after D1 (DOC4 §4.1a)
+NEXT SYNC POINT:  CHECKPOINT 8, after C9
 
 STATUS is one of ACTIVE | RESUMING | BLOCKED | CHECKPOINT. Only this track's owner (and its agent) edits this file.
 Update it after every completed step and before ending a session.
@@ -23,5 +23,7 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [C4] — TanStack Query queries resolve asynchronously in RTL tests: always await findBy* for table rows and status badges; action modals update status to match StatusBadge config; review queue requires loaded alerts to display triage cards.
 [C5] — MapLibre GL is completely isolated inside MapLibreAdapter.ts; zero CDN tile requests (bundled GeoJSON for UP, MH, RJ, HR); WebGL failure gracefully drops down to TableViewFallback without blank canvas; verbatimModuleSyntax requires explicit tsconfig types: ["geojson"].
 [C6] — Cytoscape wrapper shared across clusters and cases via eslint boundaries exception; graph node capping at 200 preserves top priority entities with a "+N more" summary node; brief rendering uses safe React elements enforcing the mandatory FIR statutory disclaimer with zero XSS risk; role-gated masking strictly isolates raw account references from non-LEA principals.
+[C7] — Recharts Tooltip `formatter` prop is typed as `Formatter<ValueType, NameType>` where ValueType is `string|number|...|undefined`; always guard with `Number(v ?? 0)` rather than typing `v: number`. ErrorState takes `{ error: UiError }` not `{ title, message }` — inline error divs are simpler when no retry handler needed. RTL getByText fails on compound spans (swatch+label+tag in one pill); add a data-testid on the label span itself.
+[C8] — Proxied control path /sim-control/* strictly enforces demo_operator authorization (non-demo roles receive 403 on route and proxy); quick-login users are fetched dynamically from /auth/demo-users to prevent client bundle credential leak; in-memory request log captures real-time proxied payloads and responses for auditability; reset and seed controls are gated to admin role in hosted mode.
 
 

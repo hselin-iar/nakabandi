@@ -100,9 +100,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
 import { NavLink } from "react-router-dom";
 import { usePrincipal as useP } from "../auth/usePrincipal";
+import type { Permission, Role } from "../../shared/api/schema.d.ts";
 
-/** Navigation items. Each `require` is a permission from LC-2 Permission enum. */
-const NAV_ITEMS = [
+interface NavItem {
+  to: string;
+  label: string;
+  id: string;
+  require?: Permission;
+  allowedRoles?: Role[];
+}
+
+/** Navigation items. Each item is gated by permission or specific roles. */
+const NAV_ITEMS: readonly NavItem[] = [
   { to: "/alerts", label: "Alerts", id: "nav-alerts", require: "VIEW_ALERTS" },
   { to: "/clusters", label: "Clusters & Cases", id: "nav-clusters", require: "VIEW_CASES" },
   { to: "/map", label: "Map", id: "nav-map", require: "VIEW_ALERTS" },
@@ -110,16 +119,24 @@ const NAV_ITEMS = [
   { to: "/ops", label: "Ops", id: "nav-ops", require: "SIM_CONTROL" },
   { to: "/outbox", label: "Outbox", id: "nav-outbox", require: "VIEW_AUDIT" },
   { to: "/audit", label: "Audit", id: "nav-audit", require: "VIEW_AUDIT" },
-  { to: "/demo", label: "Demo", id: "nav-demo", require: "SIM_CONTROL" },
-] as const;
+  { to: "/demo", label: "Demo", id: "nav-demo", allowedRoles: ["demo_operator", "admin"] },
+];
 
 export function SideNav() {
-  const { can } = useP();
+  const { can, principal } = useP();
 
   return (
     <nav className="nk-sidenav" aria-label="Main navigation">
       <ul className="nk-sidenav__list">
-        {NAV_ITEMS.filter((item) => can(item.require as Parameters<typeof can>[0])).map((item) => (
+        {NAV_ITEMS.filter((item) => {
+          if (item.allowedRoles) {
+            return principal && item.allowedRoles.includes(principal.role);
+          }
+          if (item.require) {
+            return can(item.require);
+          }
+          return true;
+        }).map((item) => (
           <li key={item.to}>
             <NavLink
               id={item.id}

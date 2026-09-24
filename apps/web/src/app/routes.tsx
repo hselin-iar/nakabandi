@@ -59,7 +59,7 @@ export function AppRoutes() {
 
       {/* Protected: require authentication (and optionally a permission) */}
       <Route
-        path="/"
+        path="/*"
         element={
           <RoleGuard>
             <Shell>
@@ -145,7 +145,7 @@ export function AppRoutes() {
                   <Route
                     path="demo"
                     element={
-                      <RoleGuard require="SIM_CONTROL">
+                      <RoleGuard allowedRoles={["demo_operator", "admin"]}>
                         <DemoPage />
                       </RoleGuard>
                     }
