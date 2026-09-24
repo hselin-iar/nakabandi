@@ -7,12 +7,37 @@ from __future__ import annotations
 
 import hashlib
 import math
-from typing import TYPE_CHECKING
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Protocol, TypeVar
 
 from nakabandi.shared import Policy, SimTime
 
 if TYPE_CHECKING:
     from nakabandi.alerting.domain.alert import Alert
+
+
+class Rankable(Protocol):
+    """What ranking needs of an alert: nothing more. A queue is ranked from a few columns, not from
+    whole alerts with their timelines (the A11 stress run: loading full alerts to re-rank a queue
+    was the cost that grew with every alert raised)."""
+
+    id: str
+    priority: float
+    created_at: SimTime
+    budget_rank: int | None
+    is_deferred: bool
+    is_probe: bool
+
+
+@dataclass(slots=True)
+class QueueEntry:
+    id: str
+    priority: float
+    created_at: SimTime
+    budget_rank: int | None
+    is_deferred: bool
+    is_probe: bool
 
 
 def priority(confidence: float, amount_paise: int, interception_probability: float) -> float:
@@ -39,7 +64,10 @@ def exploration_draw(alert_id: str, seed: str = "") -> float:
     return (int(digest, 16) % 10_000) / 10_000.0
 
 
-def rank_and_cap(alerts: list[Alert], policy: Policy, seed: str = "") -> list[Alert]:
+R = TypeVar("R", bound=Rankable)
+
+
+def rank_and_cap(alerts: Sequence[R], policy: Policy, seed: str = "") -> list[R]:
     """Rank ONE queue's alerts (highest priority first; ties by age, then id) and apply the shift
     budget: the top `budget_per_shift` are visible, the rest are deferred (budget_rank > cap) and
     stay reachable under Backlog. With probability `exploration_share` a deferred alert is

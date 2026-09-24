@@ -12,6 +12,7 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import cytoscape from "cytoscape";
 import type { Core, EventObject } from "cytoscape";
 import { usePrincipal } from "../../app/auth/usePrincipal";
+import { formatInr } from "../../shared/lib/format";
 import type { ClusterGraphData, ClusterNode, ClusterEdge } from "./types";
 
 interface ClusterGraphProps {
@@ -580,7 +581,7 @@ export function ClusterGraph({
             </div>
             {selectedNode.amount_paise !== undefined && (
               <div>
-                <strong>Amount:</strong> ₹{(selectedNode.amount_paise / 100).toLocaleString("en-IN")}
+                <strong>Amount:</strong> {formatInr(selectedNode.amount_paise)}
               </div>
             )}
             {selectedNode.isSummary && (
@@ -635,7 +636,7 @@ export function ClusterGraph({
             )}
             {selectedEdge.amount_paise !== undefined && (
               <div>
-                <strong>Amount:</strong> ₹{(selectedEdge.amount_paise / 100).toLocaleString("en-IN")}
+                <strong>Amount:</strong> {formatInr(selectedEdge.amount_paise)}
               </div>
             )}
           </div>

@@ -17,7 +17,7 @@ import structlog
 from nakabandi.alerting.application.ports import AlertRepo, ObservationSource, OutcomeRepo
 from nakabandi.alerting.domain.alert import Alert, TimelineEntry
 from nakabandi.alerting.domain.outcome import Outcome, classify_outcome
-from nakabandi.shared import Clock, Id, ObservationIngested, Policy, Scheduler, SimTime, new_id
+from nakabandi.shared import Clock, Id, ObservationIngested, Policy, new_id
 
 logger = structlog.get_logger(__name__)
 
@@ -30,7 +30,6 @@ class ReconcileOutcome:
         observations: ObservationSource | None,
         policy: Policy,
         clock: Clock,
-        scheduler: Scheduler,
         on_outcome: Callable[[Alert, Outcome], None] | None = None,
     ) -> None:
         self._alerts = alert_repo
@@ -38,7 +37,6 @@ class ReconcileOutcome:
         self._observations = observations
         self._policy = policy
         self._clock = clock
-        self._scheduler = scheduler
         self._on_outcome = on_outcome
 
     # ---- data-driven: hit / late ----------------------------------------------------------
@@ -61,13 +59,14 @@ class ReconcileOutcome:
 
     # ---- timer-driven: miss ---------------------------------------------------------------
 
-    def miss_at(self, alert: Alert) -> SimTime:
-        return alert.window_end + timedelta(hours=self._policy.outcome.grace_hours)
-
-    def schedule_miss(self, alert: Alert) -> None:
-        self._scheduler.call_at(
-            key=f"outcome:{alert.id}", at=self.miss_at(alert), fn=lambda: self._fire(alert.id)
-        )
+    def fire_due(self) -> int:
+        """Decide the misses that are due: alerts whose window + grace ended with no reconciled
+        outcome. Whatever their status (an expired alert still gets its miss)."""
+        cutoff = self._clock.now() - timedelta(hours=self._policy.outcome.grace_hours)
+        ids = self._alerts.list_miss_due_ids(cutoff, 200)
+        for alert_id in ids:
+            self._fire(alert_id)
+        return len(ids)
 
     def _fire(self, alert_id: Id) -> None:
         alert = self._alerts.get_by_id(alert_id)

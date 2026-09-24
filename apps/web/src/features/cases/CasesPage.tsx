@@ -7,9 +7,10 @@ import React, { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useCases, useCase } from "./api/useCases";
 import { CaseDetail } from "./CaseDetail";
-import { formatInr, formatSimTime } from "../../shared/lib/format";
+import { formatInr, formatSimTime, humanizeStatus } from "../../shared/lib/format";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
+import { Select } from "../../shared/ui/Select";
 import type { CaseFilter } from "./types";
 
 export default function CasesPage() {
@@ -110,7 +111,8 @@ export default function CasesPage() {
               Bundled Cases & Investigation Files
             </h2>
             <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#94a3b8" }}>
-              Algorithmic case bundling (DOC 3 §S1) aggregating multi-jurisdictional cyber complaints.
+              Complaints that share a target, cluster, or fund trail, automatically grouped into
+              one case file for investigation.
             </p>
           </div>
 
@@ -154,27 +156,19 @@ export default function CasesPage() {
             />
           </div>
 
-          <div>
-            <select
+          <div style={{ minWidth: 200 }}>
+            <Select
+              testId="cases-status-filter"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="nk-input"
-              data-testid="cases-status-filter"
-              style={{
-                background: "#1e293b",
-                border: "1px solid #334155",
-                color: "#f8fafc",
-                padding: "8px 12px",
-                borderRadius: 4,
-                fontSize: "13px",
-              }}
-            >
-              <option value="all">All Statuses</option>
-              <option value="bundled">Bundled</option>
-              <option value="under_investigation">Under Investigation</option>
-              <option value="fir_recommended">FIR Recommended</option>
-              <option value="closed">Closed</option>
-            </select>
+              onValueChange={setStatusFilter}
+              options={[
+                { value: "all", label: "All Statuses" },
+                { value: "bundled", label: "Bundled" },
+                { value: "under_investigation", label: "Under Investigation" },
+                { value: "fir_recommended", label: "FIR Recommended" },
+                { value: "closed", label: "Closed" },
+              ]}
+            />
           </div>
 
           <label
@@ -183,12 +177,13 @@ export default function CasesPage() {
               alignItems: "center",
               gap: 8,
               fontSize: "13px",
-              color: "#cbd5e1",
+              color: "var(--nk-text-secondary)",
               cursor: "pointer",
             }}
           >
             <input
               type="checkbox"
+              className="nk-checkbox"
               checked={singleOnly}
               onChange={(e) => setSingleOnly(e.target.checked)}
               data-testid="single-complaint-checkbox"
@@ -214,6 +209,21 @@ export default function CasesPage() {
         <EmptyState
           title="No Cases Found"
           message="No bundled cases match your current filter criteria."
+          action={
+            (search || statusFilter !== "all" || singleOnly) && (
+              <button
+                type="button"
+                className="nk-btn nk-btn--outline nk-btn--sm"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("all");
+                  setSingleOnly(false);
+                }}
+              >
+                Reset Filters
+              </button>
+            )
+          }
         />
       ) : (
         <div
@@ -328,7 +338,7 @@ export default function CasesPage() {
                               : "#cbd5e1",
                       }}
                     >
-                      {c.status.replace("_", " ")}
+                      {humanizeStatus(c.status)}
                     </span>
                   </td>
                   <td style={{ padding: "12px 16px", color: "#94a3b8" }}>

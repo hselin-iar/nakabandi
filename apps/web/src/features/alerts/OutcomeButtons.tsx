@@ -44,7 +44,7 @@ export function OutcomeButtons({
   function handleConfirm() {
     if (!selectedVerdict) return;
     outcomeMutation.mutate(
-      { alertId, outcome: { verdict: selectedVerdict, notes } },
+      { alertId, outcome: { result: selectedVerdict, reason: notes || undefined } },
       {
         onSuccess: () => {
           setShowConfirm(false);

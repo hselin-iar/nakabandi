@@ -22,6 +22,7 @@ from worldsim.core.clusters import build_clusters
 from worldsim.core.config import SimConfig
 from worldsim.core.generator import World
 from worldsim.core.observe import observe
+from worldsim.core.real_seed import load_real_registry
 from worldsim.core.registry import build_registry
 from worldsim.core.rng import rng_for
 from worldsim.writer.batches import (
@@ -38,9 +39,18 @@ from worldsim.writer.emitter import JsonlEmitter
 
 
 def _build_world(cfg: SimConfig) -> World:
-    """Construct a seeded World from config."""
+    """Construct a seeded World from config.
+
+    Prefers the real curated registry (data/seed + data/geo, filtered to cfg.geo.state_weights'
+    states) over registry.py's synthetic generator; falls back to synthetic if that data isn't
+    present (offline sandboxes, images that don't ship data/). This is the one place all four
+    CLI commands (history, hash, live, ledger) build a World, so the choice applies uniformly.
+    """
     rng = rng_for(cfg.seed, "world")
-    registry = build_registry(cfg, rng)
+    states = set(cfg.geo.state_weights.keys())
+    registry = load_real_registry(Path("data/seed"), states, cfg, rng)
+    if registry is None:
+        registry = build_registry(cfg, rng)
     clusters = build_clusters(cfg, registry, rng)
     return World(cfg=cfg, registry=registry, clusters=clusters)
 

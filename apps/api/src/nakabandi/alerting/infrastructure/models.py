@@ -24,6 +24,9 @@ class AlertModel(Base):
         # per dedup_key (enforced in SqlAlertRepo.get_by_dedup_key).
         Index("ix_alerts_status_severity", "status", "severity"),
         Index("ix_alerts_dedup_key", "dedup_key"),
+        # the alert clock's queries (timers.py): what is due at this sim time?
+        Index("ix_alerts_status_window_start", "status", "window_start"),
+        Index("ix_alerts_window_end", "window_end"),
     )
 
     id: Mapped[str] = mapped_column(String, primary_key=True)

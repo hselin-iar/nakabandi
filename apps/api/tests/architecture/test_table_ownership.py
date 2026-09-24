@@ -8,6 +8,8 @@ from __future__ import annotations
 import nakabandi.access.infrastructure.models  # noqa: F401
 import nakabandi.alerting.infrastructure.models  # noqa: F401
 import nakabandi.audit.infrastructure.models  # noqa: F401
+import nakabandi.casework.evidence.models  # noqa: F401
+import nakabandi.casework.infrastructure.models  # noqa: F401
 import nakabandi.geo.infrastructure.models  # noqa: F401
 import nakabandi.intake.infrastructure.models  # noqa: F401
 from nakabandi.shared import Base
@@ -38,6 +40,9 @@ EXPECTED_TABLES = {
     "actions",
     # analytics (LC-10, Step A9)
     "heat_rollups",
+    # casework (LC-10, Step A12)
+    "cases",
+    "evidence_packs",
 }
 
 

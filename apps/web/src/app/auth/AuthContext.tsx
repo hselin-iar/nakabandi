@@ -2,75 +2,26 @@
  * AuthContext.tsx — React context for the authenticated principal.
  * DOC 3 Web App Shell: auth/ (usePrincipal, RoleGuard, LoginPage)
  *
- * STUB STRATEGY (C1): manages a hardcoded demo-users fixture list; the "logged-in"
- * principal is stored in React state (no real session). Swap for the real /auth
- * endpoints once Track A Step A4 lands.
+ * Real session: POST /auth/login sets an HttpOnly cookie (access/interfaces/routers.py); this
+ * provider never sees the cookie itself, only GET /auth/me's response. On mount it checks for an
+ * existing session so a page reload doesn't bounce a logged-in user back to /login.
  */
 
-import React, { createContext, useState, useCallback } from "react";
-import type { Principal, Permission } from "../../shared/api/schema.d.ts";
+import React, { createContext, useCallback, useEffect, useState } from "react";
 
-// ---------------------------------------------------------------------------
-// Fixture demo-users (LC-2 Role shapes — DO NOT add roles or fields beyond LC-2)
-// ---------------------------------------------------------------------------
+import { apiClient } from "../../shared/api/client";
+import type { Permission } from "../../shared/api/enums.ts";
+import type { MeResponse, Principal } from "../../shared/api/types.ts";
 
-export const DEMO_USERS: Principal[] = [
-  {
-    user_id: "demo-i4c",
-    username: "i4c_analyst_1",
-    role: "i4c_analyst",
-    scope: {},
-    permissions: [
-      "VIEW_ALERTS",
-      "ACKNOWLEDGE",
-      "REQUEST_HOLD",
-      "NOTIFY_STATION",
-      "DISPATCH",
-      "OVERRIDE",
-      "MARK_OUTCOME",
-      "CREATE_EVIDENCE",
-      "VIEW_CASES",
-      "VIEW_AUDIT",
-      "VIEW_EVALUATION",
-      "SIM_CONTROL",
-    ],
-  },
-  {
-    user_id: "demo-state",
-    username: "state_investigator_1",
-    role: "state_investigator",
-    scope: { state_id: "UP" },
-    permissions: [
-      "VIEW_ALERTS",
-      "ACKNOWLEDGE",
-      "REQUEST_HOLD",
-      "NOTIFY_STATION",
-      "VIEW_CASES",
-      "MARK_OUTCOME",
-    ],
-  },
-  {
-    user_id: "demo-district",
-    username: "district_officer_1",
-    role: "district_officer",
-    scope: { state_id: "UP", district_id: "LKO" },
-    permissions: ["VIEW_ALERTS", "ACKNOWLEDGE", "NOTIFY_STATION", "VIEW_CASES"],
-  },
-  {
-    user_id: "demo-bank",
-    username: "bank_nodal_1",
-    role: "bank_nodal",
-    scope: {},
-    permissions: ["VIEW_ALERTS"],
-  },
-  {
-    user_id: "demo-operator",
-    username: "demo_operator_1",
-    role: "demo_operator",
-    scope: {},
-    permissions: ["VIEW_ALERTS", "VIEW_CASES", "VIEW_EVALUATION", "SIM_CONTROL"],
-  },
-];
+function toPrincipal(me: MeResponse): Principal {
+  return {
+    user_id: me.user_id,
+    name: me.name,
+    role: me.role as Principal["role"],
+    scope: me.scope as Principal["scope"],
+    permissions: me.permissions as Permission[],
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Context type
@@ -78,14 +29,13 @@ export const DEMO_USERS: Principal[] = [
 
 export interface AuthContextValue {
   principal: Principal | null;
-  /** Whether the stub session is considered "authenticated". */
+  /** True once the initial GET /auth/me check has finished (either way). */
+  isReady: boolean;
   isAuthenticated: boolean;
-  /** Check a permission against the current principal. */
   can(permission: Permission): boolean;
-  /** Log in as one of the demo principals (stub). */
-  loginAs(user: Principal): void;
-  /** Clear the session. */
-  logout(): void;
+  /** Real login: POST /auth/login, then GET /auth/me for scope + permissions. */
+  login(username: string, password: string): Promise<void>;
+  logout(): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -100,19 +50,40 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [principal, setPrincipal] = useState<Principal | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
-  const loginAs = useCallback((user: Principal) => {
-    setPrincipal(user);
+  useEffect(() => {
+    let cancelled = false;
+    apiClient
+      .GET("/auth/me")
+      .then(({ data }) => {
+        if (!cancelled && data) setPrincipal(toPrincipal(data));
+      })
+      .finally(() => {
+        if (!cancelled) setIsReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const logout = useCallback(() => {
+  const login = useCallback(async (username: string, password: string) => {
+    const { error } = await apiClient.POST("/auth/login", {
+      body: { username, password },
+    });
+    if (error) throw new Error("Login failed");
+    const { data: me, error: meError } = await apiClient.GET("/auth/me");
+    if (meError || !me) throw new Error("Login succeeded but /auth/me failed");
+    setPrincipal(toPrincipal(me));
+  }, []);
+
+  const logout = useCallback(async () => {
+    await apiClient.POST("/auth/logout");
     setPrincipal(null);
   }, []);
 
   const can = useCallback(
-    (permission: Permission) => {
-      return principal?.permissions.includes(permission) ?? false;
-    },
+    (permission: Permission) => principal?.permissions.includes(permission) ?? false,
     [principal],
   );
 
@@ -120,9 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         principal,
+        isReady,
         isAuthenticated: principal !== null,
         can,
-        loginAs,
+        login,
         logout,
       }}
     >

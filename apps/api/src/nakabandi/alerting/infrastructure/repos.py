@@ -5,10 +5,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from nakabandi_contracts.enums import ActionType, AlertStatus
+from sqlalchemy import func, update
 from sqlalchemy.orm import Session
 
 from nakabandi.alerting.domain.action import Action, ActionStatus
 from nakabandi.alerting.domain.alert import Alert, TimelineEntry
+from nakabandi.alerting.domain.budget import QueueEntry, Rankable
 from nakabandi.alerting.domain.delivery import (
     Delivery,
     DeliveryChannel,
@@ -208,18 +210,92 @@ class SqlAlertRepo:
             out.append(_model_to_alert(row, tl))
         return out
 
-    def list_queue(self, district_id: str | None, start: datetime, end: datetime) -> list[Alert]:
-        """Every alert of one budget queue: its district (None = unscoped), created in one shift
-        [start, end)."""
-        q = self._session.query(AlertModel).filter(
-            AlertModel.created_at >= start, AlertModel.created_at < end
+    def list_escalation_due_ids(self, cutoff: datetime, limit: int) -> list[str]:
+        """OPEN alerts unattended since `cutoff` (window_start + escalate_after has passed)."""
+        rows = (
+            self._session.query(AlertModel.id)
+            .filter(AlertModel.status == AlertStatus.OPEN.value, AlertModel.window_start <= cutoff)
+            .order_by(AlertModel.window_start)
+            .limit(limit)
         )
+        return [r[0] for r in rows]
+
+    def list_expiry_due_ids(self, now: datetime, limit: int) -> list[str]:
+        """Alerts still waiting on a human whose expiry has passed. ACTIONED is left out on
+        purpose: an alert someone acted on does not expire."""
+        rows = (
+            self._session.query(AlertModel.id)
+            .filter(
+                AlertModel.status.in_(
+                    [
+                        AlertStatus.OPEN.value,
+                        AlertStatus.ESCALATED.value,
+                        AlertStatus.ACKNOWLEDGED.value,
+                    ]
+                ),
+                AlertModel.expires_at <= now,
+            )
+            .order_by(AlertModel.expires_at)
+            .limit(limit)
+        )
+        return [r[0] for r in rows]
+
+    def list_miss_due_ids(self, cutoff: datetime, limit: int) -> list[str]:
+        """Alerts of ANY status whose window ended by `cutoff` and that ReconcileOutcome has not
+        decided (no reconciled outcome row)."""
+        decided = self._session.query(OutcomeModel.alert_id).filter(
+            OutcomeModel.source == "reconciled"
+        )
+        rows = (
+            self._session.query(AlertModel.id)
+            .filter(AlertModel.window_end <= cutoff, AlertModel.id.not_in(decided))
+            .order_by(AlertModel.window_end)
+            .limit(limit)
+        )
+        return [r[0] for r in rows]
+
+    def list_queue_entries(
+        self, district_id: str | None, start: datetime, end: datetime
+    ) -> list[QueueEntry]:
+        """One budget queue as a few columns per alert (no entities, no timelines): all that
+        ranking needs is id, priority, age and the current flags."""
+        q = self._session.query(
+            AlertModel.id,
+            AlertModel.priority,
+            AlertModel.created_at,
+            AlertModel.budget_rank,
+            AlertModel.is_deferred,
+            AlertModel.is_probe,
+        ).filter(AlertModel.created_at >= start, AlertModel.created_at < end)
         q = q.filter(
             AlertModel.scope_district_id.is_(None)
             if district_id is None
             else AlertModel.scope_district_id == district_id
         )
-        return self._load(q.all())
+        return [
+            QueueEntry(
+                id=r.id,
+                priority=r.priority,
+                created_at=to_sim_time(r.created_at),
+                budget_rank=r.budget_rank,
+                is_deferred=r.is_deferred,
+                is_probe=r.is_probe,
+            )
+            for r in q
+        ]
+
+    def save_budget(self, alert: Rankable) -> None:
+        """Write ONLY the budget fields of one alert (an UPDATE by primary key: no entity is
+        loaded, no timeline is touched)."""
+        self._session.execute(
+            update(AlertModel)
+            .where(AlertModel.id == alert.id)
+            .values(
+                budget_rank=alert.budget_rank,
+                is_deferred=alert.is_deferred,
+                is_probe=alert.is_probe,
+            )
+        )
 
     def list_awaiting_outcome(self, target_id: str | None = None) -> list[Alert]:
         """Alerts of any status that ReconcileOutcome has not yet decided (no reconciled outcome
@@ -576,6 +652,15 @@ class SqlDeliveryRepo:
         rows = rows[:limit]
         next_cursor = rows[-1].created_at.isoformat() if has_more and rows else None
         return [_delivery_from_row(r) for r in rows], next_cursor
+
+    def count_by_status(self) -> dict[str, int]:
+        """Deliveries per status (pending, failed, dead, sent): the outbox's depth and health."""
+        rows = self._session.query(DeliveryModel.status, func.count()).group_by(
+            DeliveryModel.status
+        )
+        counts = {status: 0 for status in (s.value for s in DeliveryStatus)}
+        counts.update({status: int(n) for status, n in rows})
+        return counts
 
     def count_dead(self) -> int:
         return (

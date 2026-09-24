@@ -6,19 +6,97 @@
  *   respect user role permissions and fire mutations.
  */
 
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AlertDetail } from "../AlertDetail";
 import { AuthContext } from "../../../app/auth/AuthContext";
-import type { Principal, Permission } from "../../../shared/api/schema.d.ts";
-import { resetAlertsFixtureStore } from "../api/useAlerts";
+import { apiClient } from "../../../shared/api/client";
+import type { Permission } from "../../../shared/api/enums.ts";
+import type { AlertDetail as AlertDetailModel, Principal } from "../../../shared/api/types.ts";
+
+vi.mock("../../../shared/api/client", () => ({
+  apiClient: { GET: vi.fn(), POST: vi.fn() },
+}));
+
+function fixtureDetail(): AlertDetailModel {
+  return {
+    id: "ALT-2026-001",
+    cluster_ref: "CLS-DL-8821",
+    target: { kind: "ATM", id: "LOC-ATM-4012", name: "SBI ATM — Connaught Place Inner Circle" },
+    severity: "CRITICAL",
+    confidence: 0.94,
+    status: "open",
+    is_deferred: false,
+    is_probe: false,
+    window_start: "2026-01-15T10:00:00Z",
+    window_end: "2026-01-15T11:30:00Z",
+    expires_at: "2026-01-15T11:30:00Z",
+    ladder_level: "L3",
+    created_at: "2026-01-15T10:05:00Z",
+    masked: false,
+    forecast: null,
+    interception: [],
+    timeline: [
+      { at: "2026-01-15T10:05:00Z", kind: "created", actor_id: null, text_code: "alert.created", text_params: {} },
+    ],
+    deliveries: [],
+    actions: [],
+    outcomes: [],
+    allowed_actions: [],
+  };
+}
+
+let alertState: AlertDetailModel;
+
+function installStatefulMock(): void {
+  alertState = fixtureDetail();
+  vi.mocked(apiClient.GET).mockImplementation((() =>
+    Promise.resolve({ data: alertState, error: undefined })) as unknown as typeof apiClient.GET);
+  vi.mocked(apiClient.POST).mockImplementation(((path: string, opts?: { body?: Record<string, unknown> }) => {
+    if (path === "/alerts/{alert_id}/actions") {
+      const body = opts?.body as { type: string; reason?: string; params?: Record<string, unknown> };
+      if (body.type === "acknowledge") alertState = { ...alertState, status: "acknowledged" };
+      else if (body.type === "request_hold") alertState = { ...alertState, status: "actioned" };
+      alertState = {
+        ...alertState,
+        timeline: [
+          ...alertState.timeline,
+          { at: new Date().toISOString(), kind: body.type, actor_id: "test", text_code: `alert.${body.type}`, text_params: {} },
+        ],
+      };
+      return Promise.resolve({
+        data: { id: "ACT-1", alert_id: alertState.id, type: body.type, status: "done", actor_role: "district_officer", at: new Date().toISOString(), params: body.params ?? {} },
+        error: undefined,
+      });
+    }
+    if (path === "/alerts/{alert_id}/outcome") {
+      const body = opts?.body as { result: string; reason?: string };
+      alertState = {
+        ...alertState,
+        timeline: [
+          ...alertState.timeline,
+          { at: new Date().toISOString(), kind: "outcome", actor_id: "test", text_code: `outcome.${body.result}`, text_params: {} },
+        ],
+      };
+      return Promise.resolve({
+        data: { id: "OUT-1", alert_id: alertState.id, result: body.result, source: "officer", at: new Date().toISOString() },
+        error: undefined,
+      });
+    }
+    return Promise.resolve({ data: undefined, error: new Error("unmocked path") });
+  }) as unknown as typeof apiClient.POST);
+}
+
+beforeEach(() => {
+  installStatefulMock();
+});
 
 function makePrincipal(permissions: Permission[]): Principal {
   return {
     user_id: "USR-TEST-01",
-    username: "test_officer",
+    name: "test_officer",
     role: "district_officer",
     scope: { state_id: "DL" },
     permissions,
@@ -48,8 +126,9 @@ function renderAlertDetail(
         principal: makePrincipal(permissions),
         isAuthenticated: true,
         can: (p) => permissions.includes(p),
-        loginAs: () => {},
-        logout: () => {},
+        isReady: true,
+        login: async () => {},
+        logout: async () => {},
       }}
     >
       <QueryClientProvider client={qc}>
@@ -61,7 +140,7 @@ function renderAlertDetail(
 
 afterEach(() => {
   cleanup();
-  resetAlertsFixtureStore();
+  vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
 

@@ -172,6 +172,11 @@ class FeedbackPolicy(_Strict):
     label_rate: float
 
 
+class CaseworkPolicy(_Strict):
+    bundle_debounce_min: float
+    """DOC 3 S1 "Case rebuild is debounced (once per cluster per sim hour)"."""
+
+
 class AccessPolicy(_Strict):
     permissions: dict[str, list[str]]
 
@@ -198,6 +203,7 @@ class Policy(_Strict):
     heatmap: HeatmapPolicy
     access: AccessPolicy
     feedback: FeedbackPolicy
+    casework: CaseworkPolicy
 
     @classmethod
     def load(cls, path: str | Path) -> Policy:

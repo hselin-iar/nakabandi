@@ -91,6 +91,17 @@ class SqlClusterRepo(ClusterRepo):
         ).all()
         return {r.account_id: r.cluster_id for r in rows}
 
+    def get_account_ids(self, cluster_id: Id) -> list[Id]:
+        """Every account currently assigned to this cluster (DOC 2 §2.2 table row: cluster_members
+        feeds M2, S1 — added for casework's A12 build_case; Track B's own tables, flagged in Track
+        A's Learnings as a cross-track Ownership Map touch)."""
+        rows = self._s.scalars(
+            sa.select(cluster_members.c.account_id).where(
+                cluster_members.c.cluster_id == cluster_id
+            )
+        ).all()
+        return sorted(rows)
+
     def save_cluster(self, cluster_id: Id, created_at: SimTime) -> None:
         self._s.execute(
             sa.insert(clusters)

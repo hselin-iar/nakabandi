@@ -2,7 +2,7 @@
  * types.ts — Types for the Risk Heatmap Dashboard (DOC 3 M3, LC-4).
  */
 
-import type { Severity, AlertStatus } from "../../shared/api/schema.d.ts";
+import type { Severity, AlertStatus } from "../../shared/api/enums.ts";
 
 export type HeatmapLayer = "live" | "potential";
 export type HeatmapLevel = "district" | "cell" | "location";

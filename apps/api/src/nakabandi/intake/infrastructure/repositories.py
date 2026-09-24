@@ -3,7 +3,7 @@ never commit()). `as_of`-gated reads return only rows with `observed_at <= as_of
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from nakabandi.intake.domain.entities import (
@@ -20,7 +20,7 @@ from nakabandi.intake.infrastructure.models import (
     FundHopModel,
     IngestBatchModel,
 )
-from nakabandi.shared import Id, SimTime, new_id
+from nakabandi.shared import Id, SimTime, new_id, to_sim_time
 
 
 def _account_from_model(m: AccountModel) -> Account:
@@ -225,6 +225,11 @@ class SqlBatchRepo:
             select(IngestBatchModel).where(IngestBatchModel.idempotency_key == key)
         )
         return _batch_from_model(model) if model is not None else None
+
+    def latest_received_at(self) -> SimTime | None:
+        """Sim time of the most recent ingest batch (each batch is recorded at its sim time)."""
+        latest = self._session.scalar(select(func.max(IngestBatchModel.received_at)))
+        return to_sim_time(latest) if latest is not None else None
 
     def record(self, batch: IngestBatchRecord) -> None:
         self._session.add(

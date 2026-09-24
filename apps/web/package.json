@@ -8,10 +8,12 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test",
     "build": "vite build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
@@ -31,13 +33,17 @@
     "vitest": "^5.0.1"
   },
   "dependencies": {
+    "@radix-ui/react-select": "^2.3.7",
+    "@radix-ui/react-tooltip": "^1.2.16",
     "@tanstack/react-query": "^5.103.2",
     "cytoscape": "^3.34.3",
+    "date-fns": "^4.4.0",
     "maplibre-gl": "^6.11.1",
     "openapi-fetch": "^0.13.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.6.1",
-    "react-router-dom": "^6.30.6"
+    "react-router-dom": "^6.30.6",
+    "recharts": "^3.10.1"
   }
 }

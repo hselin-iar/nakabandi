@@ -4,7 +4,7 @@
  *   Visual markers for active cash-out hotspots and alert targets.
  */
 
-import type { AlertSummary } from "../../../shared/api/schema.d.ts";
+import type { AlertSummary } from "../../../shared/api/types.ts";
 
 export const ALERTS_SOURCE_ID = "nk-alerts-source";
 export const ALERTS_HALO_LAYER_ID = "nk-alerts-halo";
@@ -32,7 +32,8 @@ export function alertsToGeoJSON(
   const features: GeoJSON.Feature[] = [];
 
   for (const alert of alerts) {
-    const coords = coordsMap[alert.target.id] ??
+    const targetId = String(alert.target.id ?? "");
+    const coords = coordsMap[targetId] ??
       coordsMap[alert.id] ?? [77.21, 28.61]; // Default to center if unmapped
 
     features.push({

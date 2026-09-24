@@ -5,7 +5,7 @@ SQLAlchemy session, so a raise_or_merge and its timeline entries share one trans
 
 Exports:
   AlertService   — raise_or_merge, acknowledge, record_action, handle_bank_callback,
-                   deliver_outbox, fire_due_timers, on_cluster_merged, rebuild_timers,
+                   deliver_outbox, fire_due_timers, on_cluster_merged,
                    get_alert_for, list_alerts, list_actions, list_deliveries
   AlertResult    — result returned to pipeline Stage 5
   ActionIn, BankCallback, LienContext — inputs to record_action / handle_bank_callback and the
@@ -47,12 +47,7 @@ from nakabandi.alerting.application.raise_or_merge import AlertResult, RaiseOrMe
 from nakabandi.alerting.application.reconcile import ReconcileOutcome
 from nakabandi.alerting.application.record_action import ActionIn, RecordAction
 from nakabandi.alerting.application.scope import scope_of
-from nakabandi.alerting.application.timers import (
-    EscalateAlert,
-    ExpireAlert,
-    RebuildTimers,
-    ReviewLien,
-)
+from nakabandi.alerting.application.timers import EscalateAlert, ExpireAlert, ReviewLien
 from nakabandi.alerting.domain.action import Action, allowed_actions
 from nakabandi.alerting.domain.alert import ACTIONABLE_STATUSES, Alert
 from nakabandi.alerting.domain.delivery import Delivery, DeliveryChannel
@@ -75,7 +70,6 @@ from nakabandi.shared import (
     ObservationIngested,
     OutcomeRecorded,
     Policy,
-    Scheduler,
     SystemClock,
     new_id,
 )
@@ -117,7 +111,6 @@ class AlertService:
         session: Session,
         clock: Clock,
         policy: Policy,
-        scheduler: Scheduler,
         role_permissions: Mapping[Role, Set[Permission]],
         sse_hub: SseHub,
         *,
@@ -135,16 +128,14 @@ class AlertService:
         self._delivery_repo = SqlDeliveryRepo(session)
         self._clock = clock
         self._policy = policy
-        self._scheduler = scheduler
         self._role_permissions = role_permissions
         self._hub = sse_hub
         self._bus = bus if bus is not None else EventBus()
 
-        # Build timer use cases (they share the same repo/clock/scheduler)
-        self._escalate = EscalateAlert(self._repo, clock, scheduler)
-        self._expire = ExpireAlert(self._repo, clock, scheduler)
-
-        self._review = ReviewLien(self._repo, self._action_repo, clock, scheduler)
+        # The alert clock: database-driven, so there is nothing to register or rebuild (timers.py)
+        self._escalate = EscalateAlert(self._repo, clock, policy)
+        self._expire = ExpireAlert(self._repo, clock)
+        self._review = ReviewLien(self._repo, self._action_repo, clock)
         self._lien_context = lien_context
         self._detail_source = detail_source
         self._outcome_repo = SqlOutcomeRepo(session)
@@ -154,7 +145,6 @@ class AlertService:
             observations,
             policy,
             clock,
-            scheduler,
             on_outcome=self._outcome_recorded,
         )
 
@@ -162,25 +152,11 @@ class AlertService:
             alert_repo=self._repo,
             policy=policy,
             clock=clock,
-            scheduler=scheduler,
-            escalate_fn=self._escalate.schedule,
-            expire_fn=self._expire.schedule,
             scope_lookup=scope_lookup,
             on_created=self._notify_banks,
             amount_of=self._amount_of,
-            on_scheduled=self._reconcile.schedule_miss,
         )
         self._acknowledge = AcknowledgeAlert(self._repo, policy, clock, role_permissions)
-        self._rebuild_timers = RebuildTimers(
-            alert_repo=self._repo,
-            escalate=self._escalate,
-            expire=self._expire,
-            policy=policy,
-            clock=clock,
-            review=self._review,
-            action_repo=self._action_repo,
-            reconcile=self._reconcile,
-        )
         self._enqueue = EnqueueDeliveries(self._delivery_repo, FileTemplateRenderer(), now_wall)
         audit = AuditLog(session, clock)
         self._record_action = RecordAction(
@@ -192,8 +168,6 @@ class AlertService:
             role_permissions=role_permissions,
             lien_context=lien_context,
             validate_lien=validate_lien,
-            scheduler=scheduler,
-            review=self._review,
             publish=self._bus.publish,
         )
         self._bank_callback = HandleBankCallback(self._action_repo, self._repo, audit, clock)
@@ -366,6 +340,10 @@ class AlertService:
             **_scope_filter(principal),
         )
 
+    def outbox_stats(self) -> dict[str, int]:
+        """Delivery counts by status (pending / failed / dead / sent) for the Ops metrics."""
+        return self._delivery_repo.count_by_status()
+
     def count_dead_deliveries(self) -> int:
         return self._delivery_repo.count_dead()
 
@@ -453,15 +431,17 @@ class AlertService:
     # Timer management
     # ------------------------------------------------------------------
 
-    def rebuild_timers(self) -> int:
-        return self._rebuild_timers.run()
-
     def fire_due_timers(self) -> int:
-        """One tick of the timer driver: re-register every live timer on THIS session (a timer
-        registered during an earlier request is bound to that request's closed session), then
-        fire what is due at the current sim time. Returns how many fired."""
-        self.rebuild_timers()
-        return self._scheduler.run_due(self._clock.now())
+        """One tick of the alert clock: act on whatever has fallen due at the current sim time
+        (escalations, expiries, misses, lien reviews). Each is found by an indexed query, so a tick
+        with nothing due costs four cheap queries however many alerts exist, and a restart needs no
+        rebuilding. Returns how many alerts it acted on."""
+        return (
+            self._escalate.fire_due()
+            + self._expire.fire_due()
+            + self._reconcile.fire_due()
+            + self._review.fire_due()
+        )
 
     # ------------------------------------------------------------------
     # Cluster merge re-keying (DOC 3 M4 edge case)

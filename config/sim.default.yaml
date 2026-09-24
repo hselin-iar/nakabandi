@@ -60,13 +60,15 @@ mule:
   lifetime_days: 30           # Appendix A: 1 to 180, median ~30
 
 geo:
-  # Appendix A: MHA Lok Sabha UQ 1906, 11 Mar 2025 — state-wise cybercrime counts
-  # Four demo states; weights are relative fractions (will be normalised by the simulator)
+  # Real MHA-sourced state complaint shares (data/seed/state_cybercrime_weights.csv: MHA Rajya
+  # Sabha USQ 1200, 30.07.2025, NCRP 2024 incident counts, normalised to these four states) —
+  # supersedes the earlier MHA Lok Sabha UQ 1906 assumed split. Four demo states: UP, MH, HR, JH
+  # (JH replaces RJ — data/seed/ only covers these four).
   state_weights:
-    UP: 0.35
-    MH: 0.25
-    RJ: 0.22
-    HR: 0.18
+    MH: 0.4060
+    UP: 0.4032
+    HR: 0.1580
+    JH: 0.0328
 
 kit:
   cards_per_account: 1        # Appendix A: kits typically hold one ATM card per account

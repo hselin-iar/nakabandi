@@ -3,7 +3,9 @@
  * DOC 3 §S1 (Cluster Case Bundling) & DOC 4 §C6
  */
 
-export type NodeKind = "mule" | "victim" | "aggregator" | "exit" | "summary";
+/** "account" is the real backend's only kind today (DOC 4 A12: no per-node role
+ * classification yet); the others are UI-only categories a future step may add. */
+export type NodeKind = "account" | "mule" | "victim" | "aggregator" | "exit" | "summary";
 
 export interface ClusterNode {
   id: string;
@@ -37,11 +39,14 @@ export type ClusterStatus = "active" | "reviewing" | "merged" | "closed";
 export interface ClusterSummary {
   cluster_ref: string;
   size: number;
-  status: ClusterStatus;
-  novelty: number; // 0.0 to 1.0
-  total_paise: number;
-  first_seen: string;
-  last_seen: string;
+  /** The real backend only ever returns "active" today (not wired to cluster-absorption
+   * state) — DOC 4 A12 Learnings. */
+  status?: ClusterStatus;
+  /** Not wired to the forecast facade yet — always 0 from the real API (DOC 4 A12 Learnings). */
+  novelty?: number;
+  total_paise?: number;
+  first_seen?: string;
+  last_seen?: string;
   single_complaint?: boolean;
 }
 

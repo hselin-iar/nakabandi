@@ -22,7 +22,6 @@ from nakabandi.alerting.application.ports import (
     LienValidator,
 )
 from nakabandi.alerting.application.scope import scope_of
-from nakabandi.alerting.application.timers import ReviewLien
 from nakabandi.alerting.domain.action import Action, ActionStatus, permission_for
 from nakabandi.alerting.domain.alert import ACTIONABLE_STATUSES, Alert, TimelineEntry
 from nakabandi.audit import AuditLog
@@ -33,7 +32,6 @@ from nakabandi.shared import (
     DomainEvent,
     Forbidden,
     NotFound,
-    Scheduler,
     SimTime,
     ValidationFailed,
     new_id,
@@ -63,8 +61,6 @@ class RecordAction:
         role_permissions: Mapping[Role, Set[Permission]],
         lien_context: LienContextPort | None,
         validate_lien: LienValidator | None,
-        scheduler: Scheduler,
-        review: ReviewLien,
         publish: Callable[[DomainEvent], None],
     ) -> None:
         self._alerts = alert_repo
@@ -75,8 +71,6 @@ class RecordAction:
         self._role_perms = role_permissions
         self._lien_context = lien_context
         self._validate_lien = validate_lien
-        self._scheduler = scheduler
-        self._review = review
         self._publish = publish
 
     def run(self, principal: Principal, alert_id: str, action_in: ActionIn) -> Action:
@@ -172,10 +166,6 @@ class RecordAction:
             ),
         )
         self._alerts.save(alert)
-        if new_status is AlertStatus.ACTIONED:
-            # "expires only if not actioned" (DOC 3 M4 edge case): the timers no longer apply
-            self._scheduler.cancel(f"escalate:{alert.id}")
-            self._scheduler.cancel(f"expire:{alert.id}")
 
         # 7. enqueue the deliveries this action causes
         if hold is not None:
@@ -191,7 +181,6 @@ class RecordAction:
                 review_at_sim=hold.review_at,
                 sim_time=now,
             )
-            self._review.schedule(action.id, hold.review_at)
 
         # 8. publish ActionRecorded (LC-3: fan-out only; a failing subscriber is logged by the
         #    bus and must never undo an action a human already took)

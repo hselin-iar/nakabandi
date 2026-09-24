@@ -246,7 +246,6 @@ def _raise_alert(client: TestClient, at: datetime, complaint_id: str, target: st
             session=uow.session,
             clock=st.clock,
             policy=st.policy,
-            scheduler=st.scheduler,
             role_permissions=st.role_permissions,
             sse_hub=st.sse_hub,
             scope_lookup=LocationScopeLookup(uow.session),

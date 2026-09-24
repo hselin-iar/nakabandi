@@ -7,14 +7,17 @@
   "workspaces": ["apps/web", "apps/bank-sim"],
   "scripts": {
     "dev": "npm run dev --workspace apps/web",
+    "dev:sim": "uv run worldsim live --control-port 8100 --oracle-port 8002",
     "test": "uv run pytest && npm run test --workspace apps/web",
+    "test:e2e": "npm run test:e2e --workspace apps/web",
     "ci": "npm run ci:py && npm run ci:web && npm run ci:bank-sim",
     "ci:py": "uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run lint-imports && uv run pytest",
     "ci:web": "npm run lint --workspace apps/web && npm run typecheck --workspace apps/web && npm run test --workspace apps/web && npm run build --workspace apps/web",
     "ci:bank-sim": "npm run typecheck --workspace apps/bank-sim && npm run test --workspace apps/bank-sim",
-    "types": "uv run python scripts/gen_contract_schemas.py && git diff --stat --exit-code packages/contracts/src/nakabandi_contracts/schemas",
+    "types": "uv run python scripts/gen_contract_schemas.py && uv run python scripts/gen_web_openapi.py && npx --prefix apps/web openapi-typescript apps/web/openapi.json -o apps/web/src/shared/api/schema.d.ts && git diff --stat --exit-code packages/contracts/src/nakabandi_contracts/schemas apps/web/src/shared/api/schema.d.ts",
     "seed": "uv run python scripts/seed.py",
-    "reset": "node scripts/not-yet.mjs reset",
-    "sweep": "node scripts/not-yet.mjs sweep"
+    "reset": "uv run python scripts/reset.py",
+    "sweep": "node scripts/not-yet.mjs sweep",
+    "stress": "uv run python scripts/stress.py"
   }
 }

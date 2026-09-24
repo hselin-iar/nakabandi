@@ -49,7 +49,7 @@ export function FeedbackPanel({ alertId, confidence }: FeedbackPanelProps) {
       {feedbackSubmitted ? (
         <div className="nk-feedback-success" role="status">
           ✓ Feedback recorded ({feedbackType === "accurate" ? "Accurate" : "Needs Retuning"}).
-          Feeds online model priors (DOC 3 M4).
+          This helps tune future forecasts.
         </div>
       ) : (
         <div className="nk-feedback-actions">

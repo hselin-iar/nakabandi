@@ -15,14 +15,15 @@ import { MaskedRef } from "../../shared/ui/MaskedRef";
 import { KeyValue } from "../../shared/ui/KeyValue";
 import { Timeline, type TimelineEntry as UITimelineEntry } from "../../shared/ui/Timeline";
 import { Button } from "../../shared/ui/Button";
+import { Select } from "../../shared/ui/Select";
 import { OutcomeButtons } from "./OutcomeButtons";
 import { NoveltyBanner } from "./NoveltyBanner";
 import { FeedbackPanel } from "./FeedbackPanel";
 import { useAlert, useAlertAction } from "./api/useAlerts";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import { can } from "../../shared/lib/permissions";
-import { formatSimTime } from "../../shared/lib/format";
-import type { ActionType } from "../../shared/api/schema.d.ts";
+import { formatSimTime, humanizeStatus } from "../../shared/lib/format";
+import type { ActionType, AlertStatus, LadderLevel, Severity } from "../../shared/api/enums.ts";
 
 interface AlertDetailProps {
   alertId: string | null;
@@ -82,7 +83,7 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
     alert?.timeline.map((entry, idx) => ({
       id: `${entry.at}-${idx}`,
       timestamp: entry.at,
-      title: entry.text_code.replace("alert.", "").replace(/_/g, " ").toUpperCase(),
+      title: humanizeStatus(entry.text_code.replace(/^alert\./, "")),
       description: Object.entries(entry.text_params)
         .map(([k, v]) => `${k}: ${v}`)
         .join(" | "),
@@ -120,9 +121,9 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
           {/* Badges & Scores */}
           <div className="nk-detail-top-card">
             <div className="nk-detail-badges">
-              <SeverityBadge severity={alert.severity} />
-              <StatusBadge status={alert.status} />
-              <LadderBadge level={alert.ladder_level} />
+              <SeverityBadge severity={alert.severity as Severity} />
+              <StatusBadge status={alert.status as AlertStatus} />
+              <LadderBadge level={alert.ladder_level as LadderLevel} />
             </div>
 
             <div className="nk-detail-metrics-row">
@@ -229,7 +230,7 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
                       onChange={(e) => setHoldAmount(e.target.value)}
                     />
                     <span className="nk-text-xs nk-text-secondary">
-                      Validated ≤ disputed amount per DOC 2 §2.4.
+                      Must be at or below the disputed amount.
                     </span>
                   </div>
                 )}
@@ -239,16 +240,16 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
                     <label htmlFor="dispatch-unit-select" className="nk-label">
                       Select Interception Patrol Unit
                     </label>
-                    <select
+                    <Select
                       id="dispatch-unit-select"
-                      className="nk-select"
                       value={unitId}
-                      onChange={(e) => setUnitId(e.target.value)}
-                    >
-                      <option value="UNIT-CRIME-04">Cyber Cell Delhi — Unit 04</option>
-                      <option value="UNIT-PCR-12">PCR Van Connaught Place — Unit 12</option>
-                      <option value="UNIT-MUMBAI-09">Bandra Beat Patrol — Unit 09</option>
-                    </select>
+                      onValueChange={setUnitId}
+                      options={[
+                        { value: "UNIT-CRIME-04", label: "Cyber Cell Delhi — Unit 04" },
+                        { value: "UNIT-PCR-12", label: "PCR Van Connaught Place — Unit 12" },
+                        { value: "UNIT-MUMBAI-09", label: "Bandra Beat Patrol — Unit 09" },
+                      ]}
+                    />
                   </div>
                 )}
 
@@ -296,11 +297,11 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
               items={[
                 {
                   key: "Target Facility",
-                  value: alert.target.name ?? alert.target.id,
+                  value: String(alert.target.name ?? alert.target.id ?? ""),
                 },
                 {
                   key: "Facility Kind",
-                  value: alert.target.kind,
+                  value: String(alert.target.kind ?? ""),
                 },
                 {
                   key: "Cluster Association",

@@ -51,6 +51,25 @@ class ObservationSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class AccountInfo:
+    account_id: str
+    account_ref: str
+    bank_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class ComplaintFact:
+    """One complaint whose money reached a set of accounts (casework's build_case, DOC 3 S1)."""
+
+    id: str
+    external_ref: str
+    victim_district_id: str
+    amount_paise: int
+    reported_event_at: SimTime
+    touched_account_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class ComplaintDetail:
     """A complaint with the facts the forecast chain needs about it and its first-layer account."""
 
@@ -166,6 +185,77 @@ class LienContextLookup:
         ):
             out[hop.to_account_id] = out.get(hop.to_account_id, 0) + hop.amount_paise
         return out
+
+    def accounts_by_ids(self, account_ids: list[str]) -> list[AccountInfo]:
+        """Account ref and bank for a set of account ids (casework's build_case, DOC 3 S1)."""
+        if not account_ids:
+            return []
+        rows = self._session.scalars(select(AccountModel).where(AccountModel.id.in_(account_ids)))
+        infos = (
+            AccountInfo(account_id=a.id, account_ref=a.account_ref, bank_id=a.bank_id) for a in rows
+        )
+        return sorted(infos, key=lambda i: i.account_id)
+
+    def complaints_for_accounts(self, account_ids: list[str]) -> list[ComplaintFact]:
+        """Every complaint whose money reached any of these accounts, as a layer-1 account or a
+        hop's end (casework's build_case, DOC 3 S1)."""
+        if not account_ids:
+            return []
+        matching_ids = set(
+            self._session.scalars(
+                select(ComplaintModel.id).where(
+                    or_(
+                        ComplaintModel.layer1_account_id.in_(account_ids),
+                        ComplaintModel.id.in_(
+                            select(FundHopModel.complaint_id).where(
+                                or_(
+                                    FundHopModel.to_account_id.in_(account_ids),
+                                    FundHopModel.from_account_id.in_(account_ids),
+                                )
+                            )
+                        ),
+                    )
+                )
+            )
+        )
+        if not matching_ids:
+            return []
+        facts: list[ComplaintFact] = []
+        for complaint in self._session.scalars(
+            select(ComplaintModel).where(ComplaintModel.id.in_(matching_ids))
+        ):
+            touched = {complaint.layer1_account_id}
+            for hop in self._session.scalars(
+                select(FundHopModel).where(FundHopModel.complaint_id == complaint.id)
+            ):
+                touched.add(hop.from_account_id)
+                touched.add(hop.to_account_id)
+            facts.append(
+                ComplaintFact(
+                    id=complaint.id,
+                    external_ref=complaint.external_ref,
+                    victim_district_id=complaint.victim_district_id,
+                    amount_paise=complaint.amount_paise,
+                    reported_event_at=to_sim_time(complaint.reported_event_at),
+                    touched_account_ids=tuple(sorted(touched)),
+                )
+            )
+        return sorted(facts, key=lambda f: f.id)
+
+    def hops_among(self, account_ids: list[str]) -> list[tuple[str, str, int]]:
+        """(from_account_id, to_account_id, amount_paise) for every hop with both ends inside this
+        set of accounts (casework's cluster graph, DOC 3 S1)."""
+        if not account_ids:
+            return []
+        rows = self._session.execute(
+            select(
+                FundHopModel.from_account_id, FundHopModel.to_account_id, FundHopModel.amount_paise
+            ).where(
+                FundHopModel.from_account_id.in_(account_ids),
+                FundHopModel.to_account_id.in_(account_ids),
+            )
+        ).all()
+        return [(r.from_account_id, r.to_account_id, r.amount_paise) for r in rows]
 
     def cluster_delays_min(self, account_ids: list[str], as_of: SimTime) -> list[float]:
         """Observed credit-to-cash-out delays (minutes) at these accounts, from what was known by

@@ -13,7 +13,7 @@ export const DEMO_REGIONS: Region[] = [
   // Four Demo States
   { id: "UP", level: "state", name: "Uttar Pradesh", parent_id: null, geojson_ref: "UP", lat: 26.85, lon: 80.95 },
   { id: "MH", level: "state", name: "Maharashtra", parent_id: null, geojson_ref: "MH", lat: 19.75, lon: 75.71 },
-  { id: "RJ", level: "state", name: "Rajasthan", parent_id: null, geojson_ref: "RJ", lat: 27.02, lon: 74.22 },
+  { id: "JH", level: "state", name: "Jharkhand", parent_id: null, geojson_ref: "JH", lat: 23.6, lon: 85.3 },
   { id: "HR", level: "state", name: "Haryana", parent_id: null, geojson_ref: "HR", lat: 29.06, lon: 76.08 },
 
   // Districts — UP
@@ -28,11 +28,11 @@ export const DEMO_REGIONS: Region[] = [
   { id: "MH-NAG", level: "district", name: "Nagpur", parent_id: "MH", geojson_ref: null, lat: 21.15, lon: 79.09 },
   { id: "MH-NAS", level: "district", name: "Nashik", parent_id: "MH", geojson_ref: null, lat: 20.00, lon: 73.79 },
 
-  // Districts — RJ
-  { id: "RJ-JPR", level: "district", name: "Jaipur", parent_id: "RJ", geojson_ref: null, lat: 26.92, lon: 75.79 },
-  { id: "RJ-JDH", level: "district", name: "Jodhpur", parent_id: "RJ", geojson_ref: null, lat: 26.29, lon: 73.02 },
-  { id: "RJ-AJM", level: "district", name: "Ajmer", parent_id: "RJ", geojson_ref: null, lat: 26.45, lon: 74.64 },
-  { id: "RJ-UDR", level: "district", name: "Udaipur", parent_id: "RJ", geojson_ref: null, lat: 24.58, lon: 73.68 },
+  // Districts — JH (the 4 highest cybercrime-complaint-weight districts, data/seed/districts.csv)
+  { id: "JH-RAN", level: "district", name: "Ranchi", parent_id: "JH", geojson_ref: null, lat: 23.34, lon: 85.31 },
+  { id: "JH-DHA", level: "district", name: "Dhanbad", parent_id: "JH", geojson_ref: null, lat: 23.80, lon: 86.43 },
+  { id: "JH-ESI", level: "district", name: "East Singhbhum", parent_id: "JH", geojson_ref: null, lat: 22.80, lon: 86.18 },
+  { id: "JH-BOK", level: "district", name: "Bokaro", parent_id: "JH", geojson_ref: null, lat: 23.67, lon: 86.15 },
 
   // Districts — HR
   { id: "HR-GGN", level: "district", name: "Gurugram", parent_id: "HR", geojson_ref: null, lat: 28.46, lon: 77.03 },

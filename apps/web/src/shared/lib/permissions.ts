@@ -8,7 +8,8 @@
  * SRP: pure functions, no React, no I/O.
  */
 
-import type { Principal, Permission, Role, Scope } from "../api/schema.d.ts";
+import type { Permission, Role } from "../api/enums.ts";
+import type { Principal, Scope } from "../api/types.ts";
 
 // ---------------------------------------------------------------------------
 // Permission matrix (DOC 3 §M5, policy.yaml — DO NOT add rows not in LC-2)
@@ -94,15 +95,15 @@ export function scopeContains(
   resourceScope: Scope,
 ): boolean {
   if (
-    resourceScope.state_id !== undefined &&
-    principalScope.state_id !== undefined &&
+    resourceScope.state_id != null &&
+    principalScope.state_id != null &&
     principalScope.state_id !== resourceScope.state_id
   ) {
     return false;
   }
   if (
-    resourceScope.district_id !== undefined &&
-    principalScope.district_id !== undefined &&
+    resourceScope.district_id != null &&
+    principalScope.district_id != null &&
     principalScope.district_id !== resourceScope.district_id
   ) {
     return false;

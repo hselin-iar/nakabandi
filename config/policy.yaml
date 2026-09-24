@@ -153,3 +153,6 @@ access:
 
 feedback:
   label_rate: 0.3
+
+casework:
+  bundle_debounce_min: 60 # DOC3: S1 "debounced (once per cluster per sim hour)"

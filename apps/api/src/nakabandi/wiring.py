@@ -20,13 +20,15 @@ from nakabandi.analytics import (
     ForecastFacts,
     GeoCatalog,
 )
+from nakabandi.casework.domain.case import AccountFact, ClusterSnapshot
+from nakabandi.casework.domain.case import ComplaintFact as CaseworkComplaintFact
 from nakabandi.forecast.infrastructure.repositories import SqlForecastRepo
 from nakabandi.geo import GeoService, LocationScopeLookup
 from nakabandi.graph import ClusterService
 from nakabandi.graph.infrastructure.repositories import SqlClusterRepo
 from nakabandi.intake import LienContextLookup
 from nakabandi.interception.infrastructure.repositories import SqlAssessmentRepo
-from nakabandi.shared import EventBus
+from nakabandi.shared import EventBus, SimTime
 
 logger = structlog.get_logger(__name__)
 
@@ -150,6 +152,63 @@ class AlertDetailSourceAdapter:
 
     def assessments(self, forecast_id: str) -> list[object]:
         return list(self._assessments.get_by_forecast(forecast_id))
+
+
+class CaseworkClusterSource:
+    """casework.ClusterSource over the graph facade (DOC 3 S1): read-only (context_for,
+    account_ids), so it never publishes — an unregistered EventBus, not app.state.event_bus_factory,
+    which re-runs every bus_registrar (including casework's own) and would recurse."""
+
+    def __init__(self, session: Session) -> None:
+        self._cluster = ClusterService(SqlClusterRepo(session), EventBus())
+
+    def snapshot(self, cluster_id: str, as_of: SimTime) -> ClusterSnapshot:
+        ctx = self._cluster.context_for(cluster_id, as_of)
+        top = sorted(ctx.location_stats, key=lambda s: s.observation_count, reverse=True)[:50]
+        sub_communities = tuple(
+            tuple(g) for g in (ctx.footprint.sub_communities if ctx.footprint else [])
+        )
+        return ClusterSnapshot(
+            cluster_id=cluster_id,
+            as_of=as_of,
+            complaint_count=ctx.stats.complaint_count,
+            total_paise=ctx.stats.total_paise,
+            last_seen_at=ctx.stats.last_seen_at,
+            top_locations=tuple((s.location_id, s.observation_count) for s in top),
+            sub_communities=sub_communities,
+        )
+
+    def account_ids(self, cluster_id: str) -> list[str]:
+        return self._cluster.account_ids(cluster_id)
+
+
+class CaseworkComplaintSource:
+    """casework.ComplaintSource over the intake facade (DOC 3 S1)."""
+
+    def __init__(self, session: Session) -> None:
+        self._intake = LienContextLookup(session)
+
+    def complaints_for_accounts(self, account_ids: list[str]) -> list[CaseworkComplaintFact]:
+        return [
+            CaseworkComplaintFact(
+                id=c.id,
+                external_ref=c.external_ref,
+                victim_district_id=c.victim_district_id,
+                amount_paise=c.amount_paise,
+                reported_event_at=c.reported_event_at,
+                touched_account_ids=c.touched_account_ids,
+            )
+            for c in self._intake.complaints_for_accounts(account_ids)
+        ]
+
+    def accounts_by_ids(self, account_ids: list[str]) -> list[AccountFact]:
+        return [
+            AccountFact(account_id=a.account_id, account_ref=a.account_ref, bank_id=a.bank_id)
+            for a in self._intake.accounts_by_ids(account_ids)
+        ]
+
+    def hops_among(self, account_ids: list[str]) -> list[tuple[str, str, int]]:
+        return self._intake.hops_among(account_ids)
 
 
 class GraphConfirmedCashOut:

@@ -1,51 +1,60 @@
-"""EscalateAlert, ExpireAlert, RebuildTimers (DOC 3 M4 timers.py).
+"""EscalateAlert, ExpireAlert, ReviewLien: the alert clock (DOC 3 M4 timers.py).
 
-Timers use the injected Scheduler and Clock.
-RebuildTimers recreates escalation and expiry timers from open alerts at boot
-(DOC 3 M4 edge case: "Process restart: RebuildTimers recreates escalation, expiry ...").
+DATABASE-DRIVEN, not scheduler-driven. Each `fire_due()` asks the database which alerts are due at
+the current sim time (an indexed query) and acts on those only. Nothing is registered in memory,
+so there is nothing to rebuild after a restart (DOC 3 M4 edge case: "Process restart:
+RebuildTimers recreates escalation, expiry and lien-review timers") and no timer is bound to a
+request's session. An earlier version registered a timer per alert and re-registered ALL of them
+on every tick; the A11 stress run showed that starving the ingest path at a few thousand alerts.
+
+Due-ness is a pure function of an alert's own fields and the sim clock:
+  escalate  OPEN and window_start + escalate_after_min <= now
+  expire    OPEN / ESCALATED / ACKNOWLEDGED and expires_at <= now (ACTIONED never expires)
+  review    a pending or applied hold whose review_at <= now, once
 """
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import structlog
 from nakabandi_contracts.enums import AlertStatus
 
 from nakabandi.alerting.application.ports import ActionRepo, AlertRepo
-from nakabandi.alerting.application.reconcile import ReconcileOutcome
 from nakabandi.alerting.domain.action import ActionStatus
 from nakabandi.alerting.domain.alert import Alert, TimelineEntry
-from nakabandi.shared import Clock, Policy, Scheduler, SimTime, new_id
+from nakabandi.shared import Clock, Policy, new_id
 
 logger = structlog.get_logger(__name__)
 
+BATCH = 200
+"""At most this many alerts are acted on per class per tick, so one tick after a long time jump
+stays short; the next tick takes the next batch."""
+
 
 class EscalateAlert:
-    """Transition OPEN → ESCALATED when the escalation timer fires."""
+    """OPEN -> ESCALATED once an alert has gone unattended for escalate_after_min."""
 
-    def __init__(self, alert_repo: AlertRepo, clock: Clock, scheduler: Scheduler) -> None:
+    def __init__(self, alert_repo: AlertRepo, clock: Clock, policy: Policy) -> None:
         self._repo = alert_repo
         self._clock = clock
-        self._scheduler = scheduler
+        self._policy = policy
 
-    def schedule(self, alert_id: str, at: SimTime) -> None:
-        """Register an escalation timer for this alert."""
-        self._scheduler.call_at(
-            key=f"escalate:{alert_id}",
-            at=at,
-            fn=lambda: self._fire(alert_id),
-        )
+    def fire_due(self) -> int:
+        cutoff = self._clock.now() - timedelta(minutes=self._policy.alerting.escalate_after_min)
+        ids = self._repo.list_escalation_due_ids(cutoff, BATCH)
+        for alert_id in ids:
+            self._fire(alert_id)
+        return len(ids)
 
     def _fire(self, alert_id: str) -> None:
         alert: Alert | None = self._repo.get_by_id(alert_id)
         if alert is None or alert.status != AlertStatus.OPEN:
             return
-        now = self._clock.now()
         entry = TimelineEntry(
             id=new_id(),
             alert_id=alert.id,
-            at=now,
+            at=self._clock.now(),
             kind="escalated",
             actor_id=None,
             text_code="alert.escalated",
@@ -60,30 +69,26 @@ class EscalateAlert:
 
 
 class ExpireAlert:
-    """Transition → EXPIRED when the expiry timer fires."""
+    """-> EXPIRED once an alert's window and grace are over and nobody acted on it."""
 
-    def __init__(self, alert_repo: AlertRepo, clock: Clock, scheduler: Scheduler) -> None:
+    def __init__(self, alert_repo: AlertRepo, clock: Clock) -> None:
         self._repo = alert_repo
         self._clock = clock
-        self._scheduler = scheduler
 
-    def schedule(self, alert_id: str, at: SimTime) -> None:
-        """Register an expiry timer for this alert."""
-        self._scheduler.call_at(
-            key=f"expire:{alert_id}",
-            at=at,
-            fn=lambda: self._fire(alert_id),
-        )
+    def fire_due(self) -> int:
+        ids = self._repo.list_expiry_due_ids(self._clock.now(), BATCH)
+        for alert_id in ids:
+            self._fire(alert_id)
+        return len(ids)
 
     def _fire(self, alert_id: str) -> None:
         alert: Alert | None = self._repo.get_by_id(alert_id)
         if alert is None or alert.status in (AlertStatus.CLOSED, AlertStatus.EXPIRED):
             return
-        now = self._clock.now()
         entry = TimelineEntry(
             id=new_id(),
             alert_id=alert.id,
-            at=now,
+            at=self._clock.now(),
             kind="expired",
             actor_id=None,
             text_code="alert.expired",
@@ -105,29 +110,32 @@ class ReviewLien:
     the alert's timeline shows it is due. It changes no status and sends nothing; whoever wants
     more (a reminder delivery, an escalation) adds it deliberately."""
 
-    def __init__(
-        self, alert_repo: AlertRepo, action_repo: ActionRepo, clock: Clock, scheduler: Scheduler
-    ) -> None:
+    def __init__(self, alert_repo: AlertRepo, action_repo: ActionRepo, clock: Clock) -> None:
         self._alerts = alert_repo
         self._actions = action_repo
         self._clock = clock
-        self._scheduler = scheduler
 
-    def schedule(self, action_id: str, at: SimTime) -> None:
-        self._scheduler.call_at(key=f"review:{action_id}", at=at, fn=lambda: self._fire(action_id))
+    def fire_due(self) -> int:
+        now = self._clock.now()
+        fired = 0
+        for action in self._actions.list_active_holds():  # holds are few; review_at is in params
+            review_at = action.params.get("review_at")
+            if isinstance(review_at, str) and datetime.fromisoformat(review_at) <= now:
+                fired += self._fire(action.id)
+        return fired
 
-    def _fire(self, action_id: str) -> None:
+    def _fire(self, action_id: str) -> int:
         action = self._actions.get_by_id(action_id)
         if action is None or action.status not in (ActionStatus.PENDING, ActionStatus.APPLIED):
-            return  # rejected or released: nothing left to review
+            return 0  # rejected or released: nothing left to review
         alert: Alert | None = self._alerts.get_by_id(action.alert_id)
         if alert is None:
-            return
+            return 0
         if any(
             e.text_code == "alert.hold.review_due" and e.text_params.get("action_id") == action_id
             for e in alert.timeline
         ):
-            return  # already noted (a rebuild can register the same timer twice)
+            return 0  # already noted: a review is noted once
         alert.timeline.append(
             TimelineEntry(
                 id=new_id(),
@@ -141,67 +149,4 @@ class ReviewLien:
         )
         self._alerts.save(alert)
         logger.info("alerting.lien_review_due", alert_id=alert.id, action_id=action_id)
-
-
-class RebuildTimers:
-    """Recreate in-memory escalation and expiry timers from open alerts at process boot.
-
-    DOC 3 M4 edge case: "Process restart: RebuildTimers recreates escalation,
-    expiry and lien-review timers from open alerts."
-    """
-
-    def __init__(
-        self,
-        alert_repo: AlertRepo,
-        escalate: EscalateAlert,
-        expire: ExpireAlert,
-        policy: Policy,
-        clock: Clock,
-        review: ReviewLien | None = None,
-        action_repo: ActionRepo | None = None,
-        reconcile: ReconcileOutcome | None = None,
-    ) -> None:
-        self._repo = alert_repo
-        self._escalate = escalate
-        self._expire = expire
-        self._policy = policy
-        self._clock = clock
-        self._review = review
-        self._actions = action_repo
-        self._reconcile = reconcile
-
-    def run(self) -> int:
-        """Rebuild timers for all open/escalated alerts. Returns count rebuilt."""
-        from datetime import timedelta
-
-        open_alerts: list[Alert] = self._repo.list_open()
-        escalate_after = timedelta(minutes=self._policy.alerting.escalate_after_min)
-        rebuilt = 0
-
-        for alert in open_alerts:
-            # Only OPEN alerts get an escalation timer (ESCALATED ones already past it)
-            # An overdue timer is still registered: it fires on the next run_due, so a restart
-            # (or a tick that jumped past several deadlines) never silently drops it.
-            if alert.status == AlertStatus.OPEN:
-                self._escalate.schedule(alert.id, alert.window_start + escalate_after)
-
-            # Every non-terminal alert gets an expiry timer
-            self._expire.schedule(alert.id, alert.expires_at)
-
-            rebuilt += 1
-
-        # Miss timers cover every alert still without a reconciled outcome, whatever its status: an
-        # expired or closed alert still gets its miss (or its late hit) decided.
-        if self._reconcile is not None:
-            for alert in self._repo.list_awaiting_outcome():
-                self._reconcile.schedule_miss(alert)
-
-        # Lien-review timers live on actions, not on alerts (an actioned alert is not "open")
-        if self._review is not None and self._actions is not None:
-            for action in self._actions.list_active_holds():
-                review_at = action.params.get("review_at")
-                if isinstance(review_at, str):
-                    self._review.schedule(action.id, datetime.fromisoformat(review_at))
-
-        logger.info("alerting.timers.rebuilt", count=rebuilt)
-        return rebuilt
+        return 1

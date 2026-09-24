@@ -4,7 +4,8 @@
  */
 
 import React, { useState } from "react";
-import type { AlertSummary } from "../../shared/api/schema.d.ts";
+import type { AlertSummary } from "../../shared/api/types.ts";
+import type { AlertStatus, Severity } from "../../shared/api/enums.ts";
 import { SeverityBadge, StatusBadge } from "../../shared/ui/Badge";
 import { Countdown } from "../../shared/ui/Countdown";
 import { Button } from "../../shared/ui/Button";
@@ -93,13 +94,15 @@ export function ReviewQueue({
       <div className="nk-review-queue-body">
         <div className="nk-review-item-main">
           <div className="nk-review-badges">
-            <SeverityBadge severity={current.severity} />
-            <StatusBadge status={current.status} />
+            <SeverityBadge severity={current.severity as Severity} />
+            <StatusBadge status={current.status as AlertStatus} />
           </div>
 
           <div className="nk-review-target">
             <span className="font-mono font-bold">{current.id}</span>
-            <div className="text-sm font-medium">{current.target.name ?? current.target.id}</div>
+            <div className="text-sm font-medium">
+              {String(current.target.name ?? current.target.id ?? "")}
+            </div>
             <div className="text-xs text-muted font-mono">{current.cluster_ref}</div>
           </div>
 

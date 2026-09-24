@@ -27,6 +27,9 @@ class AuditEntryResponse(BaseModel):
     entity_id: str
     reason: str | None
     payload: dict
+    hash: str
+    """This row's own chain hash (DOC 3 M5) — lets a viewer see the chain, not just verify()'s
+    pass/fail; added for the web Audit page (DOC 4 C7)."""
 
 
 class VerifyResponse(BaseModel):
@@ -75,6 +78,7 @@ def list_audit(
             entity_type=e.entity_type,
             entity_id=e.entity_id,
             reason=e.reason,
+            hash=e.hash,
             payload=e.payload,
         )
         for e in audit.list()

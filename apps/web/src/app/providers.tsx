@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./auth/AuthContext";
 import { StreamProvider } from "../shared/stream/useStream";
+import { TooltipProvider } from "../shared/ui/Tooltip";
 
 /** TanStack Query client with sensible defaults for the app. */
 const queryClient = new QueryClient({
@@ -36,19 +37,21 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <StreamProvider>
-            {children}
-            {/* Toast container — positioned top-right, accessible */}
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 5000,
-                style: {
-                  background: "var(--nk-surface-raised, #1e2130)",
-                  color: "var(--nk-text-primary, #e2e8f0)",
-                  border: "1px solid var(--nk-border-subtle, #2d3748)",
-                },
-              }}
-            />
+            <TooltipProvider delayDuration={200}>
+              {children}
+              {/* Toast container — positioned top-right, accessible */}
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 5000,
+                  style: {
+                    background: "var(--nk-surface-raised, #1e2130)",
+                    color: "var(--nk-text-primary, #e2e8f0)",
+                    border: "1px solid var(--nk-border-subtle, #2d3748)",
+                  },
+                }}
+              />
+            </TooltipProvider>
           </StreamProvider>
         </AuthProvider>
       </QueryClientProvider>

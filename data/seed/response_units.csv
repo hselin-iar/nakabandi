@@ -1,0 +1,971 @@
+unit_id,kind,district_id,unit_name,lat,lon,status,speed_profile,source
+UNIT-0001,station,MH-PUN,Shikrapur-Talegoan Dhamdhere Police Staion,18.695175,74.137613,active,urban,osm
+UNIT-0002,station,HR-PAN,Sector 7 Police station,30.710642,76.845480,active,semi_urban,osm
+UNIT-0003,station,MH-LAT,Police Station.,18.392086,77.116489,active,rural,osm
+UNIT-0004,station,MH-LAT,Police station Udgir Rural.,18.408411,77.100494,inactive,rural,osm
+UNIT-0005,station,UP-BAR,पटौली सिमा सुरक्षा चौकी Police Station,27.728493,82.378660,active,rural,osm
+UNIT-0006,station,UP-GON,Katra Kotwali Dist- Ayodhya Police Station,26.838539,82.231784,active,rural,osm
+UNIT-0007,station,HR-PAN,Women Police Station,30.693752,76.851995,inactive,semi_urban,osm
+UNIT-0008,station,HR-PAN,Police Post Sector 21,30.676643,76.863420,active,semi_urban,osm
+UNIT-0009,station,HR-PAN,Police Station Sector 14,30.680162,76.847905,inactive,semi_urban,osm
+UNIT-0010,station,MH-PAR,Palam Police Station,19.013115,76.951434,active,semi_urban,osm
+UNIT-0011,station,MH-NAN,Homeguard police ground,19.176307,77.310355,inactive,rural,osm
+UNIT-0012,station,MH-NAG,Police Station Ramtek,21.397047,79.324328,inactive,urban,osm
+UNIT-0013,station,UP-JHA,Reserve Police Lines jhansi,25.447578,78.572412,active,semi_urban,osm
+UNIT-0014,station,UP-JHA,Kotwali Jhansi city Police Station,25.459687,78.577104,active,semi_urban,osm
+UNIT-0015,station,UP-JHA,police chowki,25.463767,78.586526,active,semi_urban,osm
+UNIT-0016,station,UP-LAL,mahila police thana,24.693229,78.414497,active,rural,osm
+UNIT-0017,station,UP-LAL,police station,24.692095,78.420092,active,rural,osm
+UNIT-0018,station,MH-PUN,Ramwadi Police Station,18.554555,73.905636,active,urban,osm
+UNIT-0019,station,MH-PUN,Yerawada Police Station,18.552799,73.895797,active,urban,osm
+UNIT-0020,station,MH-PUN,Mangaldas Police Chowki,18.533987,73.878905,active,urban,osm
+UNIT-0021,station,MH-PUN,Police Station – Pune,18.524308,73.878890,active,urban,osm
+UNIT-0022,station,MH-PUN,Samarth Police Station,18.520318,73.869689,inactive,urban,osm
+UNIT-0023,station,MH-PUN,Sant Kabir Police Station,18.514876,73.868857,active,urban,osm
+UNIT-0024,station,MH-PUN,Somwar Peth Police Station सोमवार पेठ पोलिस स्टेशन,18.519568,73.862446,active,urban,osm
+UNIT-0025,station,MH-PUN,Vishrantwadi Police Station,18.564672,73.877527,active,urban,osm
+UNIT-0026,station,MH-PUN,Khadki Police Station,18.557192,73.845425,active,urban,osm
+UNIT-0027,station,MH-PUN,Police Station – Pune,18.544938,73.844857,active,urban,osm
+UNIT-0028,station,MH-PUN,ShivajiNagar Police Station,18.529982,73.850013,active,urban,osm
+UNIT-0029,station,MH-PUN,Ganesh Peth Police station,18.516175,73.862191,active,urban,osm
+UNIT-0030,station,MH-PUN,Faraskhana Police Station,18.516496,73.856026,active,urban,osm
+UNIT-0031,station,MH-PUN,Kasba Peth Police Chowki,18.520476,73.856038,active,urban,osm
+UNIT-0032,station,MH-PUN,Narayan Peth Police Chowki,18.516200,73.847865,active,urban,osm
+UNIT-0033,station,MH-PUN,Shaniwar Peth Police Chowki,18.520009,73.850024,active,urban,osm
+UNIT-0034,station,MH-PUN,Balagandharva Police Station,18.522236,73.847842,inactive,urban,osm
+UNIT-0035,station,MH-PUN,"Centre for Police Research - CPR,",18.540655,73.822460,inactive,urban,osm
+UNIT-0036,station,MH-RAI,chaitra cafe Police Station,19.035020,73.100965,active,semi_urban,osm
+UNIT-0037,station,MH-THA,Kulgaon Police Station,19.157544,73.239707,active,urban,osm
+UNIT-0038,station,MH-THA,Badlapur Police Station.,19.157600,73.239640,active,urban,osm
+UNIT-0039,station,MH-THA,Kinhavali Police Station,19.352300,73.481162,active,urban,osm
+UNIT-0040,station,MH-THA,Police Station – Thane,19.193452,73.332748,active,urban,osm
+UNIT-0041,station,MH-AHM,Rajur Police Station,19.519499,73.872201,active,rural,osm
+UNIT-0042,station,MH-AHM,Akole Police Station,19.539599,74.004302,active,rural,osm
+UNIT-0043,station,MH-PUN,Otur Police Station,19.270260,73.981664,active,urban,osm
+UNIT-0044,station,MH-LAT,MIDC Police station,18.409045,76.543086,active,rural,osm
+UNIT-0045,station,MH-LAT,Renapur Naka Police Chowki,18.408776,76.567356,active,rural,osm
+UNIT-0046,station,MH-LAT,Vivekanand Chowk Police Station,18.404540,76.597787,active,rural,osm
+UNIT-0047,station,MH-LAT,Police Welfare Highschool,18.388700,76.619447,active,rural,osm
+UNIT-0048,station,MH-LAT,"Police Training Center, Babhalgaon",18.389406,76.624772,active,rural,osm
+UNIT-0049,station,MH-LAT,Police Headquarter Latur,18.389955,76.623439,active,rural,osm
+UNIT-0050,station,MH-LAT,Latur Gramin Police Station,18.398387,76.602248,active,rural,osm
+UNIT-0051,station,MH-LAT,Police Station Latur Ghramine,18.398436,76.602032,active,rural,osm
+UNIT-0052,station,MH-LAT,Gandhi Chowk Police station,18.399925,76.578086,active,rural,osm
+UNIT-0053,station,MH-LAT,Shivajinagar Police Chowki,18.387483,76.563039,active,rural,osm
+UNIT-0054,station,MH-LAT,Ashtavinayak Police Station,18.394021,76.567605,active,rural,osm
+UNIT-0055,station,MH-LAT,Shivaji Chowk Police station,18.399734,76.563593,active,rural,osm
+UNIT-0056,station,MH-LAT,Police station Shirur Anantpal,18.341970,76.841431,active,rural,osm
+UNIT-0057,station,MH-LAT,"Police Station, Shirur Anatpal",18.341856,76.841606,inactive,rural,osm
+UNIT-0058,station,MH-PUN,Chavan Nagar - Pune Rural Police Headquarters,18.540356,73.819313,active,urban,osm
+UNIT-0059,station,MH-PUN,Chaturshringi Police Station,18.546176,73.825612,active,urban,osm
+UNIT-0060,station,MH-PUN,Sangvi Police Station,18.578593,73.815639,active,urban,osm
+UNIT-0061,station,MH-PUN,Pimple Saudagar Police Statiom,18.601556,73.799361,active,urban,osm
+UNIT-0062,station,MH-PUN,Police Station Pimple Saudagar,18.601819,73.799092,active,urban,osm
+UNIT-0063,station,MH-PUN,Mahalunge Police Station,18.787132,73.775838,active,urban,osm
+UNIT-0064,station,MH-PUN,Marungi Police Station,18.746000,73.788333,active,urban,osm
+UNIT-0065,station,MH-OSM,Police Station – Osmanabad,17.835979,76.629626,active,rural,osm
+UNIT-0066,station,MH-LAT,Police Station – Latur,18.077403,76.592733,active,rural,osm
+UNIT-0067,station,MH-PUN,Wakad Police Chowky,18.592050,73.757560,active,urban,osm
+UNIT-0068,station,HR-FAT,New Police Line,29.486362,75.479407,active,rural,osm
+UNIT-0069,station,HR-BHI,Old Police Station,28.878790,75.914859,active,rural,osm
+UNIT-0070,station,HR-BHI,Police Station,28.879001,75.915503,active,rural,osm
+UNIT-0071,station,HR-HIS,Police Station Urban Estate,29.127134,75.765395,inactive,semi_urban,osm
+UNIT-0072,station,UP-CHI,Police Station – Chitrakoot,25.216195,80.917238,active,rural,osm
+UNIT-0073,station,UP-CHI,MAHILA THANA Police Station,25.213767,80.905931,active,rural,osm
+UNIT-0074,station,UP-CHI,PURANI KOTWALI MAIDAN Police Station,25.213412,80.907626,active,rural,osm
+UNIT-0075,station,HR-GUR,Police Station Bilaspur,28.288256,76.858613,active,urban,osm
+UNIT-0076,station,HR-REW,Police Aid Post dharuheda,28.215750,76.794717,active,rural,osm
+UNIT-0077,station,HR-MAH,Railway Police Force,28.044712,76.121662,active,rural,osm
+UNIT-0078,station,HR-MAH,Women Police Station,28.047453,76.111972,active,rural,osm
+UNIT-0079,station,HR-MAH,Police Station – Mahendragarh,28.050303,76.112065,inactive,rural,osm
+UNIT-0080,station,HR-MAH,New Police Station,28.057237,76.107008,active,rural,osm
+UNIT-0081,station,HR-MAH,Police Line Narnaul,28.046967,76.111995,active,rural,osm
+UNIT-0082,station,HR-MAH,Police Station – Mahendragarh,28.074473,76.108030,active,rural,osm
+UNIT-0083,station,HR-MAH,Firing Range Narnaul Police Station,28.071006,76.075560,inactive,rural,osm
+UNIT-0084,station,HR-MAH,Mahendragarh Police Station,28.272001,76.147984,active,rural,osm
+UNIT-0085,station,UP-GOR,Police Station – Gorakhpur,26.754713,83.213205,active,rural,osm
+UNIT-0086,station,UP-AMB,Chhajjapur Police Chowki,26.555617,82.656952,active,rural,osm
+UNIT-0087,station,UP-AMB,Kedar Nagar Police station,26.539945,82.546576,active,rural,osm
+UNIT-0088,station,UP-AMB,Kedar Nagar Police Station,26.540610,82.546149,active,rural,osm
+UNIT-0089,station,UP-SID,Police Office Siddharth Nagar,27.275289,83.067549,inactive,rural,osm
+UNIT-0090,station,UP-KUS,Police Station Padrauna,26.901930,83.976826,active,rural,osm
+UNIT-0091,station,UP-MAH,"Immigration Check Post, Sonauli Police Station",27.471959,83.465604,active,rural,osm
+UNIT-0092,station,HR-GUR,Police Station – Gurugram,28.460127,77.092758,active,urban,osm
+UNIT-0093,station,HR-GUR,Police Station Sushant Lok,28.460703,77.080971,active,urban,osm
+UNIT-0094,station,HR-GUR,Sushant Lok Police Station,28.462993,77.072817,active,urban,osm
+UNIT-0095,station,HR-GUR,Sector 29 Police Station,28.463048,77.073173,active,urban,osm
+UNIT-0096,station,HR-GUR,"Police Station, DLF Phase 2",28.487335,77.091064,active,urban,osm
+UNIT-0097,station,HR-GUR,Palam Vihar Police Station,28.501366,77.063519,active,urban,osm
+UNIT-0098,station,HR-GUR,Sector 18 Police Station,28.487675,77.066046,active,urban,osm
+UNIT-0099,station,HR-GUR,Sector 18 Police Station,28.486364,77.066095,active,urban,osm
+UNIT-0100,station,HR-GUR,Police Station – Gurugram,28.503823,77.024721,active,urban,osm
+UNIT-0101,station,MH-AUR,Police Headcquarter Aurangabad(Rural),19.899686,75.352394,active,semi_urban,osm
+UNIT-0102,station,UP-GHA,Teela Mod Police Station,28.725869,77.334623,active,urban,osm
+UNIT-0103,station,UP-BAG,Police Chowki,28.863895,77.285428,active,rural,osm
+UNIT-0104,station,HR-SON,"Commissioner's Office, Sonipat Police Station",28.944506,77.101282,active,semi_urban,osm
+UNIT-0105,station,HR-SON,Murthal Police Station,29.026639,77.073202,active,semi_urban,osm
+UNIT-0106,station,UP-BAN,Police Baberu,25.549502,80.697410,active,rural,osm
+UNIT-0107,station,UP-AME,Kamrauli police station,26.485459,81.560509,inactive,rural,osm
+UNIT-0108,station,UP-LKO,UP police Headquarters,26.812074,81.008873,active,urban,osm
+UNIT-0109,station,UP-LKO,Police Chowki Makboolganj,26.839597,80.924987,active,urban,osm
+UNIT-0110,station,UP-LKO,Dugawan Police Chowki,26.845803,80.918437,active,urban,osm
+UNIT-0111,station,MH-SAT,Police Station – Satara,17.696487,73.988277,active,rural,osm
+UNIT-0112,station,MH-SAT,Satara Rural Police Station,17.687764,73.990781,active,rural,osm
+UNIT-0113,station,MH-SAT,Police Head Quarter,17.687372,73.998712,active,rural,osm
+UNIT-0114,station,UP-BAL,Ubhaon Police Station,26.132733,83.866918,active,rural,osm
+UNIT-0115,station,UP-BAL,Sukhpura Thana Police Station,25.856842,84.092084,active,rural,osm
+UNIT-0116,station,MH-AUR,Police Station – Aurangabad,20.034055,75.033655,inactive,semi_urban,osm
+UNIT-0117,station,MH-AUR,POLICE GROUND,20.264920,75.132722,active,semi_urban,osm
+UNIT-0118,station,MH-AUR,Police Station – Aurangabad,20.090081,75.435754,active,semi_urban,osm
+UNIT-0119,station,MH-AUR,Police station1,19.577608,75.626138,active,semi_urban,osm
+UNIT-0120,station,MH-JAA,DY SP OFFICE Police Station,19.619334,75.793041,active,rural,osm
+UNIT-0121,station,MH-JAA,Police station of ambad,19.616455,75.787953,active,rural,osm
+UNIT-0122,station,MH-SAT,Malharpeth Police station,17.344462,74.004712,active,rural,osm
+UNIT-0123,station,MH-RAT,Jaigad Police Station,17.292797,73.219457,active,rural,osm
+UNIT-0124,station,MH-RAT,Ratnagiri Railway Police Station,17.003026,73.356900,active,rural,osm
+UNIT-0125,station,MH-RAT,Police Station – Ratnagiri,17.007628,73.431599,inactive,rural,osm
+UNIT-0126,station,MH-RAT,Police Station – Ratnagiri,16.699092,73.394564,inactive,rural,osm
+UNIT-0127,station,MH-SIN,police station,16.062164,73.457255,active,rural,osm
+UNIT-0128,station,MH-SIN,Sindhurgnagari Police Station,16.115655,73.704848,active,rural,osm
+UNIT-0129,station,MH-KOL,Gadhinglaj Police Station,16.223711,74.347802,active,semi_urban,osm
+UNIT-0130,station,MH-KOL,Ajara Police Station,16.120429,74.209494,inactive,semi_urban,osm
+UNIT-0131,station,UP-SAH,Hasanpur Police Chowki,29.938214,77.538743,inactive,semi_urban,osm
+UNIT-0132,station,UP-SAH,hasanpur chowki Police Station,29.938308,77.539194,active,semi_urban,osm
+UNIT-0133,station,HR-KAR,Police Station – Karnal,29.731906,77.041398,active,semi_urban,osm
+UNIT-0134,station,HR-KAR,Police Station,29.693528,77.004256,active,semi_urban,osm
+UNIT-0135,station,HR-KAR,Traffic Police Karnal,29.676580,77.005120,inactive,semi_urban,osm
+UNIT-0136,station,HR-KAR,Sector 6 Police Chowki,29.678377,77.006987,active,semi_urban,osm
+UNIT-0137,station,HR-KAR,Police Complex Madhuban,29.612671,76.971760,active,semi_urban,osm
+UNIT-0138,station,MH-PUN,Wakad Police Station,18.607337,73.765311,active,urban,osm
+UNIT-0139,station,HR-KUR,Police Line,29.975585,76.885402,active,semi_urban,osm
+UNIT-0140,station,HR-PAN,Crime Branch Police Station,30.658150,76.885648,active,semi_urban,osm
+UNIT-0141,station,HR-PAN,Police Post Sector 25,30.673162,76.880418,active,semi_urban,osm
+UNIT-0142,station,HR-PAN,Police Station Chandimandir,30.691553,76.883560,active,semi_urban,osm
+UNIT-0143,station,HR-PAN,Haryana Emergency 112 Helpline Center Police Station,30.693901,76.870216,active,semi_urban,osm
+UNIT-0144,station,HR-PAN,Police Station Sector 1,30.700956,76.868200,active,semi_urban,osm
+UNIT-0145,station,MH-MSB,Kandivali Police Station,19.209583,72.850140,active,urban,osm
+UNIT-0146,station,MH-MSB,Police Station – Mumbai Suburban,19.228789,72.804654,active,urban,osm
+UNIT-0147,station,MH-MSB,Versova Police Station,19.142974,72.804488,inactive,urban,osm
+UNIT-0148,station,MH-MSB,Oshiwara Police Station,19.147698,72.831433,active,urban,osm
+UNIT-0149,station,MH-MSB,Police Station – Mumbai Suburban,19.183497,72.844506,active,urban,osm
+UNIT-0150,station,MH-MSB,Dindoshi Police station,19.178949,72.857733,active,urban,osm
+UNIT-0151,station,MH-MSB,Aarey Police Station,19.166485,72.854382,active,urban,osm
+UNIT-0152,station,MH-MSB,Goregaon Police Station,19.157400,72.845809,active,urban,osm
+UNIT-0153,station,MH-MSB,Goregaon (E) Police Station,19.155874,72.857676,inactive,urban,osm
+UNIT-0154,station,MH-PUN,Hinjawadi police station,18.586133,73.735549,active,urban,osm
+UNIT-0155,station,MH-PUN,Police Station – Pune,18.586601,73.736862,active,urban,osm
+UNIT-0156,station,MH-PUN,Hinjawadi Police Chowki,18.591748,73.738707,active,urban,osm
+UNIT-0157,station,MH-PUN,Baner Police Station,18.568713,73.774847,active,urban,osm
+UNIT-0158,station,MH-PUN,Pashan Police station,18.538278,73.798018,inactive,urban,osm
+UNIT-0159,station,MH-PUN,Bavdhan Police Chowki,18.522496,73.779584,active,urban,osm
+UNIT-0160,station,MH-PUN,bavdhandhan  Police Station,18.522592,73.779613,active,urban,osm
+UNIT-0161,station,MH-PUN,Kothrud Police Station,18.506629,73.802475,active,urban,osm
+UNIT-0162,station,MH-PUN,Bavdhan Police Station,18.511434,73.777522,active,urban,osm
+UNIT-0163,station,MH-KOL,Shahupuri Police Station,16.703469,74.239273,active,semi_urban,osm
+UNIT-0164,station,MH-KOL,Laxmipuri Police Station,16.698763,74.227484,active,semi_urban,osm
+UNIT-0165,station,MH-KOL,Juna Rajawada Police Station,16.694502,74.223529,active,semi_urban,osm
+UNIT-0166,station,MH-PUN,Police Station – Pune,18.507561,73.917400,active,urban,osm
+UNIT-0167,station,MH-AMR,Warud Police Station,21.467315,78.269770,active,semi_urban,osm
+UNIT-0168,station,MH-MSB,Versova Police Chowki,19.136755,72.810513,active,urban,osm
+UNIT-0169,station,MH-MSB,Versova Police station (D.N.Nagar),19.124531,72.830137,active,urban,osm
+UNIT-0170,station,MH-MSB,Versova Police Station,19.124125,72.830370,active,urban,osm
+UNIT-0171,station,MH-MSB,D.N. Nagar Police Station,19.122585,72.830000,active,urban,osm
+UNIT-0172,station,MH-MSB,Police Station – Mumbai Suburban,19.098188,72.826643,active,urban,osm
+UNIT-0173,station,MH-MSB,Juhu Tara Road Police Station,19.096447,72.827042,active,urban,osm
+UNIT-0174,station,MH-MSB,Juhu Police Station,19.103166,72.832712,active,urban,osm
+UNIT-0175,station,MH-MSB,Bail Bazar Police Station,19.085325,72.880989,active,urban,osm
+UNIT-0176,station,MH-MSB,Marol Police Camp,19.127856,72.884089,active,urban,osm
+UNIT-0177,station,MH-PUN,Police Station – Pune,18.522945,73.615706,active,urban,osm
+UNIT-0178,station,MH-RAI,Police Station – Raigad,18.237525,73.288623,active,semi_urban,osm
+UNIT-0179,station,MH-RAI,Roha Police Station,18.441988,73.112730,active,semi_urban,osm
+UNIT-0180,station,MH-PUN,Police Madat Kendra,18.743389,73.483323,inactive,urban,osm
+UNIT-0181,station,MH-PUN,Kamshet Police Station,18.762464,73.559042,inactive,urban,osm
+UNIT-0182,station,MH-PUN,Lonavala police station,18.747556,73.407184,active,urban,osm
+UNIT-0183,station,MH-PUN,Police Station – Pune,18.753902,73.404556,active,urban,osm
+UNIT-0184,station,MH-PUN,Police Station – Pune,18.753939,73.404532,active,urban,osm
+UNIT-0185,station,MH-RAI,Highway Police Borghat,18.764348,73.355652,active,semi_urban,osm
+UNIT-0186,station,MH-RAI,Khopoli Police Station,18.786251,73.343528,active,semi_urban,osm
+UNIT-0187,station,MH-RAI,Matheran Police Station,18.982771,73.268526,active,semi_urban,osm
+UNIT-0188,station,HR-SON,Police Station Rai,28.939855,77.097789,active,semi_urban,osm
+UNIT-0189,station,HR-SON,Police Station – Sonipat,28.920129,77.062994,active,semi_urban,osm
+UNIT-0190,station,HR-SON,Ganaur Police Station,29.133022,77.014927,active,semi_urban,osm
+UNIT-0191,station,MH-KOL,Rajarampuri Police Station,16.690523,74.246911,active,semi_urban,osm
+UNIT-0192,station,MH-KOL,Highway Police Station,16.660890,74.267511,active,semi_urban,osm
+UNIT-0193,station,MH-KOL,Kagal Police Station,16.576096,74.314362,active,semi_urban,osm
+UNIT-0194,station,MH-PUN,Chandan nagar police,18.557096,73.928086,active,urban,osm
+UNIT-0195,station,MH-PUN,Kharadi Police Station,18.549192,73.947423,active,urban,osm
+UNIT-0196,station,MH-PUN,Police Station,18.571317,73.979084,active,urban,osm
+UNIT-0197,station,MH-PUN,police station Wagoli;Wagoli police station,18.581825,73.986854,active,urban,osm
+UNIT-0198,station,MH-PUN,wagoli police station,18.581217,73.986526,active,urban,osm
+UNIT-0199,station,MH-MSB,Homeguard Central Training Institute Police Station,19.089619,72.890637,active,urban,osm
+UNIT-0200,station,MH-MSB,Vikhroli Police Station,19.118719,72.937325,active,urban,osm
+UNIT-0201,station,MH-MSB,Tembhipada Police Chowki,19.154890,72.929111,inactive,urban,osm
+UNIT-0202,station,MH-MSB,Traffic Police Chowky,19.163976,72.937481,active,urban,osm
+UNIT-0203,station,MH-MSB,Police Station – Mumbai Suburban,19.169307,72.968504,active,urban,osm
+UNIT-0204,station,MH-MSB,Police Station – Mumbai Suburban,19.169550,72.959176,active,urban,osm
+UNIT-0205,station,MH-MSB,Police Station – Mumbai Suburban,19.171584,72.956655,active,urban,osm
+UNIT-0206,station,MH-MSB,Mulund Police Chowky,19.172340,72.956269,active,urban,osm
+UNIT-0207,station,MH-THA,Mulund Police Station,19.177604,72.951644,active,urban,osm
+UNIT-0208,station,MH-MSB,RPF Reserve Line - Mulund Police Station,19.173452,72.959182,active,urban,osm
+UNIT-0209,station,MH-MSB,"Office Of The Inspector Incharge, Mulund East Police Station",19.172160,72.957515,active,urban,osm
+UNIT-0210,station,MH-MSB,Kopri Police Station,19.178321,72.969173,active,urban,osm
+UNIT-0211,station,MH-THA,Naupada Police Station,19.188799,72.967171,active,urban,osm
+UNIT-0212,station,MH-THA,Police Station – Thane,19.187185,72.975904,active,urban,osm
+UNIT-0213,station,UP-MUZ,Police Chowki Baywala,29.258752,77.456719,active,semi_urban,osm
+UNIT-0214,station,UP-MUZ,Command House SSP Muzaffarnagar Police Station,29.467848,77.706254,active,semi_urban,osm
+UNIT-0215,station,UP-MUZ,Khatauli Police Station,29.275475,77.731512,active,semi_urban,osm
+UNIT-0216,station,UP-MEE,Medical Police Station,28.961040,77.753735,active,semi_urban,osm
+UNIT-0217,station,UP-MEE,Police Station – Meerut,28.978615,77.693479,active,semi_urban,osm
+UNIT-0218,station,UP-MEE,Police Station – Meerut,28.978583,77.693056,active,semi_urban,osm
+UNIT-0219,station,UP-MEE,Police Chowki Kaiserganj,28.982067,77.695534,active,semi_urban,osm
+UNIT-0220,station,UP-MEE,Police Station – Meerut,28.978880,77.698169,active,semi_urban,osm
+UNIT-0221,station,UP-MEE,Police Station – Meerut,28.980632,77.705917,active,semi_urban,osm
+UNIT-0222,station,UP-MEE,Lisari Gate Police Station,28.970812,77.706542,active,semi_urban,osm
+UNIT-0223,station,UP-MEE,Police Station Tejgarhi,28.963814,77.740780,active,semi_urban,osm
+UNIT-0224,station,UP-MEE,Police Station – Meerut,28.981524,77.737990,active,semi_urban,osm
+UNIT-0225,station,UP-MEE,Jail Chungi Police chowki,28.979054,77.731600,active,semi_urban,osm
+UNIT-0226,station,UP-MEE,Police Station – Meerut,28.988298,77.727343,active,semi_urban,osm
+UNIT-0227,station,MH-KOL,Shivaji Nagar Police Station,16.685643,74.458430,active,semi_urban,osm
+UNIT-0228,station,MH-PUN,lonikand Police station,18.620529,74.023799,inactive,urban,osm
+UNIT-0229,station,MH-PUN,Unit 6 Police Station,18.572673,73.978236,active,urban,osm
+UNIT-0230,station,MH-MSB,BKC Police Station,19.064515,72.860341,active,urban,osm
+UNIT-0231,station,MH-MSB,Kherwadi Police Station,19.065421,72.849982,active,urban,osm
+UNIT-0232,station,MH-MSB,Khar Police Station,19.072887,72.837653,active,urban,osm
+UNIT-0233,station,MH-MSB,Police Station – Mumbai Suburban,19.084055,72.835256,active,urban,osm
+UNIT-0234,station,MH-MSB,Santacruz Police Station,19.084410,72.834722,active,urban,osm
+UNIT-0235,station,MH-MSB,Police Chowk,19.073890,72.829485,active,urban,osm
+UNIT-0236,station,MH-MSB,Police Chowki,19.062832,72.829219,active,urban,osm
+UNIT-0237,station,MH-MSB,"Additional Commisioner of Police, Mumbai, West Region",19.062764,72.822625,active,urban,osm
+UNIT-0238,station,MH-RAI,Murud Police Station,18.334478,72.954527,active,semi_urban,osm
+UNIT-0239,station,MH-MSB,Gokuldham Police Station,19.175591,72.867653,active,urban,osm
+UNIT-0240,station,MH-MSB,"Police Station, Thakur Village",19.205951,72.872904,active,urban,osm
+UNIT-0241,station,MH-MSB,Police Station – Mumbai Suburban,19.257384,72.865094,active,urban,osm
+UNIT-0242,station,MH-THA,Police Station – Thane,19.259059,72.966995,active,urban,osm
+UNIT-0243,station,MH-THA,Chitalsar Police Station,19.231394,72.976279,active,urban,osm
+UNIT-0244,station,UP-MEE,Police Chowki Subharti,28.958454,77.639534,active,semi_urban,osm
+UNIT-0245,station,UP-MEE,Police Station – Meerut,28.977997,77.675098,active,semi_urban,osm
+UNIT-0246,station,UP-MEE,T.P. Nagar Thana Police Station,28.971473,77.682331,active,semi_urban,osm
+UNIT-0247,station,UP-GHA,Modinagar Police Station,28.830013,77.570438,active,urban,osm
+UNIT-0248,station,UP-GHA,karan gate Police Station,28.688547,77.358281,active,urban,osm
+UNIT-0249,station,UP-GHA,POLICE CHOWLI SIKANDARAPUR,28.695000,77.339214,active,urban,osm
+UNIT-0250,station,UP-GHA,shalimar garden police chowki,28.688339,77.340492,active,urban,osm
+UNIT-0251,station,UP-GHA,Rajendra Nagar Police Chowki,28.677813,77.357894,active,urban,osm
+UNIT-0252,station,UP-GHA,Police Station Sahibabad,28.678628,77.371272,active,urban,osm
+UNIT-0253,station,UP-SAM,Police Station – Sambhal,28.238026,78.443873,active,semi_urban,osm
+UNIT-0254,station,UP-AMR,Police Station – Amroha,28.532693,78.310851,inactive,rural,osm
+UNIT-0255,station,UP-BUL,Ahmedgarh Police Station,28.238216,78.132706,active,rural,osm
+UNIT-0256,station,UP-BUL,Police Station – Bulandshahr,28.230671,78.189886,active,rural,osm
+UNIT-0257,station,UP-BUL,Police Station – Bulandshahr,28.218636,78.225135,inactive,rural,osm
+UNIT-0258,station,UP-BUL,Police Station – Bulandshahr,28.209348,78.248618,active,rural,osm
+UNIT-0259,station,UP-BUD,Police Station – Budaun,28.156526,78.611690,active,rural,osm
+UNIT-0260,station,MH-RAI,Poladpur Police station,17.982796,73.465311,active,semi_urban,osm
+UNIT-0261,station,MH-SAT,Police Station – Satara,17.923917,73.658961,active,rural,osm
+UNIT-0262,station,MH-SAT,Panchgani Police Station,17.924644,73.799987,active,rural,osm
+UNIT-0263,station,MH-SAT,Police Station,17.949978,73.887259,active,rural,osm
+UNIT-0264,station,MH-PUN,Velhe Police Station,18.291220,73.636931,active,urban,osm
+UNIT-0265,station,MH-PUN,Saswad police station,18.346335,74.029881,active,urban,osm
+UNIT-0266,station,MH-PUN,Police Station – Pune,18.463782,73.815472,active,urban,osm
+UNIT-0267,station,MH-PUN,Vadgaon Budruk Police Chowki,18.468983,73.832795,active,urban,osm
+UNIT-0268,station,MH-PUN,Sinhagad Road Police Station,18.473132,73.813710,active,urban,osm
+UNIT-0269,station,UP-VAR,Kathirao Police Chauki,25.523121,82.740214,active,semi_urban,osm
+UNIT-0270,station,UP-AMB,police station,26.309812,82.737988,active,rural,osm
+UNIT-0271,station,UP-AMB,Rajesultanpur KOTWALI Police Station,26.306309,83.079039,active,rural,osm
+UNIT-0272,station,UP-SAN,Sikriganj Police Station,26.503025,83.200402,active,rural,osm
+UNIT-0273,station,UP-GOR,Normal Police Chauki,26.740780,83.359874,active,rural,osm
+UNIT-0274,station,UP-GOR,Normal Police Chauki,26.740804,83.359830,active,rural,osm
+UNIT-0275,station,UP-GOR,Police Station – Gorakhpur,26.758615,83.377179,active,rural,osm
+UNIT-0276,station,UP-KAS,Police Station – Kasganj,27.709300,78.739980,active,rural,osm
+UNIT-0277,station,UP-FIR,rajawli chawraha Police Station,27.337490,78.347701,active,semi_urban,osm
+UNIT-0278,station,UP-ETA,tajapur Police Station,27.355823,78.369129,active,rural,osm
+UNIT-0279,station,UP-SON,Mahila Thana Police Station,24.688210,83.073764,active,rural,osm
+UNIT-0280,station,UP-SON,Robertsganj Police Thana,24.683198,83.063721,active,rural,osm
+UNIT-0281,station,UP-SON,Renukoot Police Station,24.216044,83.035527,active,rural,osm
+UNIT-0282,station,MH-PUN,Paud Phata Police Chowki,18.506451,73.824599,active,urban,osm
+UNIT-0283,station,MH-PUN,Alankar Police Chowki,18.498433,73.826215,active,urban,osm
+UNIT-0284,station,MH-PUN,Dattawadi Police Chowki,18.501002,73.840267,active,urban,osm
+UNIT-0285,station,MH-PUN,Prabhat Police Chowki,18.514522,73.833306,active,urban,osm
+UNIT-0286,station,MH-PUN,Deccan Gymkhana Police Chowki,18.514141,73.840381,active,urban,osm
+UNIT-0287,station,MH-PUN,Sambhaji Police Chowki,18.513178,73.843892,active,urban,osm
+UNIT-0288,station,MH-PUN,Senadatta Police Chowki,18.505206,73.844603,active,urban,osm
+UNIT-0289,station,MH-PUN,Perugate Police Chowki,18.511393,73.848776,active,urban,osm
+UNIT-0290,station,MH-PUN,Swargate Police Station,18.500792,73.859159,active,urban,osm
+UNIT-0291,station,MH-PUN,Dattawadi Police Station,18.492845,73.848048,active,urban,osm
+UNIT-0292,station,MH-PUN,Laxminagar Police chowky,18.489602,73.849701,active,urban,osm
+UNIT-0293,station,MH-PUN,Sahakarnagar Police Station,18.489551,73.849689,active,urban,osm
+UNIT-0294,station,MH-PUN,Bharati Vidyapeeth Police Station,18.459096,73.857523,active,urban,osm
+UNIT-0295,station,MH-PUN,Kondhwa traffic police chowky,18.464827,73.889405,inactive,urban,osm
+UNIT-0296,station,MH-PUN,Police Station – Pune,18.465981,73.890460,active,urban,osm
+UNIT-0297,station,MH-PUN,Maharshi Nagar Police Chowki,18.493406,73.870975,inactive,urban,osm
+UNIT-0298,station,HR-AMB,Topkhana Police Station,30.368820,76.846036,active,semi_urban,osm
+UNIT-0299,station,HR-AMB,SADAR POLICE STATION,30.336571,76.842934,active,semi_urban,osm
+UNIT-0300,station,HR-AMB,Police Station – Ambala,30.380600,76.790691,active,semi_urban,osm
+UNIT-0301,station,UP-LKO,Alambagh Police Station,26.826292,80.909521,active,urban,osm
+UNIT-0302,station,UP-LKO,"Police Station, Talkatora",26.846318,80.875619,active,urban,osm
+UNIT-0303,station,UP-LKO,para thana Police Station,26.824023,80.874068,active,urban,osm
+UNIT-0304,station,UP-LKO,Krishna Nagar Police Station,26.795146,80.891826,active,urban,osm
+UNIT-0305,station,UP-LKO,Police Station – Lucknow,26.793954,80.912525,active,urban,osm
+UNIT-0306,station,UP-LKO,Police Station – Lucknow,26.796306,80.923303,active,urban,osm
+UNIT-0307,station,UP-LKO,Central Reserve Police Force,26.724730,80.893264,active,urban,osm
+UNIT-0308,station,UP-UNN,Police station,26.442088,80.541616,active,rural,osm
+UNIT-0309,station,UP-KNP,Police chawki,26.472727,80.344398,active,urban,osm
+UNIT-0310,station,UP-KNP,Police station,26.473106,80.342952,active,urban,osm
+UNIT-0311,station,UP-KNP,Railway Police Force Post,26.453714,80.350288,active,urban,osm
+UNIT-0312,station,UP-KNP,Police Station Kanpur Cantonment,26.454188,80.364264,active,urban,osm
+UNIT-0313,station,UP-KNP,POLICE CHOWKI,26.423546,80.388586,active,urban,osm
+UNIT-0314,station,UP-KNP,police chawki,26.467388,80.298357,active,urban,osm
+UNIT-0315,station,UP-KNP,IIT Kanpur Police Chowki,26.510144,80.241934,active,urban,osm
+UNIT-0316,station,UP-FAT,yamuna bridge Police Station,25.715022,80.606857,active,rural,osm
+UNIT-0317,station,UP-FAT,lalauli police station,25.809946,80.540687,active,rural,osm
+UNIT-0318,station,HR-KAI,Police Station – Kaithal,29.770647,76.564779,active,rural,osm
+UNIT-0319,station,HR-KAI,Police Lines,29.810277,76.423385,active,rural,osm
+UNIT-0320,station,HR-KAR,Police Station,29.506422,76.715165,inactive,semi_urban,osm
+UNIT-0321,station,HR-JIN,urban estate Police station,29.321223,76.338126,active,rural,osm
+UNIT-0322,station,HR-BHI,SP Office Bhiwani Police Station,28.805786,76.141557,active,rural,osm
+UNIT-0323,station,HR-BHI,HUDA Police station Sector 13,28.814583,76.139526,inactive,rural,osm
+UNIT-0324,station,HR-BHI,District Police Line Bhiwani,28.822199,76.121149,active,rural,osm
+UNIT-0325,station,HR-BHI,Police Station NGM,28.786231,76.123591,active,rural,osm
+UNIT-0326,station,UP-JHA,Police Station – Jhansi,25.312200,79.003336,active,semi_urban,osm
+UNIT-0327,station,UP-JHA,Police Station – Jhansi,25.260305,79.137982,inactive,semi_urban,osm
+UNIT-0328,station,UP-JHA,Police Station – Jhansi,25.244626,79.139633,active,semi_urban,osm
+UNIT-0329,station,UP-JHA,mauranipur Police Station,25.246867,79.136867,active,semi_urban,osm
+UNIT-0330,station,UP-JHA,Bada Bazar  Chauki Police Station,25.244926,79.131674,active,semi_urban,osm
+UNIT-0331,station,UP-JHA,Police Station Sakrar,25.349670,78.891537,active,semi_urban,osm
+UNIT-0332,station,UP-JHA,"Police Station ,Chirgaon",25.572854,78.816359,active,semi_urban,osm
+UNIT-0333,station,UP-JAL,police chowki,26.144571,79.336052,inactive,rural,osm
+UNIT-0334,station,UP-JAL,orai kotwali Police Station,25.989115,79.453828,active,rural,osm
+UNIT-0335,station,UP-AUR,Police Station – Auraiya,26.594855,79.267236,active,rural,osm
+UNIT-0336,station,UP-ETH,Police Station – Etawah,26.661540,79.174221,active,rural,osm
+UNIT-0337,station,UP-AMR,Police station,28.726986,78.281171,active,rural,osm
+UNIT-0338,station,MH-PUN,Jejuri Police Station,18.277555,74.163087,active,urban,osm
+UNIT-0339,station,MH-PUN,Jejuri Police Line,18.278302,74.163550,active,urban,osm
+UNIT-0340,station,MH-PUN,"Rural Police Station, Supe",18.333118,74.370637,active,urban,osm
+UNIT-0341,station,UP-HAM,Hamirpur Kotwali Police Station,25.9547,80.1504,active,rural,synthetic
+UNIT-0342,station,UP-FIR,Police Station,27.380263,78.607178,active,semi_urban,osm
+UNIT-0343,station,UP-FIR,Police Station – Firozabad,27.271693,78.281078,active,semi_urban,osm
+UNIT-0344,station,UP-AGR,police chauki,27.283445,78.082410,active,semi_urban,osm
+UNIT-0345,station,UP-AGR,police thana,26.942729,77.819274,inactive,semi_urban,osm
+UNIT-0346,station,UP-AGR,Police Station – Agra,27.157633,77.990277,inactive,semi_urban,osm
+UNIT-0347,station,UP-AGR,police station,27.153294,78.007719,active,semi_urban,osm
+UNIT-0348,station,UP-AGR,police station,27.133157,78.007714,active,semi_urban,osm
+UNIT-0349,station,UP-AGR,Saheed Nagar Police Station,27.148668,78.037357,inactive,semi_urban,osm
+UNIT-0350,station,UP-AGR,Police Station – Agra,27.168983,78.041343,active,semi_urban,osm
+UNIT-0351,station,MH-SAT,Wathar Police Station,17.885212,74.140184,active,rural,osm
+UNIT-0352,station,MH-NAR,Police Station Taloda,21.564721,74.213803,active,rural,osm
+UNIT-0353,station,UP-AGR,Police Station – Agra,27.185793,78.017948,inactive,semi_urban,osm
+UNIT-0354,station,UP-AGR,Police Choki,27.186812,78.014918,active,semi_urban,osm
+UNIT-0355,station,UP-AGR,Police Chowki,27.186095,78.006091,inactive,semi_urban,osm
+UNIT-0356,station,UP-AGR,THANA NAI KI MANDI Police Station,27.180773,78.002028,active,semi_urban,osm
+UNIT-0357,station,UP-AGR,Rakabganj Police Station,27.170113,78.012008,active,semi_urban,osm
+UNIT-0358,station,UP-AGR,police choki,27.170295,77.984013,active,semi_urban,osm
+UNIT-0359,station,UP-AGR,police chauki,27.180957,77.997124,active,semi_urban,osm
+UNIT-0360,station,UP-AGR,Police Chowki,27.188820,77.962106,active,semi_urban,osm
+UNIT-0361,station,UP-AGR,new agra police station,27.211278,78.005195,active,semi_urban,osm
+UNIT-0362,station,UP-AGR,Jeoni Mandi Police Station,27.197098,78.024886,active,semi_urban,osm
+UNIT-0363,station,UP-AGR,Kamla Nagar Police Choki,27.211733,78.017365,active,semi_urban,osm
+UNIT-0364,station,UP-AGR,Police thana barhan,27.328768,78.190392,active,semi_urban,osm
+UNIT-0365,station,UP-MAT,Mathuragate Police Station,27.579055,77.697366,active,semi_urban,osm
+UNIT-0366,station,UP-MAT,Police Station – Mathura,27.571634,77.675954,active,semi_urban,osm
+UNIT-0367,station,UP-MAT,GOVIND NAGAR STATION Police Station,27.509682,77.670787,inactive,semi_urban,osm
+UNIT-0368,station,UP-MAT,Police Station – Mathura,27.387289,77.689572,active,semi_urban,osm
+UNIT-0369,station,UP-AGR,police thana,27.176436,77.760852,active,semi_urban,osm
+UNIT-0370,station,HR-PAL,Dhatir police station,28.198468,77.223195,active,rural,osm
+UNIT-0371,station,HR-FAR,Police Station – Faridabad,28.366742,77.353476,active,urban,osm
+UNIT-0372,station,MH-OSM,POICE CHOUKI YEDSHI Police Station,18.322686,75.963323,active,rural,osm
+UNIT-0373,station,MH-OSM,Anandnagar Police Station,18.201600,76.041969,active,rural,osm
+UNIT-0374,station,MH-SAN,Guruwar Peth Polic Chowki Police Station,16.821265,74.648595,active,rural,osm
+UNIT-0375,station,MH-SAN,Police Station – Sangli,16.841213,74.637259,active,rural,osm
+UNIT-0376,station,MH-SAN,Police Parade Ground,16.843464,74.650581,inactive,rural,osm
+UNIT-0377,station,MH-SAN,MIDC Police Station,16.873221,74.631420,active,rural,osm
+UNIT-0378,station,MH-SAN,Vishrambag Police Station,16.849248,74.595551,inactive,rural,osm
+UNIT-0379,station,MH-SAN,S P Office Police Station,16.849340,74.594158,active,rural,osm
+UNIT-0380,station,MH-SAN,Burud Galli Police Chowki,16.863006,74.564368,active,rural,osm
+UNIT-0381,station,MH-AHM,Police Statio n,18.998944,74.433936,active,rural,osm
+UNIT-0382,station,MH-THA,WAGLE POLICE STATION,19.203187,72.955099,active,urban,osm
+UNIT-0383,station,MH-THA,Vartak Nagar Police Station,19.213135,72.962761,active,urban,osm
+UNIT-0384,station,MH-THA,Anti Corruption Bureau Thane Police Station,19.205964,72.982633,active,urban,osm
+UNIT-0385,station,MH-THA,Rabodi Police Station,19.210326,72.982275,active,urban,osm
+UNIT-0386,station,MH-THA,Ramnagar Police Station,19.216607,73.086181,active,urban,osm
+UNIT-0387,station,MH-THA,Vishnunagar Police Station,19.219249,73.086751,active,urban,osm
+UNIT-0388,station,MH-THA,Vishnu Nagar Police Station,19.219069,73.086831,active,urban,osm
+UNIT-0389,station,MH-THA,Police Station – Thane,19.142823,73.046117,active,urban,osm
+UNIT-0390,station,MH-THA,Police Commissioner Office,19.196080,72.981127,active,urban,osm
+UNIT-0391,station,MH-THA,Rabale Traffic Police Station,19.148575,72.993002,active,urban,osm
+UNIT-0392,station,MH-THA,Police Station – Thane,19.146302,73.000928,active,urban,osm
+UNIT-0393,station,MH-THA,Rabale Police Station,19.146497,73.000952,active,urban,osm
+UNIT-0394,station,MH-THA,Shil Mhape Police Chouki,19.114723,73.034321,active,urban,osm
+UNIT-0395,station,MH-THA,KK POLICE STATION,19.099075,73.005183,active,urban,osm
+UNIT-0396,station,MH-SOL,Akluj Police Station,17.883205,75.017891,active,semi_urban,osm
+UNIT-0397,station,MH-SOL,Akluj Polic Station Police Station,17.889342,75.023087,active,semi_urban,osm
+UNIT-0398,station,MH-SOL,Akluj Police Station,17.891438,75.018467,active,semi_urban,osm
+UNIT-0399,station,MH-RAI,Kharghar Police Station,19.034637,73.068143,inactive,semi_urban,osm
+UNIT-0400,station,MH-RAI,kamothe police station,19.022616,73.091075,active,semi_urban,osm
+UNIT-0401,station,MH-THA,CBD Belapur Police Station,19.025177,73.041231,inactive,urban,osm
+UNIT-0402,station,MH-THA,Police Station – Thane,19.017300,73.029727,active,urban,osm
+UNIT-0403,station,MH-THA,Gaimukh Chowk Police Station,19.015155,73.015941,active,urban,osm
+UNIT-0404,station,MH-THA,Seawoods Traffic Police Station,19.019662,73.019907,active,urban,osm
+UNIT-0405,station,MH-THA,N.R.I Coastal Police Station,19.008076,73.028502,inactive,urban,osm
+UNIT-0406,station,MH-THA,Nerul Police Station,19.029085,73.019287,active,urban,osm
+UNIT-0407,station,MH-THA,Turbhe Police Station,19.066671,73.019758,active,urban,osm
+UNIT-0408,station,MH-SAN,Jat Police Station,17.050249,75.208504,active,rural,osm
+UNIT-0409,station,MH-MSB,POLICE STATION,19.053700,72.935700,active,urban,osm
+UNIT-0410,station,MH-MSB,Maharashtra Nagar Police Station,19.050247,72.937862,active,urban,osm
+UNIT-0411,station,MH-MSB,Trombay Police Station,19.038069,72.945107,active,urban,osm
+UNIT-0412,station,MH-MSB,trombay police station,19.036145,72.949946,active,urban,osm
+UNIT-0413,station,MH-MSB,Lallubhai Police Station,19.052848,72.927100,active,urban,osm
+UNIT-0414,station,MH-MSB,Shivajinagar Police Station,19.063262,72.916873,active,urban,osm
+UNIT-0415,station,MH-MSB,gaikwaad nagar police station,19.060352,72.910440,active,urban,osm
+UNIT-0416,station,MH-MSB,Govandi Police station,19.059521,72.911665,active,urban,osm
+UNIT-0417,station,MH-MSB,chembur police station,19.063949,72.900825,active,urban,osm
+UNIT-0418,station,MH-MSB,Chheda Nagar Police Station,19.067214,72.903157,active,urban,osm
+UNIT-0419,station,MH-MSB,Tilak Nagar Police Station,19.065286,72.895998,active,urban,osm
+UNIT-0420,station,MH-MSB,VB Nagar Police Station,19.071717,72.884227,active,urban,osm
+UNIT-0421,station,MH-AHM,Ghargaon Police Station,19.320517,74.176197,active,rural,osm
+UNIT-0422,station,MH-AHM,Karjat Police Station,18.558033,75.007372,active,rural,osm
+UNIT-0423,station,MH-MSB,Nehru Nagar Kurla Police Station,19.058865,72.880497,inactive,urban,osm
+UNIT-0424,station,MH-MSB,Nehru Nagar Kurla E Police Chowky,19.065066,72.880875,active,urban,osm
+UNIT-0425,station,MH-MSB,beat no 2 Police Station,19.061751,72.890791,active,urban,osm
+UNIT-0426,station,MH-MSB,Khardev Nagar Police Station,19.055743,72.908830,active,urban,osm
+UNIT-0427,station,MH-MSB,Govandi Police station,19.048844,72.917741,active,urban,osm
+UNIT-0428,station,MH-MCT,Cuffe Parade Police Station,18.912025,72.819082,active,urban,osm
+UNIT-0429,station,MH-MCT,Cuffe Parade Police Station,18.911858,72.818595,inactive,urban,osm
+UNIT-0430,station,MH-MCT,Police Station – Mumbai City,18.930262,72.824346,active,urban,osm
+UNIT-0431,station,MH-MCT,Mata Ramabai Ambedkar Marg Police Thaane,18.932531,72.831850,inactive,urban,osm
+UNIT-0432,station,MH-MCT,Colaba Traffic Police Division,18.935054,72.830325,active,urban,osm
+UNIT-0433,station,MH-SOL,Sakhar Peth Police Station,17.675869,75.912996,inactive,semi_urban,osm
+UNIT-0434,station,MH-SOL,Budhwar Peth Police Station,17.682238,75.900041,inactive,semi_urban,osm
+UNIT-0435,station,MH-SOL,Navi Peth Police Station,17.675573,75.898891,active,semi_urban,osm
+UNIT-0436,station,MH-SOL,Market Police Station,17.670196,75.906737,active,semi_urban,osm
+UNIT-0437,station,MH-SOL,Superintendent Of Police Solapur District,17.668237,75.906542,active,semi_urban,osm
+UNIT-0438,station,MH-SOL,Modi Police Station,17.659040,75.900554,active,semi_urban,osm
+UNIT-0439,station,MH-SOL,Begum Peth Police Station,17.672316,75.908853,active,semi_urban,osm
+UNIT-0440,station,MH-SOL,Sadar Bazaar Police Station,17.655900,75.911443,active,semi_urban,osm
+UNIT-0441,station,MH-YAV,Yavatmal City Police Station,20.390306,78.132563,active,rural,osm
+UNIT-0442,station,MH-MCT,Colaba Police Station,18.922459,72.831257,active,urban,osm
+UNIT-0443,station,MH-MCT,Maharashtra Police Headquarters,18.924479,72.833229,active,urban,osm
+UNIT-0444,station,MH-MCT,Azad Maidan Police Station,18.941992,72.832796,active,urban,osm
+UNIT-0445,station,MH-MCT,Police Station – Mumbai City,18.942097,72.833734,active,urban,osm
+UNIT-0446,station,MH-MCT,Police Station – Mumbai City,18.944204,72.832867,active,urban,osm
+UNIT-0447,station,MH-MCT,Police Station – Mumbai City,18.944448,72.832889,active,urban,osm
+UNIT-0448,station,MH-MCT,Lokmanya Tilak Police Chowkie Beat No 4,18.947444,72.833389,active,urban,osm
+UNIT-0449,station,MH-MCT,Police Commissioner's Office,18.946295,72.833307,inactive,urban,osm
+UNIT-0450,station,MH-MCT,Lokmanya Tilak Police Station,18.946329,72.833129,active,urban,osm
+UNIT-0451,station,MH-MCT,Dongri Police Station,18.962140,72.839049,active,urban,osm
+UNIT-0452,station,MH-MCT,Sir JJ Marg Police Station,18.963006,72.832291,active,urban,osm
+UNIT-0453,station,MH-MCT,Police Station – Mumbai City,18.967528,72.832365,active,urban,osm
+UNIT-0454,station,MH-MCT,Nagpada Police Station,18.967015,72.829044,active,urban,osm
+UNIT-0455,station,MH-MCT,Chhota Sonapur Police Chowki,18.962056,72.824561,active,urban,osm
+UNIT-0456,station,MH-MCT,Chowki Mohalla Police Chowki,18.961878,72.830142,active,urban,osm
+UNIT-0457,station,MH-MCT,Do Taki Police Chowki,18.961606,72.828670,active,urban,osm
+UNIT-0458,station,MH-MCT,Null Bazaar Police Chowkie,18.957007,72.829033,active,urban,osm
+UNIT-0459,station,MH-MCT,Pydhoni Police Station,18.954172,72.832021,active,urban,osm
+UNIT-0460,station,MH-MCT,Police Station – Mumbai City,18.953977,72.831780,active,urban,osm
+UNIT-0461,station,MH-MCT,Lokmanya Tilak Road Police Station,18.945371,72.830331,active,urban,osm
+UNIT-0462,station,MH-MCT,Badhamkar Mark Police Station,18.960821,72.817067,active,urban,osm
+UNIT-0463,station,MH-MCT,Police Station – Mumbai City,18.961071,72.817174,active,urban,osm
+UNIT-0464,station,MH-MCT,Gamdevi Police Station,18.960560,72.812493,active,urban,osm
+UNIT-0465,station,MH-MCT,Traffic Police,18.961627,72.812877,active,urban,osm
+UNIT-0466,station,MH-MCT,Tardeo Police Station,18.969511,72.814290,inactive,urban,osm
+UNIT-0467,station,MH-MCT,NM Joshi Marg Police Station,18.991413,72.830977,active,urban,osm
+UNIT-0468,station,MH-MCT,Byculla Police Station,18.973863,72.833976,active,urban,osm
+UNIT-0469,station,MH-MCT,Police Station – Mumbai City,18.997883,72.837489,active,urban,osm
+UNIT-0470,station,MH-MCT,Elphinstone Road Traffic Police Chowki,19.008542,72.832559,active,urban,osm
+UNIT-0471,station,MH-KOL,kodoli police station,16.863639,74.185606,active,semi_urban,osm
+UNIT-0472,station,MH-KOL,Bambavade Police Station,16.871149,74.041624,active,semi_urban,osm
+UNIT-0473,station,MH-SAN,Islampur Police Station,17.051966,74.269699,active,rural,osm
+UNIT-0474,station,MH-AHM,Topkhana Police Station,19.115954,74.736531,active,rural,osm
+UNIT-0475,station,MH-MCT,Shivaji Park Police Station,19.023326,72.840822,active,urban,osm
+UNIT-0476,station,MH-MCT,Dadar Police Station,19.015127,72.835395,inactive,urban,osm
+UNIT-0477,station,MH-MCT,Chaitya Bhumi Police Chowk,19.026024,72.834522,active,urban,osm
+UNIT-0478,station,MH-MSB,Mount Mary Police Chouki,19.051928,72.823281,active,urban,osm
+UNIT-0479,station,MH-MSB,Bandra Reclamation Police Station,19.050751,72.829917,active,urban,osm
+UNIT-0480,station,MH-MCT,Mahim Traffic Division Police Station,19.042165,72.840108,active,urban,osm
+UNIT-0481,station,MH-MCT,Sion (E) Police Station,19.031323,72.857588,active,urban,osm
+UNIT-0482,station,MH-MCT,Matunga Police Station,19.031116,72.857879,inactive,urban,osm
+UNIT-0483,station,MH-MCT,Dharavi Police Station,19.043284,72.857535,active,urban,osm
+UNIT-0484,station,MH-MSB,Bandra Railway Police Station,19.055658,72.839683,active,urban,osm
+UNIT-0485,station,MH-MSB,Bandra Police Station,19.055981,72.835599,inactive,urban,osm
+UNIT-0486,station,MH-MSB,Khar Police Station,19.064037,72.837114,active,urban,osm
+UNIT-0487,station,MH-MSB,Shivaji Nagar Police Station,19.061098,72.843369,active,urban,osm
+UNIT-0488,station,MH-SAT,Talbeed Police Station,17.367560,74.120859,active,rural,osm
+UNIT-0489,station,MH-AHM,Police Station – Ahmednagar,19.392809,74.650927,active,rural,osm
+UNIT-0490,station,MH-AUR,Police chowk,19.455935,75.577465,active,semi_urban,osm
+UNIT-0491,station,UP-PRJ,Police Lines Allahabad,25.462640,81.843261,active,rural,osm
+UNIT-0492,station,UP-PRJ,UP Rajkiya Railways Police office,25.457555,81.827689,active,rural,osm
+UNIT-0493,station,UP-PRJ,UP Police Mukhyalaya,25.457736,81.828207,active,rural,osm
+UNIT-0494,station,UP-BAN,Police Station Badausa,25.243181,80.654922,active,rural,osm
+UNIT-0495,station,HR-FAT,सदर पुलिस स्टेशन रतिया Police Station,29.691219,75.566649,active,rural,osm
+UNIT-0496,station,UP-PRJ,Chowk Police Station,25.437231,81.833059,active,rural,osm
+UNIT-0497,station,UP-PRJ,Shahganj Police Station,25.438720,81.829109,active,rural,osm
+UNIT-0498,station,UP-PRJ,Attarsuiya Police Station,25.431528,81.830637,inactive,rural,osm
+UNIT-0499,station,UP-PRJ,Police Chauki Jail Road,25.405272,81.869065,active,rural,osm
+UNIT-0500,station,UP-PRJ,Police Arail,25.414991,81.883392,active,rural,osm
+UNIT-0501,station,UP-PRJ,Police station Karchana,25.285155,81.935218,active,rural,osm
+UNIT-0502,station,UP-VAR,PROCTOR BOOTH Police Station,25.263168,82.986444,active,semi_urban,osm
+UNIT-0503,station,MH-SAT,Police Station – Satara,17.592309,74.451167,active,rural,osm
+UNIT-0504,station,MH-AHM,District Superintendent Police Office,19.106952,74.746455,inactive,rural,osm
+UNIT-0505,station,MH-AUR,Bidkin Police Station,19.705604,75.302410,inactive,semi_urban,osm
+UNIT-0506,station,MH-AUR,police colony,19.874929,75.323706,active,semi_urban,osm
+UNIT-0507,station,MH-AUR,k.c.police s,19.875150,75.324176,active,semi_urban,osm
+UNIT-0508,station,MH-AUR,Osmanpura Police Station.,19.863598,75.325413,active,semi_urban,osm
+UNIT-0509,station,MH-AUR,javahar police station,19.864708,75.347905,active,semi_urban,osm
+UNIT-0510,station,JH-DHA,Maithon Police Station,23.764194,86.798722,active,urban,osm
+UNIT-0511,station,JH-DHA,Jharia Police Station,23.741766,86.411761,active,urban,osm
+UNIT-0512,station,UP-MIR,Mirzapur City Kotwali Police Station,25.149583,82.568140,active,rural,osm
+UNIT-0513,station,UP-GBN,kalindi kunj pollice station Police Station,28.530958,77.318677,active,urban,osm
+UNIT-0514,station,UP-GBN,Police Station – Gautam Buddha Nagar,28.530361,77.318946,active,urban,osm
+UNIT-0515,station,HR-FAR,Police Station – Faridabad,28.461083,77.284940,active,urban,osm
+UNIT-0516,station,HR-GUR,Police Station Bhondsi,28.344578,77.068134,active,urban,osm
+UNIT-0517,station,HR-GUR,Police Station – Gurugram,28.373402,76.909523,active,urban,osm
+UNIT-0518,station,HR-GUR,Traffic Police Station II,28.339386,76.937955,active,urban,osm
+UNIT-0519,station,HR-GUR,Police Station – Gurugram,28.366354,76.940907,inactive,urban,osm
+UNIT-0520,station,HR-GUR,Police station sec 9A,28.470274,76.995121,active,urban,osm
+UNIT-0521,station,HR-GUR,Police Station – Gurugram,28.470311,76.994898,active,urban,osm
+UNIT-0522,station,HR-GUR,Police Station – Gurugram,28.494996,77.017100,active,urban,osm
+UNIT-0523,station,HR-GUR,Sadar Police Station,28.464060,77.036067,active,urban,osm
+UNIT-0524,station,HR-GUR,Police Staion,28.465187,77.017287,active,urban,osm
+UNIT-0525,station,HR-GUR,Commissioner Of Police,28.455431,77.029484,active,urban,osm
+UNIT-0526,station,HR-GUR,Police Stn (Sec-40),28.449943,77.058780,active,urban,osm
+UNIT-0527,station,HR-GUR,Sector 53 Police Station,28.446322,77.097866,active,urban,osm
+UNIT-0528,station,HR-GUR,Assistant Comissioner of Police Cyber Crime Gurugram,28.451390,77.095488,active,urban,osm
+UNIT-0529,station,HR-GUR,Assistant Comissioner of Police DLF Subdivision Gurugram,28.451337,77.095474,active,urban,osm
+UNIT-0530,station,HR-GUR,Cyber Crime Police Station Gurugram,28.451521,77.095405,active,urban,osm
+UNIT-0531,station,MH-PUN,Highway Police,18.227389,74.816279,active,urban,osm
+UNIT-0532,station,MH-PUN,Daund Railway Police Station,18.463083,74.580982,active,urban,osm
+UNIT-0533,station,UP-SHA,powayan police station,28.066747,80.097575,active,rural,osm
+UNIT-0534,station,UP-BAY,IZZATNAGAR POLICE STATION BLY,28.389255,79.433803,active,semi_urban,osm
+UNIT-0535,station,UP-BAY,Police Station – Bareilly,28.336105,79.411044,active,semi_urban,osm
+UNIT-0536,station,UP-BUD,Police Station – Budaun,28.035551,79.136557,active,rural,osm
+UNIT-0537,station,UP-BUD,Reserve Police,28.025669,79.130090,active,rural,osm
+UNIT-0538,station,UP-BUD,Police Station – Budaun,28.022861,79.129325,active,rural,osm
+UNIT-0539,station,UP-BUD,Police Station – Budaun,28.023001,79.129515,active,rural,osm
+UNIT-0540,station,UP-BUD,Police Station – Budaun,28.308134,78.936467,inactive,rural,osm
+UNIT-0541,station,JH-RAN,Tupudana OP Police Station,23.264913,85.304631,inactive,semi_urban,osm
+UNIT-0542,station,JH-RAN,Hatia Police Station,23.288188,85.311774,active,semi_urban,osm
+UNIT-0543,station,JH-RAN,Jharkhand Police HQ,23.292828,85.300738,active,semi_urban,osm
+UNIT-0544,station,JH-RAN,Dhurwa Police Station,23.297498,85.276047,active,semi_urban,osm
+UNIT-0545,station,JH-RAN,Jagarnathpur Thana Police Station,23.321305,85.303124,active,semi_urban,osm
+UNIT-0546,station,JH-RAN,Doronda Police Station,23.338777,85.321798,active,semi_urban,osm
+UNIT-0547,station,JH-RAN,Chutia Police Station.,23.353612,85.337834,active,semi_urban,osm
+UNIT-0548,station,JH-RAN,Kotwali Police Station,23.370881,85.321806,active,semi_urban,osm
+UNIT-0549,station,JH-RAN,Kotwali Thana Ranchi Police Station,23.370756,85.322033,inactive,semi_urban,osm
+UNIT-0550,station,JH-RAN,Mahila Thana Campus Police Station,23.370872,85.322262,active,semi_urban,osm
+UNIT-0551,station,JH-RAN,police station,23.366015,85.324564,active,semi_urban,osm
+UNIT-0552,station,JH-RAN,Lalpur Police Station,23.371628,85.335386,active,semi_urban,osm
+UNIT-0553,station,JH-RAN,Pandra Police Station,23.388659,85.277912,active,semi_urban,osm
+UNIT-0554,station,MH-CHA,Police Station,20.611540,79.865065,active,semi_urban,osm
+UNIT-0555,station,MH-GAD,Police Station – Gadchiroli,20.617446,79.965169,active,rural,osm
+UNIT-0556,station,MH-GAD,"Police Station, Ghot",19.815496,79.984702,active,rural,osm
+UNIT-0557,station,MH-GAD,Police Station Chamorshi,19.944577,79.891335,active,rural,osm
+UNIT-0558,station,MH-CHA,Ramnagar police station,19.965613,79.299923,active,semi_urban,osm
+UNIT-0559,station,MH-CHA,CITY POLICE STATION,19.946284,79.296348,active,semi_urban,osm
+UNIT-0560,station,JH-RAN,Pithoria Police Station,23.524273,85.296538,active,semi_urban,osm
+UNIT-0561,station,MH-CHA,Shastri Nagar Police Chowki,19.966223,79.311876,active,semi_urban,osm
+UNIT-0562,station,MH-CHA,Mahakali ward police chauki,19.939777,79.308109,active,semi_urban,osm
+UNIT-0563,station,MH-SOL,Vijapur Naka Police Station,17.639086,75.899935,active,semi_urban,osm
+UNIT-0564,station,MH-SOL,I.T.I Police Station,17.643826,75.898601,inactive,semi_urban,osm
+UNIT-0565,station,MH-SOL,Inter State Border Check Post Police Station,17.451078,75.848434,active,semi_urban,osm
+UNIT-0566,station,UP-LKO,Police Chowki Chowk,26.865774,80.908893,active,urban,osm
+UNIT-0567,station,UP-LKO,Police Chowki,26.848260,80.924363,active,urban,osm
+UNIT-0568,station,UP-LKO,Police Station – Lucknow,26.847647,80.939657,active,urban,osm
+UNIT-0569,station,UP-LKO,Police Station Babuganj,26.871297,80.933224,active,urban,osm
+UNIT-0570,station,UP-LKO,Hazratganj Police Station,26.847189,80.946096,active,urban,osm
+UNIT-0571,station,UP-LKO,Ghazipur Police Station,26.872677,80.983644,active,urban,osm
+UNIT-0572,station,UP-LKO,Lekhraj Police Chauki,26.871084,80.973690,active,urban,osm
+UNIT-0573,station,UP-LKO,Mahanagar Police Station,26.873085,80.958727,active,urban,osm
+UNIT-0574,station,UP-LKO,Police Chowki Gole Market,26.873508,80.957599,active,urban,osm
+UNIT-0575,station,UP-LKO,UP Police Radio Headquarters,26.879013,80.958573,active,urban,osm
+UNIT-0576,station,UP-LKO,Gudamba Police Station,26.918832,80.964448,active,urban,osm
+UNIT-0577,station,UP-LKO,Sec 8 Police Station,26.877684,81.002674,active,urban,osm
+UNIT-0578,station,UP-LKO,Police Chowki Polytechnic,26.873099,80.995216,active,urban,osm
+UNIT-0579,station,UP-LKO,Gomti Nagar Police Station,26.854502,80.994377,active,urban,osm
+UNIT-0580,station,UP-SHR,RTO office bhinga sravasti Police Station,27.707036,81.906323,active,rural,osm
+UNIT-0581,station,UP-SHR,bhartiya shashtra seema bal Police Station,27.699483,81.879837,active,rural,osm
+UNIT-0582,station,MH-PAL,Police chouki,20.124283,72.917237,inactive,urban,osm
+UNIT-0583,station,MH-PAL,police station talasari,20.118724,72.918036,active,urban,osm
+UNIT-0584,station,MH-PAL,Dhundaleadi Police Stestion,20.049949,72.918809,active,urban,osm
+UNIT-0585,station,MH-PAL,Udhava police station,20.091938,73.005191,active,urban,osm
+UNIT-0586,station,MH-PAL,Police Station – Palghar,19.705944,72.767618,active,urban,osm
+UNIT-0587,station,MH-PAL,Mahim Police Station,19.648345,72.722819,active,urban,osm
+UNIT-0588,station,MH-PAL,Kelve Road Police station,19.623065,72.790394,inactive,urban,osm
+UNIT-0589,station,MH-PAL,Saphale police station,19.578850,72.821524,active,urban,osm
+UNIT-0590,station,MH-PAL,Pargaon Coastal Checkpost Police Station,19.596480,72.883721,active,urban,osm
+UNIT-0591,station,MH-PAL,Police Station – Palghar,19.596373,72.883669,active,urban,osm
+UNIT-0592,station,MH-THA,Golden Nest Police Chowki,19.295588,72.858635,active,urban,osm
+UNIT-0593,station,MH-MSB,Borivali Police Station,19.229498,72.855780,active,urban,osm
+UNIT-0594,station,MH-MSB,Police Station – Mumbai Suburban,19.229495,72.855948,active,urban,osm
+UNIT-0595,station,MH-MSB,Police Station – Mumbai Suburban,19.228207,72.858217,active,urban,osm
+UNIT-0596,station,MH-MSB,Samatanagar Police Station,19.199839,72.861415,active,urban,osm
+UNIT-0597,station,HR-ROH,Women Police Station Rohtak,28.898210,76.592409,active,semi_urban,osm
+UNIT-0598,station,HR-ROH,Police Station – Rohtak,28.880139,76.586075,active,semi_urban,osm
+UNIT-0599,station,HR-ROH,Railway Police,28.890377,76.580873,active,semi_urban,osm
+UNIT-0600,station,UP-PRJ,Jhunsi Police Chowki,25.428884,81.913829,active,rural,osm
+UNIT-0601,station,UP-PRJ,Jhunsi Police Station,25.429965,81.905218,active,rural,osm
+UNIT-0602,station,UP-PRJ,allapur police chauki,25.457760,81.869752,active,rural,osm
+UNIT-0603,station,UP-PRJ,Police Chowki,25.463645,81.869127,active,rural,osm
+UNIT-0604,station,MH-NAG,Police Station Dhantoli,21.137389,79.085355,active,urban,osm
+UNIT-0605,station,MH-NAG,Police Station – Nagpur,21.128495,79.067891,active,urban,osm
+UNIT-0606,station,MH-NAG,Bajajnagar Police Station,21.125992,79.068694,active,urban,osm
+UNIT-0607,station,MH-NAG,Regional Police Training School,21.121470,79.057768,active,urban,osm
+UNIT-0608,station,MH-NAG,RanaPratapnagar Police Station,21.115537,79.039834,active,urban,osm
+UNIT-0609,station,MH-NAG,MIDC Police Station,21.124765,79.011034,active,urban,osm
+UNIT-0610,station,MH-NAG,Police Station Kalmeshwar,21.234093,78.911444,active,urban,osm
+UNIT-0611,station,MH-WAR,Police Headquarter Wardha,20.745134,78.607942,active,semi_urban,osm
+UNIT-0612,station,MH-WAR,Police Station Sawangi (M),20.714499,78.574331,inactive,semi_urban,osm
+UNIT-0613,station,MH-WAR,Police Station Wardha,20.736454,78.599305,active,semi_urban,osm
+UNIT-0614,station,UP-BAN,tindwari police station,25.616864,80.524794,inactive,rural,osm
+UNIT-0615,station,UP-GBN,Sector 135 Police,28.500052,77.401472,active,urban,osm
+UNIT-0616,station,UP-GBN,Police,28.528936,77.384565,active,urban,osm
+UNIT-0617,station,UP-GBN,Police Station – Gautam Buddha Nagar,28.539246,77.340130,active,urban,osm
+UNIT-0618,station,UP-GBN,Cyber Crime Police Station,28.571707,77.351423,active,urban,osm
+UNIT-0619,station,UP-GBN,Police Station – Gautam Buddha Nagar,28.577965,77.337526,active,urban,osm
+UNIT-0620,station,UP-GBN,Police Station Sector-12,28.593245,77.340606,active,urban,osm
+UNIT-0621,station,UP-GBN,Noida Sector 24 Police Station,28.589112,77.351486,active,urban,osm
+UNIT-0622,station,UP-GBN,Police Station – Gautam Buddha Nagar,28.560491,77.365795,active,urban,osm
+UNIT-0623,station,UP-GHA,Police Station – Ghaziabad,28.630185,77.434003,active,urban,osm
+UNIT-0624,station,UP-GHA,Police Station – Ghaziabad,28.657834,77.430458,active,urban,osm
+UNIT-0625,station,UP-GHA,Police Station – Ghaziabad,28.655862,77.433346,inactive,urban,osm
+UNIT-0626,station,MH-AMR,Nandgaon Khandeshwar Police Station,20.691275,77.837962,active,semi_urban,osm
+UNIT-0627,station,MH-AMR,"Office of Superintendant of Police, Amravati",20.938610,77.778067,active,semi_urban,osm
+UNIT-0628,station,MH-AMR,Police Station Frezarpura,20.932376,77.776263,active,semi_urban,osm
+UNIT-0629,station,MH-AMR,"Amravati City Kotwali, Police Station",20.930163,77.753666,active,semi_urban,osm
+UNIT-0630,station,MH-AMR,Nagpuri Gate Police Station,20.936337,77.744445,active,semi_urban,osm
+UNIT-0631,station,MH-AMR,Kholapuri Gate Police station,20.934026,77.738952,active,semi_urban,osm
+UNIT-0632,station,MH-AKO,Police Station – Akola,20.707857,76.994558,active,semi_urban,osm
+UNIT-0633,station,MH-HIN,Hingoli Town Police Station,19.713165,77.143347,active,rural,osm
+UNIT-0634,station,MH-AUR,Police,20.580054,75.724966,active,semi_urban,osm
+UNIT-0635,station,MH-JAL,Chopda Gramin Police station,21.244943,75.292517,active,semi_urban,osm
+UNIT-0636,station,MH-DHU,State Reserve Police Force (S. R. P. F.),20.889692,74.733591,active,rural,osm
+UNIT-0637,station,MH-AHM,Kopargaon police station,19.878721,74.479119,active,rural,osm
+UNIT-0638,station,MH-AHM,Loni Police Station,19.578195,74.476231,active,rural,osm
+UNIT-0639,station,MH-NAS,Niphad Police Station,20.077526,74.107037,active,semi_urban,osm
+UNIT-0640,station,MH-NAS,City Police Station,20.043624,74.490170,inactive,semi_urban,osm
+UNIT-0641,station,MH-NAS,"Sarkarwada Police Station, Gangapur Road",20.005643,73.779722,inactive,semi_urban,osm
+UNIT-0642,station,MH-NAS,Panchavato Karanja Police Chowky,20.009745,73.794592,active,semi_urban,osm
+UNIT-0643,station,HR-FAR,Police chowki NIT 3,28.395943,77.290078,active,urban,osm
+UNIT-0644,station,HR-FAR,Police Station – Faridabad,28.430981,77.297133,active,urban,osm
+UNIT-0645,station,HR-FAR,Police Station – Faridabad,28.369480,77.335057,active,urban,osm
+UNIT-0646,station,HR-PAL,Police Station – Palwal,28.256319,77.288712,inactive,rural,osm
+UNIT-0647,station,HR-FAR,Police Station – Faridabad,28.266971,77.287567,active,urban,osm
+UNIT-0648,station,HR-FAR,Maangar Police Chowki,28.407030,77.192645,active,urban,osm
+UNIT-0649,station,HR-GUR,Police Station Sector 56,28.424827,77.103151,active,urban,osm
+UNIT-0650,station,HR-GUR,Police Station Sec 51,28.428183,77.060128,active,urban,osm
+UNIT-0651,station,HR-GUR,Police Station Sadar,28.429162,77.037512,active,urban,osm
+UNIT-0652,station,HR-GUR,Police Chauki,28.401589,77.005395,active,urban,osm
+UNIT-0653,station,UP-GHA,Police Station,28.659229,77.448459,active,urban,osm
+UNIT-0654,station,UP-GHA,Central Industrial Security Force Police Station,28.636246,77.378656,active,urban,osm
+UNIT-0655,station,UP-GHA,Shipra Police station,28.637807,77.378263,active,urban,osm
+UNIT-0656,station,UP-GHA,Vaishali POlice Station,28.649076,77.351243,active,urban,osm
+UNIT-0657,station,UP-GHA,"Police Post, Sector 17, Vasundhara",28.652131,77.355882,active,urban,osm
+UNIT-0658,station,UP-GHA,Police station Surya nagar,28.669210,77.331314,active,urban,osm
+UNIT-0659,station,JH-DHA,Barora Police Station,23.813273,86.237528,active,urban,osm
+UNIT-0660,station,UP-GHA,"Police Post Kaushambi, Police Station Indirapuram",28.642188,77.327065,active,urban,osm
+UNIT-0661,station,UP-SAH,Badgaon Police Station,29.708877,77.530046,active,semi_urban,osm
+UNIT-0662,station,JH-BOK,Rajrappa Police Station,23.591642,85.677451,active,semi_urban,osm
+UNIT-0663,station,JH-RAN,Bariatu Thana Police Station,23.393413,85.348445,inactive,semi_urban,osm
+UNIT-0664,station,JH-RAN,Airport Police Station,23.305114,85.342492,active,semi_urban,osm
+UNIT-0665,station,JH-RAN,Police Station Kharsidag,23.266921,85.379655,active,semi_urban,osm
+UNIT-0666,station,UP-GBN,"Police Chowki, Sector 18",28.571074,77.323904,active,urban,osm
+UNIT-0667,station,UP-GBN,"Police Chowki, Sector 18",28.571074,77.323904,active,urban,osm
+UNIT-0668,station,UP-VAR,Sankat Mochan Police Chowki,25.283235,82.999813,active,semi_urban,osm
+UNIT-0669,station,UP-VAR,Police Station – Varanasi,25.299981,83.001548,active,semi_urban,osm
+UNIT-0670,station,UP-VAR,Sigra Thana Police Station,25.318468,82.990580,active,semi_urban,osm
+UNIT-0671,station,UP-VAR,Luxa Police Thana,25.308465,82.999662,active,semi_urban,osm
+UNIT-0672,station,UP-VAR,Water Police Varanasi,25.307154,83.010410,active,semi_urban,osm
+UNIT-0673,station,UP-CHA,Police Station – Chandauli,25.271936,83.145383,active,rural,osm
+UNIT-0674,station,UP-VAR,Police Station – Varanasi,25.356690,82.955038,inactive,semi_urban,osm
+UNIT-0675,station,UP-VAR,police chauki,25.353802,82.966067,active,semi_urban,osm
+UNIT-0676,station,UP-VAR,"Mahmoorganj Police Station , Bhelupur,Varanasi.",25.302875,82.973436,active,semi_urban,osm
+UNIT-0677,station,UP-VAR,Police Chowki Sunderpur,25.284208,82.969402,active,semi_urban,osm
+UNIT-0678,station,UP-VAR,Manduadih Police Station,25.301763,82.966341,active,semi_urban,osm
+UNIT-0679,station,UP-VAR,BLW Police Chauki,25.283516,82.955392,active,semi_urban,osm
+UNIT-0680,station,MH-CHA,Ghugus Police Station,19.942717,79.115679,inactive,semi_urban,osm
+UNIT-0681,station,MH-CHA,chek post Police Station,19.953887,79.100185,active,semi_urban,osm
+UNIT-0682,station,MH-CHA,"Sub Police Station, Patan",19.631105,79.201044,active,semi_urban,osm
+UNIT-0683,station,MH-YAV,Traffic police,20.057266,78.950881,active,rural,osm
+UNIT-0684,station,MH-YAV,Police station wani,20.057663,78.951194,active,rural,osm
+UNIT-0685,station,MH-CHA,Bhadrawati Police Station,20.100820,79.124115,active,semi_urban,osm
+UNIT-0686,station,MH-CHA,Police Station Warora,20.241889,79.009197,active,semi_urban,osm
+UNIT-0687,station,MH-NAG,Umred Police Station,20.847341,79.326015,active,urban,osm
+UNIT-0688,station,MH-BHA,Police Station – Bhandara,21.118094,79.542861,active,rural,osm
+UNIT-0689,station,MH-NAG,Police Station Aroli,21.322917,79.439688,active,urban,osm
+UNIT-0690,station,MH-NAG,Police Station Mauda,21.145666,79.397253,active,urban,osm
+UNIT-0691,station,MH-NAG,Police Station Kanhan,21.225507,79.233885,active,urban,osm
+UNIT-0692,station,MH-NAG,Wadi Police Station,21.147363,78.991495,inactive,urban,osm
+UNIT-0693,station,MH-NAG,Ambazari Police Station,21.148586,79.055379,active,urban,osm
+UNIT-0694,station,MH-NAG,Sadar Solan Police Station,21.161774,79.071402,active,urban,osm
+UNIT-0695,station,MH-NAG,Gittikhadan Police Station,21.173675,79.060918,active,urban,osm
+UNIT-0696,station,MH-NAG,Jaripatka Police Station,21.188689,79.091877,active,urban,osm
+UNIT-0697,station,MH-NAG,Golchha Marg Police Chowky,21.163224,79.076687,active,urban,osm
+UNIT-0698,station,MH-NAG,Police Control Room Nagpur City,21.154594,79.072517,active,urban,osm
+UNIT-0699,station,MH-NAG,Sitabuldi Police Station,21.144299,79.080338,active,urban,osm
+UNIT-0700,station,MH-NAG,Police Station,21.144064,79.083559,inactive,urban,osm
+UNIT-0701,station,MH-NAG,Ganeshpeth Police Station,21.142706,79.100796,active,urban,osm
+UNIT-0702,station,MH-NAG,Lakdapul Police Station,21.147774,79.112832,active,urban,osm
+UNIT-0703,station,JH-SKH,Kadma Police Station,22.799180,86.172295,active,rural,osm
+UNIT-0704,station,JH-ESI,Bistupur Police Station.,22.797989,86.184459,active,semi_urban,osm
+UNIT-0705,station,JH-SKH,Traffic Police Chowki,22.819330,86.211665,active,rural,osm
+UNIT-0706,station,JH-ESI,Police Station,22.766954,86.201650,active,semi_urban,osm
+UNIT-0707,station,JH-ESI,Police Station – East Singhbhum,22.768264,86.200436,active,semi_urban,osm
+UNIT-0708,station,JH-SKH,Jugsalai Police Station,22.782697,86.184733,active,rural,osm
+UNIT-0709,station,JH-WSI,Jhikpani Police Station,22.460628,85.791442,active,rural,osm
+UNIT-0710,station,JH-KHU,Khunti Police Station,23.076524,85.278415,active,rural,osm
+UNIT-0711,station,JH-KHU,Murhu Police Station,22.961593,85.279616,active,rural,osm
+UNIT-0712,station,MH-NAG,Police Station Pachpaoli,21.164244,79.102793,active,urban,osm
+UNIT-0713,station,MH-NAG,Kalamana Police Station,21.162799,79.145590,active,urban,osm
+UNIT-0714,station,MH-NAG,Yashodhara Nagar Police Station,21.181333,79.125586,active,urban,osm
+UNIT-0715,station,MH-NAG,Nandanvan Police Station,21.130454,79.122102,active,urban,osm
+UNIT-0716,station,MH-NAG,Nandanvan Police Station,21.136913,79.122057,active,urban,osm
+UNIT-0717,station,MH-NAG,Sakkardara Police Station,21.129421,79.114072,active,urban,osm
+UNIT-0718,station,MH-NAG,Police Station – Nagpur,21.129416,79.113947,active,urban,osm
+UNIT-0719,station,MH-NAG,Hudkeshwar Police Station,21.105796,79.117185,active,urban,osm
+UNIT-0720,station,MH-NAG,Sonegao Police Station,21.090538,79.064358,active,urban,osm
+UNIT-0721,station,MH-NAG,Police Station-Ajni,21.123399,79.085425,active,urban,osm
+UNIT-0722,station,MH-NAG,Ajni Police Station,21.123026,79.097476,active,urban,osm
+UNIT-0723,station,MH-NAS,Upnagar Police Station,19.967413,73.822852,active,semi_urban,osm
+UNIT-0724,station,MH-NAS,Nehru Nagar Police Station,19.968522,73.825331,active,semi_urban,osm
+UNIT-0725,station,MH-NAS,Police Station – Nashik,19.946533,73.842731,active,semi_urban,osm
+UNIT-0726,station,MH-NAS,Police Station – Nashik,19.946954,73.841802,active,semi_urban,osm
+UNIT-0727,station,MH-NAS,Police Station Igatpuri,19.694727,73.570950,active,semi_urban,osm
+UNIT-0728,station,MH-NAS,Police Training Academy,19.994160,73.755051,inactive,semi_urban,osm
+UNIT-0729,station,MH-NAS,Ashoknagar Police Station,19.989376,73.713806,inactive,semi_urban,osm
+UNIT-0730,station,MH-THA,RTO Police Choky,19.651409,73.494716,active,urban,osm
+UNIT-0731,station,MH-THA,Khardi Police Staion,19.585538,73.387944,active,urban,osm
+UNIT-0732,station,JH-WSI,Manoharpur Police Station,22.375042,85.196120,active,rural,osm
+UNIT-0733,station,JH-WSI,Hat Gamaria Police Station,22.276130,85.738942,active,rural,osm
+UNIT-0734,station,JH-WSI,Kumardungi Police Station.,22.224058,85.874972,active,rural,osm
+UNIT-0735,station,UP-BAH,टेपरी सिमा सुरक्षा बल Police Station,28.166735,81.311228,active,rural,osm
+UNIT-0736,station,UP-SIT,District Jail Police Station,27.569870,80.686233,active,rural,osm
+UNIT-0737,station,UP-RAM,Police Station – Rampur,29.053961,79.016298,active,rural,osm
+UNIT-0738,station,UP-MOR,Police Station – Moradabad,29.043789,78.754288,active,semi_urban,osm
+UNIT-0739,station,MH-PUN,Police Station Talegaon Dabhade,18.714162,73.677143,active,urban,osm
+UNIT-0740,station,MH-PUN,Police Station – Pune,18.696715,73.658495,inactive,urban,osm
+UNIT-0741,station,MH-PUN,Police Station,18.686306,73.721188,active,urban,osm
+UNIT-0742,station,MH-PUN,Pradhikaran Police Chowki,18.662106,73.774177,active,urban,osm
+UNIT-0743,station,MH-PUN,Akurdi Police Chowky,18.650809,73.767062,active,urban,osm
+UNIT-0744,station,MH-PUN,Police Station Ravet,18.641900,73.755452,active,urban,osm
+UNIT-0745,station,UP-MOR,जिला कारागार Police Station,28.841710,78.769812,active,semi_urban,osm
+UNIT-0746,station,UP-RAM,"Civil Lines Police Station, Rampur",28.781742,79.019621,inactive,rural,osm
+UNIT-0747,station,MH-PUN,Chinchwad Police Station,18.629324,73.779996,active,urban,osm
+UNIT-0748,station,MH-PUN,PCMC Police Station,18.639873,73.795019,active,urban,osm
+UNIT-0749,station,MH-PUN,Police Station – Pune,18.647890,73.842517,active,urban,osm
+UNIT-0750,station,MH-PUN,Khed Police Station,18.854283,73.881256,active,urban,osm
+UNIT-0751,station,MH-PUN,Khed Police Station,18.849910,73.886718,active,urban,osm
+UNIT-0752,station,MH-PUN,Chakan Police Station,18.759457,73.863314,active,urban,osm
+UNIT-0753,station,HR-CHA,Charkhi Dadri Police Station (HQ),28.757603,76.044065,active,rural,synthetic
+UNIT-0754,station,HR-JHA,Jhajjar Police Station (HQ),28.596084,76.592929,active,rural,synthetic
+UNIT-0755,station,HR-NUH,Nuh Police Station (HQ),28.071963,77.001685,active,rural,synthetic
+UNIT-0756,station,HR-PAT,Panipat Police Station (HQ),29.328477,76.930964,active,semi_urban,synthetic
+UNIT-0757,station,HR-SIR,Sirsa Police Station (HQ),29.686731,74.924785,active,rural,synthetic
+UNIT-0758,station,HR-YAM,Yamunanagar Police Station (HQ),30.245048,77.263539,active,semi_urban,synthetic
+UNIT-0759,station,JH-CHA,Chatra Police Station (HQ),24.184304,84.935686,active,rural,synthetic
+UNIT-0760,station,JH-DEO,Deoghar Police Station (HQ),24.360583,86.737469,active,rural,synthetic
+UNIT-0761,station,JH-DUM,Dumka Police Station (HQ),24.304543,87.245014,active,rural,synthetic
+UNIT-0762,station,JH-GAR,Garhwa Police Station (HQ),24.116620,83.695782,active,rural,synthetic
+UNIT-0763,station,JH-GIR,Giridih Police Station (HQ),24.336215,86.106864,active,rural,synthetic
+UNIT-0764,station,JH-GOD,Godda Police Station (HQ),24.829959,87.299959,active,rural,synthetic
+UNIT-0765,station,JH-GUM,Gumla Police Station (HQ),23.069292,84.611239,active,rural,synthetic
+UNIT-0766,station,JH-HAZ,Hazaribagh Police Station (HQ),23.970599,85.441263,active,rural,synthetic
+UNIT-0767,station,JH-JAM,Jamtara Police Station (HQ),23.923998,86.982043,active,rural,synthetic
+UNIT-0768,station,JH-KOD,Koderma Police Station (HQ),24.564523,85.721965,active,rural,synthetic
+UNIT-0769,station,JH-LAT,Latehar Police Station (HQ),23.806707,84.500986,active,rural,synthetic
+UNIT-0770,station,JH-LOH,Lohardaga Police Station (HQ),23.419813,84.640867,active,rural,synthetic
+UNIT-0771,station,JH-PAK,Pakur Police Station (HQ),24.606215,87.685880,active,rural,synthetic
+UNIT-0772,station,JH-PAL,Palamu Police Station (HQ),24.192638,84.181008,active,rural,synthetic
+UNIT-0773,station,JH-RAM,Ramgarh Police Station (HQ),23.891304,85.447229,active,semi_urban,synthetic
+UNIT-0774,station,JH-SAH,Sahibganj Police Station (HQ),24.894129,87.683852,active,rural,synthetic
+UNIT-0775,station,JH-SIM,Simdega Police Station (HQ),22.583257,84.628245,active,rural,synthetic
+UNIT-0776,station,MH-BEE,Beed Police Station (HQ),18.921487,75.731503,active,rural,synthetic
+UNIT-0777,station,MH-BUL,Buldhana Police Station (HQ),20.615198,76.410394,active,rural,synthetic
+UNIT-0778,station,MH-GON,Gondia Police Station (HQ),21.225579,80.139529,active,rural,synthetic
+UNIT-0779,station,MH-WAS,Washim Police Station (HQ),20.275685,77.301264,active,rural,synthetic
+UNIT-0780,station,UP-ALI,Aligarh Police Station (HQ),27.932567,78.036087,active,semi_urban,synthetic
+UNIT-0781,station,UP-AYO,Ayodhya Police Station (HQ),26.631763,82.008381,active,rural,synthetic
+UNIT-0782,station,UP-AZA,Azamgarh Police Station (HQ),25.996414,83.003948,active,rural,synthetic
+UNIT-0783,station,UP-BAI,Barabanki Police Station (HQ),26.941028,81.375216,active,rural,synthetic
+UNIT-0784,station,UP-BAS,Basti Police Station (HQ),26.828006,82.670317,active,rural,synthetic
+UNIT-0785,station,UP-BHA,Bhadohi Police Station (HQ),25.372397,82.418842,active,rural,synthetic
+UNIT-0786,station,UP-BIJ,Bijnor Police Station (HQ),29.328013,78.434180,active,rural,synthetic
+UNIT-0787,station,UP-DEO,Deoria Police Station (HQ),26.414093,83.825632,active,rural,synthetic
+UNIT-0788,station,UP-FAR,Farrukhabad Police Station (HQ),27.443365,79.474658,active,rural,synthetic
+UNIT-0789,station,UP-GHR,Ghazipur Police Station (HQ),25.628434,83.556548,active,rural,synthetic
+UNIT-0790,station,UP-HAP,Hapur Police Station (HQ),28.769219,77.770009,active,urban,synthetic
+UNIT-0791,station,UP-HAR,Hardoi Police Station (HQ),27.350846,80.288115,active,rural,synthetic
+UNIT-0792,station,UP-HAT,Hathras Police Station (HQ),27.603440,78.171181,active,rural,synthetic
+UNIT-0793,station,UP-JAU,Jaunpur Police Station (HQ),25.674245,82.548357,active,rural,synthetic
+UNIT-0794,station,UP-KAN,Kannauj Police Station (HQ),27.036050,79.647840,active,rural,synthetic
+UNIT-0795,station,UP-KND,Kanpur Dehat Police Station (HQ),26.444128,79.965964,active,rural,synthetic
+UNIT-0796,station,UP-KAU,Kaushambi Police Station (HQ),25.532433,81.402311,active,rural,synthetic
+UNIT-0797,station,UP-LAK,Lakhimpur Kheri Police Station (HQ),28.099693,80.639811,active,rural,synthetic
+UNIT-0798,station,UP-MAA,Mahoba Police Station (HQ),25.339050,79.656595,active,rural,synthetic
+UNIT-0799,station,UP-MAI,Mainpuri Police Station (HQ),27.182620,79.011457,active,rural,synthetic
+UNIT-0800,station,UP-MAU,Mau Police Station (HQ),25.980172,83.485724,active,rural,synthetic
+UNIT-0801,station,UP-PIL,Pilibhit Police Station (HQ),28.548794,79.922704,active,rural,synthetic
+UNIT-0802,station,UP-PRA,Pratapgarh Police Station (HQ),25.843218,81.923342,active,rural,synthetic
+UNIT-0803,station,UP-RAE,Rae Bareli Police Station (HQ),26.239893,81.193798,active,rural,synthetic
+UNIT-0804,station,UP-SHI,Shamli Police Station (HQ),29.536135,77.627438,active,semi_urban,synthetic
+UNIT-0805,station,UP-SUL,Sultanpur Police Station (HQ),26.297599,82.117011,active,rural,synthetic
+UNIT-0806,cyber_cell,MH-MCT,Mumbai City Cyber Cell,18.966976,72.855198,active,urban,synthetic
+UNIT-0807,cyber_cell,MH-MSB,Mumbai Suburban Cyber Cell,19.129386,72.852371,active,urban,synthetic
+UNIT-0808,cyber_cell,MH-PUN,Pune Cyber Cell,18.541434,73.834489,active,urban,synthetic
+UNIT-0809,cyber_cell,MH-THA,Thane Cyber Cell,19.219359,73.018317,active,urban,synthetic
+UNIT-0810,cyber_cell,MH-NAG,Nagpur Cyber Cell,21.141782,79.093458,active,urban,synthetic
+UNIT-0811,cyber_cell,UP-LKO,Lucknow Cyber Cell,26.879215,80.930177,active,urban,synthetic
+UNIT-0812,cyber_cell,UP-GBN,Gautam Buddha Nagar Cyber Cell,28.547913,77.385078,active,urban,synthetic
+UNIT-0813,cyber_cell,UP-GHA,Ghaziabad Cyber Cell,28.705748,77.395521,active,urban,synthetic
+UNIT-0814,cyber_cell,UP-KNP,Kanpur Nagar Cyber Cell,26.405741,80.250899,active,urban,synthetic
+UNIT-0815,cyber_cell,UP-VAR,Varanasi Cyber Cell,25.336211,82.944118,active,urban,synthetic
+UNIT-0816,cyber_cell,HR-GUR,Gurugram Cyber Cell,28.453862,77.087544,active,urban,synthetic
+UNIT-0817,cyber_cell,HR-FAR,Faridabad Cyber Cell,28.323811,77.311413,active,urban,synthetic
+UNIT-0818,cyber_cell,JH-RAN,Ranchi Cyber Cell,23.359966,85.332330,active,urban,synthetic
+UNIT-0819,cyber_cell,JH-DHA,Dhanbad Cyber Cell,23.796000,86.478121,active,urban,synthetic
+UNIT-0820,cyber_cell,JH-ESI,East Singhbhum Cyber Cell,22.724211,86.333988,active,urban,synthetic
+UNIT-0821,patrol,HR-AMB,Mobile Patrol – Ambala 1,30.465315,76.954775,active,semi_urban,synthetic
+UNIT-0822,patrol,HR-PAT,Mobile Patrol – Panipat 2,29.138180,76.824510,active,semi_urban,synthetic
+UNIT-0823,patrol,UP-JAL,Mobile Patrol – Jalaun 3,26.217333,79.299876,active,rural,synthetic
+UNIT-0824,patrol,UP-GBN,Mobile Patrol – Gautam Buddha Nagar 4,28.679185,77.219452,active,urban,synthetic
+UNIT-0825,patrol,HR-CHA,Mobile Patrol – Charkhi Dadri 5,28.878630,76.139460,active,rural,synthetic
+UNIT-0826,patrol,JH-PAK,Mobile Patrol – Pakur 6,24.649117,87.617000,active,rural,synthetic
+UNIT-0827,patrol,UP-BAL,Mobile Patrol – Ballia 7,25.985982,84.090285,active,rural,synthetic
+UNIT-0828,patrol,UP-BUD,Mobile Patrol – Budaun 8,28.178752,78.897896,inactive,rural,synthetic
+UNIT-0829,patrol,HR-JIN,Mobile Patrol – Jind 9,29.408714,76.392576,active,rural,synthetic
+UNIT-0830,patrol,UP-FIR,Mobile Patrol – Firozabad 1,27.345059,78.587571,active,semi_urban,synthetic
+UNIT-0831,patrol,HR-YAM,Mobile Patrol – Yamunanagar 2,30.128385,77.231963,active,semi_urban,synthetic
+UNIT-0832,patrol,UP-GOR,Mobile Patrol – Gorakhpur 3,26.508867,83.196243,active,rural,synthetic
+UNIT-0833,patrol,MH-KOL,Mobile Patrol – Kolhapur 4,16.595802,74.340244,active,semi_urban,synthetic
+UNIT-0834,patrol,JH-GUM,Mobile Patrol – Gumla 5,23.181192,84.528808,active,rural,synthetic
+UNIT-0835,patrol,MH-OSM,Mobile Patrol – Osmanabad 6,18.196118,76.111190,active,rural,synthetic
+UNIT-0836,patrol,MH-MSB,Mobile Patrol – Mumbai Suburban 7,18.984360,72.750625,active,urban,synthetic
+UNIT-0837,patrol,UP-SHA,Mobile Patrol – Shahjahanpur 8,27.902918,79.667609,active,rural,synthetic
+UNIT-0838,patrol,MH-MCT,Mobile Patrol – Mumbai City 9,18.978508,72.728456,active,urban,synthetic
+UNIT-0839,patrol,UP-HAT,Mobile Patrol – Hathras 1,27.799822,78.012114,active,rural,synthetic
+UNIT-0840,patrol,MH-JAA,Mobile Patrol – Jalna 2,19.991685,76.106552,inactive,rural,synthetic
+UNIT-0841,patrol,MH-SAT,Mobile Patrol – Satara 3,17.608567,73.928452,active,rural,synthetic
+UNIT-0842,patrol,UP-SHI,Mobile Patrol – Shamli 4,29.413800,77.457485,active,semi_urban,synthetic
+UNIT-0843,patrol,JH-WSI,Mobile Patrol – West Singhbhum 5,22.359372,85.459858,active,rural,synthetic
+UNIT-0844,patrol,HR-BHI,Mobile Patrol – Bhiwani 6,28.602501,76.144829,active,rural,synthetic
+UNIT-0845,patrol,MH-GAD,Mobile Patrol – Gadchiroli 7,19.879941,80.079410,inactive,rural,synthetic
+UNIT-0846,patrol,MH-NAN,Mobile Patrol – Nanded 8,18.969504,77.717407,active,rural,synthetic
+UNIT-0847,patrol,HR-CHA,Mobile Patrol – Charkhi Dadri 9,28.885136,76.007663,active,rural,synthetic
+UNIT-0848,patrol,MH-WAR,Mobile Patrol – Wardha 1,20.597787,78.402654,active,semi_urban,synthetic
+UNIT-0849,patrol,UP-KND,Mobile Patrol – Kanpur Dehat 2,26.269437,79.806519,active,rural,synthetic
+UNIT-0850,patrol,UP-PIL,Mobile Patrol – Pilibhit 3,28.410615,79.936303,active,rural,synthetic
+UNIT-0851,patrol,UP-BUL,Mobile Patrol – Bulandshahr 4,28.448172,78.013746,active,rural,synthetic
+UNIT-0852,patrol,MH-THA,Mobile Patrol – Thane 5,19.194135,72.813691,active,urban,synthetic
+UNIT-0853,patrol,UP-BAH,Mobile Patrol – Bahraich 6,27.633008,81.247622,active,rural,synthetic
+UNIT-0854,patrol,UP-BAR,Mobile Patrol – Balrampur 7,27.477359,82.434811,active,rural,synthetic
+UNIT-0855,patrol,HR-BHI,Mobile Patrol – Bhiwani 8,28.733854,75.968997,active,rural,synthetic
+UNIT-0856,patrol,JH-CHA,Mobile Patrol – Chatra 9,24.146791,85.088821,active,rural,synthetic
+UNIT-0857,patrol,JH-RAN,Mobile Patrol – Ranchi 1,23.184495,85.145989,active,semi_urban,synthetic
+UNIT-0858,patrol,UP-BUL,Mobile Patrol – Bulandshahr 2,28.205622,78.098708,active,rural,synthetic
+UNIT-0859,patrol,UP-LAL,Mobile Patrol – Lalitpur 3,24.484500,78.548937,active,rural,synthetic
+UNIT-0860,patrol,JH-SKH,Mobile Patrol – Saraikela-Kharsawan 4,23.010268,85.853062,active,rural,synthetic
+UNIT-0861,patrol,MH-BEE,Mobile Patrol – Beed 5,18.842133,75.866419,inactive,rural,synthetic
+UNIT-0862,patrol,UP-KND,Mobile Patrol – Kanpur Dehat 6,26.369939,80.009022,active,rural,synthetic
+UNIT-0863,patrol,JH-BOK,Mobile Patrol – Bokaro 7,23.869975,86.030570,active,semi_urban,synthetic
+UNIT-0864,patrol,JH-RAN,Mobile Patrol – Ranchi 8,23.388635,85.467946,active,semi_urban,synthetic
+UNIT-0865,patrol,MH-BEE,Mobile Patrol – Beed 9,19.053162,75.604689,active,rural,synthetic
+UNIT-0866,patrol,UP-CHA,Mobile Patrol – Chandauli 1,25.300544,83.165466,active,rural,synthetic
+UNIT-0867,patrol,JH-PAK,Mobile Patrol – Pakur 2,24.505039,87.775833,active,rural,synthetic
+UNIT-0868,patrol,HR-KAR,Mobile Patrol – Karnal 3,29.797558,76.975068,active,semi_urban,synthetic
+UNIT-0869,patrol,UP-AGR,Mobile Patrol – Agra 4,27.004289,78.045412,active,semi_urban,synthetic
+UNIT-0870,patrol,MH-THA,Mobile Patrol – Thane 5,19.286608,72.916431,active,urban,synthetic
+UNIT-0871,patrol,UP-BIJ,Mobile Patrol – Bijnor 6,29.391550,78.412896,active,rural,synthetic
+UNIT-0872,patrol,HR-GUR,Mobile Patrol – Gurugram 7,28.240429,77.258086,active,urban,synthetic
+UNIT-0873,patrol,UP-GOR,Mobile Patrol – Gorakhpur 8,26.745016,83.455060,active,rural,synthetic
+UNIT-0874,patrol,JH-WSI,Mobile Patrol – West Singhbhum 9,22.503938,85.516016,inactive,rural,synthetic
+UNIT-0875,patrol,UP-BAH,Mobile Patrol – Bahraich 1,27.639616,81.277022,active,rural,synthetic
+UNIT-0876,patrol,UP-LKO,Mobile Patrol – Lucknow 2,26.918234,80.774621,active,urban,synthetic
+UNIT-0877,patrol,MH-WAS,Mobile Patrol – Washim 3,20.386739,77.305856,inactive,rural,synthetic
+UNIT-0878,patrol,UP-LAL,Mobile Patrol – Lalitpur 4,24.773773,78.670858,active,rural,synthetic
+UNIT-0879,patrol,HR-HIS,Mobile Patrol – Hisar 5,29.273855,75.996314,active,semi_urban,synthetic
+UNIT-0880,patrol,JH-GAR,Mobile Patrol – Garhwa 6,23.994103,83.888473,active,rural,synthetic
+UNIT-0881,patrol,JH-SAH,Mobile Patrol – Sahibganj 7,24.968583,87.772284,active,rural,synthetic
+UNIT-0882,patrol,UP-AZA,Mobile Patrol – Azamgarh 8,26.040592,82.904836,active,rural,synthetic
+UNIT-0883,patrol,MH-PAR,Mobile Patrol – Parbhani 9,19.540458,76.671421,active,semi_urban,synthetic
+UNIT-0884,patrol,UP-KAN,Mobile Patrol – Kannauj 1,26.919379,79.552987,active,rural,synthetic
+UNIT-0885,patrol,MH-YAV,Mobile Patrol – Yavatmal 2,20.123129,78.101927,active,rural,synthetic
+UNIT-0886,patrol,MH-PUN,Mobile Patrol – Pune 3,18.640350,73.994246,active,urban,synthetic
+UNIT-0887,patrol,MH-NAS,Mobile Patrol – Nashik 4,19.950221,73.961286,active,semi_urban,synthetic
+UNIT-0888,patrol,UP-BAL,Mobile Patrol – Ballia 5,26.058910,84.033214,active,rural,synthetic
+UNIT-0889,patrol,JH-DUM,Mobile Patrol – Dumka 6,24.205355,87.259294,active,rural,synthetic
+UNIT-0890,patrol,UP-BAI,Mobile Patrol – Barabanki 7,26.846929,81.571415,active,rural,synthetic
+UNIT-0891,patrol,UP-BAL,Mobile Patrol – Ballia 8,25.804780,83.884553,active,rural,synthetic
+UNIT-0892,patrol,HR-MAH,Mobile Patrol – Mahendragarh 9,28.012698,76.129070,active,rural,synthetic
+UNIT-0893,patrol,UP-SHI,Mobile Patrol – Shamli 1,29.707519,77.785727,active,semi_urban,synthetic
+UNIT-0894,patrol,HR-JIN,Mobile Patrol – Jind 2,29.304693,76.291118,active,rural,synthetic
+UNIT-0895,patrol,UP-ETH,Mobile Patrol – Etawah 3,26.820832,79.245639,active,rural,synthetic
+UNIT-0896,patrol,MH-JAL,Mobile Patrol – Jalgaon 4,20.938895,75.391695,inactive,semi_urban,synthetic
+UNIT-0897,patrol,UP-SAH,Mobile Patrol – Saharanpur 5,29.853455,77.420302,active,semi_urban,synthetic
+UNIT-0898,patrol,MH-HIN,Mobile Patrol – Hingoli 6,19.601977,77.040562,active,rural,synthetic
+UNIT-0899,patrol,UP-BAR,Mobile Patrol – Balrampur 7,27.469140,82.468479,active,rural,synthetic
+UNIT-0900,patrol,MH-MCT,Mobile Patrol – Mumbai City 8,19.058567,72.816245,inactive,urban,synthetic
+UNIT-0901,patrol,JH-LOH,Mobile Patrol – Lohardaga 9,23.568327,84.753729,active,rural,synthetic
+UNIT-0902,patrol,MH-NAS,Mobile Patrol – Nashik 1,20.291044,73.771450,active,semi_urban,synthetic
+UNIT-0903,patrol,UP-AZA,Mobile Patrol – Azamgarh 2,26.034304,83.035337,active,rural,synthetic
+UNIT-0904,patrol,UP-MAA,Mobile Patrol – Mahoba 3,25.432458,79.555993,active,rural,synthetic
+UNIT-0905,patrol,HR-KUR,Mobile Patrol – Kurukshetra 4,29.876854,76.605887,active,semi_urban,synthetic
+UNIT-0906,patrol,JH-RAM,Mobile Patrol – Ramgarh 5,23.714655,85.558777,inactive,semi_urban,synthetic
+UNIT-0907,patrol,UP-PRA,Mobile Patrol – Pratapgarh 6,25.905938,81.802245,active,rural,synthetic
+UNIT-0908,patrol,UP-MAA,Mobile Patrol – Mahoba 7,25.382283,79.659374,active,rural,synthetic
+UNIT-0909,patrol,UP-VAR,Mobile Patrol – Varanasi 8,25.180862,82.882450,active,semi_urban,synthetic
+UNIT-0910,patrol,HR-MAH,Mobile Patrol – Mahendragarh 9,28.291769,76.212350,active,rural,synthetic
+UNIT-0911,patrol,UP-MIR,Mobile Patrol – Mirzapur 1,24.917197,82.753208,active,rural,synthetic
+UNIT-0912,patrol,UP-JAL,Mobile Patrol – Jalaun 2,25.867960,79.407483,active,rural,synthetic
+UNIT-0913,patrol,JH-DUM,Mobile Patrol – Dumka 3,24.209113,87.302622,active,rural,synthetic
+UNIT-0914,patrol,MH-NAS,Mobile Patrol – Nashik 4,20.188863,73.855393,active,semi_urban,synthetic
+UNIT-0915,patrol,UP-GHA,Mobile Patrol – Ghaziabad 5,28.764042,77.589992,active,urban,synthetic
+UNIT-0916,patrol,MH-SAT,Mobile Patrol – Satara 6,17.772211,74.294352,active,rural,synthetic
+UNIT-0917,patrol,UP-LAL,Mobile Patrol – Lalitpur 7,24.421917,78.513907,active,rural,synthetic
+UNIT-0918,patrol,MH-BHA,Mobile Patrol – Bhandara 8,21.358450,79.879679,active,rural,synthetic
+UNIT-0919,patrol,UP-BIJ,Mobile Patrol – Bijnor 9,29.259434,78.329847,active,rural,synthetic
+UNIT-0920,patrol,UP-MIR,Mobile Patrol – Mirzapur 1,25.102454,82.751320,active,rural,synthetic
+UNIT-0921,patrol,HR-HIS,Mobile Patrol – Hisar 2,29.105912,75.887714,active,semi_urban,synthetic
+UNIT-0922,patrol,MH-THA,Mobile Patrol – Thane 3,19.342677,72.949772,active,urban,synthetic
+UNIT-0923,patrol,UP-RAM,Mobile Patrol – Rampur 4,29.028329,78.924459,inactive,rural,synthetic
+UNIT-0924,patrol,JH-ESI,Mobile Patrol – East Singhbhum 5,22.784009,86.212174,active,semi_urban,synthetic
+UNIT-0925,patrol,HR-JHA,Mobile Patrol – Jhajjar 6,28.408432,76.448290,active,rural,synthetic
+UNIT-0926,patrol,HR-KAR,Mobile Patrol – Karnal 7,29.722816,76.932788,inactive,semi_urban,synthetic
+UNIT-0927,patrol,UP-SID,Mobile Patrol – Siddharthnagar 8,27.313064,82.706193,active,rural,synthetic
+UNIT-0928,patrol,UP-MEE,Mobile Patrol – Meerut 9,29.132847,77.553977,active,semi_urban,synthetic
+UNIT-0929,patrol,UP-BHA,Mobile Patrol – Bhadohi 1,25.215243,82.301132,active,rural,synthetic
+UNIT-0930,patrol,HR-JIN,Mobile Patrol – Jind 2,29.595739,76.539173,active,rural,synthetic
+UNIT-0931,patrol,JH-BOK,Mobile Patrol – Bokaro 3,23.838311,86.035047,active,semi_urban,synthetic
+UNIT-0932,patrol,JH-DHA,Mobile Patrol – Dhanbad 4,23.663331,86.581910,active,urban,synthetic
+UNIT-0933,patrol,MH-SAT,Mobile Patrol – Satara 5,17.643065,74.077802,inactive,rural,synthetic
+UNIT-0934,patrol,MH-NAN,Mobile Patrol – Nanded 6,19.326249,77.443879,active,rural,synthetic
+UNIT-0935,patrol,UP-AGR,Mobile Patrol – Agra 7,27.264892,78.046408,active,semi_urban,synthetic
+UNIT-0936,patrol,MH-RAT,Mobile Patrol – Ratnagiri 8,17.283288,73.092881,active,rural,synthetic
+UNIT-0937,patrol,UP-GHA,Mobile Patrol – Ghaziabad 9,28.697197,77.262401,active,urban,synthetic
+UNIT-0938,patrol,HR-MAH,Mobile Patrol – Mahendragarh 1,28.109296,76.009257,active,rural,synthetic
+UNIT-0939,patrol,JH-CHA,Mobile Patrol – Chatra 2,24.214121,84.850529,active,rural,synthetic
+UNIT-0940,patrol,UP-MAT,Mobile Patrol – Mathura 3,27.427612,77.732351,active,semi_urban,synthetic
+UNIT-0941,patrol,HR-BHI,Mobile Patrol – Bhiwani 4,28.699310,75.944645,active,rural,synthetic
+UNIT-0942,patrol,MH-AKO,Mobile Patrol – Akola 5,20.931085,77.115407,active,semi_urban,synthetic
+UNIT-0943,patrol,UP-MAH,Mobile Patrol – Maharajganj 6,27.058889,83.648184,active,rural,synthetic
+UNIT-0944,patrol,MH-DHU,Mobile Patrol – Dhule 7,21.419538,74.472258,active,rural,synthetic
+UNIT-0945,patrol,HR-SON,Mobile Patrol – Sonipat 8,29.020945,77.130768,active,semi_urban,synthetic
+UNIT-0946,patrol,JH-DUM,Mobile Patrol – Dumka 9,24.355716,87.187261,active,rural,synthetic
+UNIT-0947,patrol,UP-BUL,Mobile Patrol – Bulandshahr 1,28.526746,78.147918,active,rural,synthetic
+UNIT-0948,patrol,HR-HIS,Mobile Patrol – Hisar 2,29.079807,75.719121,active,semi_urban,synthetic
+UNIT-0949,patrol,UP-MUZ,Mobile Patrol – Muzaffarnagar 3,29.450426,77.608536,active,semi_urban,synthetic
+UNIT-0950,patrol,MH-JAA,Mobile Patrol – Jalna 4,20.033031,75.791554,active,rural,synthetic
+UNIT-0951,patrol,UP-SUL,Mobile Patrol – Sultanpur 5,26.356119,82.056405,active,rural,synthetic
+UNIT-0952,patrol,JH-PAL,Mobile Patrol – Palamu 6,24.339837,84.161131,active,rural,synthetic
+UNIT-0953,patrol,UP-AGR,Mobile Patrol – Agra 7,27.025017,77.981123,active,semi_urban,synthetic
+UNIT-0954,patrol,UP-SHA,Mobile Patrol – Shahjahanpur 8,27.920028,79.775309,active,rural,synthetic
+UNIT-0955,patrol,MH-KOL,Mobile Patrol – Kolhapur 9,16.499693,74.108442,active,semi_urban,synthetic
+UNIT-0956,patrol,JH-PAL,Mobile Patrol – Palamu 1,24.281972,84.370915,active,rural,synthetic
+UNIT-0957,patrol,UP-SUL,Mobile Patrol – Sultanpur 2,26.306470,81.981381,active,rural,synthetic
+UNIT-0958,patrol,MH-AMR,Mobile Patrol – Amravati 3,20.912960,77.989742,active,semi_urban,synthetic
+UNIT-0959,patrol,JH-SAH,Mobile Patrol – Sahibganj 4,25.079084,87.524507,active,rural,synthetic
+UNIT-0960,patrol,JH-LOH,Mobile Patrol – Lohardaga 5,23.537768,84.734184,active,rural,synthetic
+UNIT-0961,patrol,MH-BEE,Mobile Patrol – Beed 6,18.765199,75.896064,active,rural,synthetic
+UNIT-0962,patrol,UP-BIJ,Mobile Patrol – Bijnor 7,29.313579,78.239227,active,rural,synthetic
+UNIT-0963,patrol,UP-GHA,Mobile Patrol – Ghaziabad 8,28.767124,77.423276,active,urban,synthetic
+UNIT-0964,patrol,UP-HAT,Mobile Patrol – Hathras 9,27.412287,78.074067,active,rural,synthetic
+UNIT-0965,patrol,HR-BHI,Mobile Patrol – Bhiwani 1,28.856567,76.269571,active,rural,synthetic
+UNIT-0966,patrol,UP-SAM,Mobile Patrol – Sambhal 2,28.917902,78.743485,active,semi_urban,synthetic
+UNIT-0967,patrol,UP-SHI,Mobile Patrol – Shamli 3,29.677113,77.699277,active,semi_urban,synthetic
+UNIT-0968,patrol,UP-HAP,Mobile Patrol – Hapur 4,28.742230,77.673932,active,urban,synthetic
+UNIT-0969,patrol,UP-FAR,Mobile Patrol – Farrukhabad 5,27.340323,79.434711,active,rural,synthetic
+UNIT-0970,patrol,JH-RAM,Mobile Patrol – Ramgarh 6,23.791328,85.416660,active,semi_urban,synthetic

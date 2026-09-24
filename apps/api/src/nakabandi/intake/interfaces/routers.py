@@ -81,6 +81,7 @@ def post_hops(
 
 
 @router.post("/cashout-observations")
+@router.post("/cashouts")
 def post_cashout_observations(
     batch: CashOutObservationBatch,
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),

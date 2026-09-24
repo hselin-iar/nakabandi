@@ -12,6 +12,8 @@ import { useAlerts, type AlertFilters } from "./api/useAlerts";
 import { AlertDetail } from "./AlertDetail";
 import { ReviewQueue } from "./ReviewQueue";
 import { DataTable, type Column } from "../../shared/ui/DataTable";
+import { Select } from "../../shared/ui/Select";
+import { shouldShowKindBadge } from "../../shared/lib/format";
 import {
   SeverityBadge,
   StatusBadge,
@@ -23,7 +25,8 @@ import { MaskedRef } from "../../shared/ui/MaskedRef";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
 import { Button } from "../../shared/ui/Button";
-import type { AlertSummary, Severity, AlertStatus } from "../../shared/api/schema.d.ts";
+import type { AlertStatus, LadderLevel, Severity } from "../../shared/api/enums.ts";
+import type { AlertSummary } from "../../shared/api/types.ts";
 
 export default function AlertsInbox() {
   const { id: urlAlertId } = useParams<{ id?: string }>();
@@ -74,7 +77,7 @@ export default function AlertsInbox() {
         header: "Severity",
         sortable: true,
         width: "9rem",
-        cell: (row) => <SeverityBadge severity={row.severity} />,
+        cell: (row) => <SeverityBadge severity={row.severity as Severity} />,
       },
       {
         key: "id",
@@ -94,14 +97,16 @@ export default function AlertsInbox() {
         key: "target",
         header: "Target Facility",
         sortable: true,
-        cell: (row) => (
-          <div className="nk-alert-target-cell">
-            <span className="font-medium text-primary">
-              {row.target.name ?? row.target.id}
-            </span>
-            <span className="nk-text-xs nk-tag">{row.target.kind}</span>
-          </div>
-        ),
+        cell: (row) => {
+          const name = String(row.target.name ?? row.target.id ?? "");
+          const kind = String(row.target.kind ?? "");
+          return (
+            <div className="nk-alert-target-cell">
+              <span className="font-medium text-primary">{name}</span>
+              {shouldShowKindBadge(name, kind) && <span className="nk-text-xs nk-tag">{kind}</span>}
+            </div>
+          );
+        },
       },
       {
         key: "confidence",
@@ -115,14 +120,14 @@ export default function AlertsInbox() {
         header: "Status",
         sortable: true,
         width: "8rem",
-        cell: (row) => <StatusBadge status={row.status} />,
+        cell: (row) => <StatusBadge status={row.status as AlertStatus} />,
       },
       {
         key: "ladder_level",
         header: "Ladder",
         sortable: true,
         width: "9rem",
-        cell: (row) => <LadderBadge level={row.ladder_level} />,
+        cell: (row) => <LadderBadge level={row.ladder_level as LadderLevel} />,
       },
       {
         key: "expires_at",
@@ -225,18 +230,13 @@ export default function AlertsInbox() {
         </div>
 
         <div className="nk-filter-controls">
-          <select
-            className="nk-select nk-select--sm"
+          <Select
+            size="sm"
             value={severityFilter}
-            aria-label="Filter by severity"
-            onChange={(e) => setSeverityFilter(e.target.value as Severity | "all")}
-          >
-            {severityOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            ariaLabel="Filter by severity"
+            onValueChange={(v) => setSeverityFilter(v as Severity | "all")}
+            options={severityOptions}
+          />
 
           <input
             type="search"

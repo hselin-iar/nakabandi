@@ -86,7 +86,7 @@ export class MapLibreAdapter implements MapAdapter {
 
     return new Promise<void>((resolve, reject) => {
       try {
-        const center = options.center ?? [76.5, 24.5]; // Centered across UP/MH/RJ/HR
+        const center = options.center ?? [79.5, 24.5]; // Centered across UP/MH/HR/JH
         const zoom = options.zoom ?? 5;
 
         const mapInstance = new maplibregl.Map({
@@ -101,13 +101,19 @@ export class MapLibreAdapter implements MapAdapter {
 
         mapInstance.on("load", () => {
           this.isLoaded = true;
-          this.setupSourcesAndLayers();
+          try {
+            this.setupSourcesAndLayers();
 
-          // Apply any pending data that arrived before load event
-          this.pendingLayerData.forEach((data, layerId) => {
-            this.setLayerData(layerId, data);
-          });
-          this.pendingLayerData.clear();
+            // Apply any pending data that arrived before load event
+            this.pendingLayerData.forEach((data, layerId) => {
+              this.setLayerData(layerId, data);
+            });
+            this.pendingLayerData.clear();
+          } catch (err) {
+            console.error("MapLibreAdapter: setupSourcesAndLayers failed", err);
+            reject(err instanceof Error ? err : new Error("Failed to set up map layers"));
+            return;
+          }
 
           resolve();
         });

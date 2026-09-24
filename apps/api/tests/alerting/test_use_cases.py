@@ -25,7 +25,6 @@ from nakabandi.main import create_app
 from nakabandi.shared import (
     SIM_CLOCK_EPOCH,
     Policy,
-    Scheduler,
     SimClock,
     SqlAlchemyUnitOfWork,
 )
@@ -134,7 +133,7 @@ def test_get_alert_not_found(client: TestClient) -> None:
 
 def _make_alert_service(
     db_url: str,
-) -> tuple[AlertService, SqlAlchemyUnitOfWork, SimClock, Scheduler]:
+) -> tuple[AlertService, SqlAlchemyUnitOfWork, SimClock, None]:
     policy = Policy.load("config/policy.yaml")
     engine = create_sqlite_engine(db_url)
     from nakabandi.shared.infrastructure.db import create_all
@@ -145,17 +144,15 @@ def _make_alert_service(
     uow.__enter__()
     assert uow.session is not None
     clock = SimClock(start=SIM_CLOCK_EPOCH)
-    scheduler = Scheduler()
     hub = SseHub()
     svc = AlertService(
         session=uow.session,
         clock=clock,
         policy=policy,
-        scheduler=scheduler,
         role_permissions={Role.ADMIN: frozenset({Permission.VIEW_ALERTS})},
         sse_hub=hub,
     )
-    return svc, uow, clock, scheduler
+    return svc, uow, clock, None
 
 
 def test_raise_or_merge_creates_alert(db_url: str) -> None:
@@ -224,13 +221,16 @@ def test_ladder_level_none_skipped(db_url: str) -> None:
         uow.__exit__(None, None, None)
 
 
-def test_escalation_timer_fires(db_url: str) -> None:
-    """EscalateAlert fires when Scheduler.run_due is called past escalate_at.
+def _fresh_service(session_factory, clock, policy):  # noqa: ANN001, ANN202
+    """A brand-new service on a brand-new session: what a restarted process, or the timer
+    worker's next tick, has. Nothing registered in memory survives into it."""
+    uow = SqlAlchemyUnitOfWork(session_factory)
+    uow.__enter__()
+    assert uow.session is not None
+    return uow, AlertService(uow.session, clock, policy, {}, SseHub())
 
-    Key design: the timer lambda captures the EscalateAlert that holds a SqlAlertRepo
-    bound to a session.  We keep one open UoW alive throughout the test so the captured
-    session remains valid when scheduler.run_due fires the lambda.
-    """
+
+def _raise_and_forget(db_url: str):  # noqa: ANN202
     policy = Policy.load("config/policy.yaml")
     engine = create_sqlite_engine(db_url)
     from nakabandi.shared.infrastructure.db import create_all
@@ -238,66 +238,74 @@ def test_escalation_timer_fires(db_url: str) -> None:
     create_all(engine)
     session_factory = make_session_factory(engine)
     clock = SimClock(start=SIM_CLOCK_EPOCH)
-    scheduler = Scheduler()
-    hub = SseHub()
-
-    # Raise alert and keep UoW alive so the timer lambda's captured repo is valid.
     with SqlAlchemyUnitOfWork(session_factory) as uow:
         assert uow.session is not None
-        svc = AlertService(uow.session, clock, policy, scheduler, {}, hub)
+        svc = AlertService(uow.session, clock, policy, {}, SseHub())
         result = svc.raise_or_merge(FakeForecast(), [FakeAssessment()])
         uow.commit()
+    assert result.alert_id is not None
+    return policy, session_factory, clock, result.alert_id
 
-        alert_id = result.alert_id
-        assert alert_id is not None
 
-        # Advance clock past escalate_after_min and fire timers inside same UoW
-        escalate_at = SIM_CLOCK_EPOCH + timedelta(minutes=policy.alerting.escalate_after_min + 1)
-        clock._current = escalate_at  # type: ignore[attr-defined]
-        scheduler.run_due(escalate_at)
+def test_escalation_fires_when_due_from_a_fresh_session(db_url: str) -> None:
+    """The alert clock is database-driven: a service that never saw the alert raised (a restarted
+    process) still escalates it once escalate_after_min has passed."""
+    policy, session_factory, clock, alert_id = _raise_and_forget(db_url)
+
+    uow, svc = _fresh_service(session_factory, clock, policy)
+    try:
+        assert svc.fire_due_timers() == 0  # nothing is due yet
+        clock._current = SIM_CLOCK_EPOCH + timedelta(  # type: ignore[attr-defined]
+            minutes=policy.alerting.escalate_after_min + 1
+        )
+        assert svc.fire_due_timers() >= 1
         uow.commit()
+        alert = svc.get_alert(alert_id)
+        assert alert is not None and alert.status.value == "escalated"
+        assert svc.fire_due_timers() == 0  # and it is not escalated twice
+    finally:
+        uow.__exit__(None, None, None)
 
+
+def test_expiry_fires_when_due_from_a_fresh_session(db_url: str) -> None:
+    policy, session_factory, clock, alert_id = _raise_and_forget(db_url)
+
+    uow, svc = _fresh_service(session_factory, clock, policy)
+    try:
         alert = svc.get_alert(alert_id)
         assert alert is not None
-        assert alert.status.value == "escalated"
-
-
-def test_expiry_timer_fires(db_url: str) -> None:
-    """ExpireAlert fires when Scheduler.run_due is called past expires_at.
-
-    Same pattern: keep one UoW open so the timer lambda's repo is still valid.
-    """
-    policy = Policy.load("config/policy.yaml")
-    engine = create_sqlite_engine(db_url)
-    from nakabandi.shared.infrastructure.db import create_all
-
-    create_all(engine)
-    session_factory = make_session_factory(engine)
-    clock = SimClock(start=SIM_CLOCK_EPOCH)
-    scheduler = Scheduler()
-    hub = SseHub()
-
-    with SqlAlchemyUnitOfWork(session_factory) as uow:
-        assert uow.session is not None
-        svc = AlertService(uow.session, clock, policy, scheduler, {}, hub)
-        result = svc.raise_or_merge(FakeForecast(), [FakeAssessment()])
+        clock._current = alert.expires_at + timedelta(seconds=1)  # type: ignore[attr-defined]
+        svc.fire_due_timers()
         uow.commit()
+        after = svc.get_alert(alert_id)
+        assert after is not None and after.status.value == "expired"
+    finally:
+        uow.__exit__(None, None, None)
 
-        alert_id = result.alert_id
-        assert alert_id is not None
 
-        # Get the alert to read expires_at, then advance past it and fire
-        alert = svc.get_alert(alert_id)
+def test_an_alert_someone_acted_on_never_expires(db_url: str) -> None:
+    """ "Alert acknowledged then window passes: expires only if not actioned" (DOC 3 M4)."""
+    from nakabandi.alerting.infrastructure.repos import SqlAlertRepo
+    from nakabandi_contracts.enums import AlertStatus
+
+    policy, session_factory, clock, alert_id = _raise_and_forget(db_url)
+    uow, svc = _fresh_service(session_factory, clock, policy)
+    try:
+        repo = SqlAlertRepo(uow.session)  # type: ignore[arg-type]
+        alert = repo.get_by_id(alert_id)
         assert alert is not None
-        expire_at = alert.expires_at + timedelta(seconds=1)
+        alert.status = AlertStatus.ACTIONED
+        repo.save(alert)
+        uow.commit()
+        clock._current = alert.expires_at + timedelta(days=3)  # type: ignore[attr-defined]
 
-        clock._current = expire_at  # type: ignore[attr-defined]
-        scheduler.run_due(expire_at)
+        svc.fire_due_timers()
         uow.commit()
 
-        alert2 = svc.get_alert(alert_id)
-        assert alert2 is not None
-        assert alert2.status.value == "expired"
+        after = svc.get_alert(alert_id)
+        assert after is not None and after.status is AlertStatus.ACTIONED
+    finally:
+        uow.__exit__(None, None, None)
 
 
 # ---------------------------------------------------------------------------
@@ -316,7 +324,7 @@ def test_acknowledge_alert_via_api(client: TestClient, db_url: str) -> None:
     alert_id = None
     with SqlAlchemyUnitOfWork(session_factory) as uow:
         assert uow.session is not None
-        svc = AlertService(uow.session, clock, policy, Scheduler(), {}, SseHub())
+        svc = AlertService(uow.session, clock, policy, {}, SseHub())
         result = svc.raise_or_merge(FakeForecast(), [FakeAssessment()])
         uow.commit()
         alert_id = result.alert_id

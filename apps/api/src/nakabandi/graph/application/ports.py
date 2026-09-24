@@ -25,6 +25,10 @@ class ClusterRepo(ABC):
         """Return {account_id: cluster_id} for accounts that already have a cluster."""
 
     @abstractmethod
+    def get_account_ids(self, cluster_id: Id) -> list[Id]:
+        """Every account currently assigned to this cluster, sorted."""
+
+    @abstractmethod
     def save_cluster(self, cluster_id: Id, created_at: SimTime) -> None:
         """Persist a new cluster record (idempotent on cluster_id)."""
 

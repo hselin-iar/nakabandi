@@ -11,11 +11,12 @@ Invariants enforced here:
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import Any, Protocol
 
 import structlog
 
-from nakabandi.shared import EventBus, ForecastGenerated, Id, SimTime, new_id
+from nakabandi.shared import EventBus, ForecastGenerated, Id, Metrics, SimTime, new_id
 
 logger = structlog.get_logger(__name__)
 
@@ -130,8 +131,10 @@ class ProcessComplaint:
         interceptor: _Interceptor,
         alert_service: _AlertService,
         bus: EventBus | None = None,
+        metrics: Metrics | None = None,
     ) -> None:
         self._bus = bus
+        self._metrics = metrics
         self._complaints = complaint_repo
         self._cluster = cluster_service
         self._forecast = forecaster
@@ -139,6 +142,11 @@ class ProcessComplaint:
         self._alerts = alert_service
 
     def run(self, complaint_id: Id, now: SimTime, *, refresh: bool = False) -> ProcessResult:
+        """Run the chain for one complaint; the whole chain is timed as `stage.pipeline.total`."""
+        with self._stage("pipeline.total"):
+            return self._run(complaint_id, now, refresh=refresh)
+
+    def _run(self, complaint_id: Id, now: SimTime, *, refresh: bool = False) -> ProcessResult:
         """`refresh=True` re-runs the chain for a complaint already forecast (new hops joined its
         cluster): the alert merges as usual, but ForecastGenerated is NOT published again, so the
         analytics read model counts one forecast per complaint."""
@@ -156,9 +164,9 @@ class ProcessComplaint:
         # Stage 1: graph.resolve
         # ------------------------------------------------------------------
         try:
-            resolution = self._cluster.resolve(
-                self._complaints.accounts_of(complaint_id) or [complaint.layer1_account_id], now
-            )
+            accounts = self._complaints.accounts_of(complaint_id) or [complaint.layer1_account_id]
+            with self._stage("graph.resolve"):
+                resolution = self._cluster.resolve(accounts, now)
             cluster_id = resolution.cluster_id
         except Exception:
             log.exception("pipeline.stage.graph_resolve.failed")
@@ -169,7 +177,8 @@ class ProcessComplaint:
         # Stage 2: graph.context_for
         # ------------------------------------------------------------------
         try:
-            ctx = self._cluster.context_for(complaint_id, cluster_id, now)
+            with self._stage("graph.context_for"):
+                ctx = self._cluster.context_for(complaint_id, cluster_id, now)
         except Exception:
             log.exception("pipeline.stage.graph_context.failed")
             self._complaints.mark_unprocessed(complaint_id, failed_stage="graph.context_for")
@@ -179,7 +188,8 @@ class ProcessComplaint:
         # Stage 3: forecast.generate
         # ------------------------------------------------------------------
         try:
-            forecast = self._forecast.generate(ctx, now)
+            with self._stage("forecast.generate"):
+                forecast = self._forecast.generate(ctx, now)
         except Exception:
             log.exception("pipeline.stage.forecast.failed")
             self._complaints.mark_unprocessed(complaint_id, failed_stage="forecast.generate")
@@ -197,7 +207,8 @@ class ProcessComplaint:
         # Stage 4: interception.assess
         # ------------------------------------------------------------------
         try:
-            assessments = self._intercept.assess(forecast, complaint_id, now)
+            with self._stage("interception.assess"):
+                assessments = self._intercept.assess(forecast, complaint_id, now)
         except Exception:
             log.exception("pipeline.stage.interception.failed")
             self._complaints.mark_unprocessed(complaint_id, failed_stage="interception.assess")
@@ -207,7 +218,8 @@ class ProcessComplaint:
         # Stage 5: alerting.raise_or_merge
         # ------------------------------------------------------------------
         try:
-            alert_result = self._alerts.raise_or_merge(forecast, assessments)
+            with self._stage("alerting.raise_or_merge"):
+                alert_result = self._alerts.raise_or_merge(forecast, assessments)
         except Exception:
             log.exception("pipeline.stage.alerting.failed")
             self._complaints.mark_unprocessed(complaint_id, failed_stage="alerting.raise_or_merge")
@@ -228,6 +240,12 @@ class ProcessComplaint:
             ok=True,
             alert_id=getattr(alert_result, "alert_id", None),
         )
+
+    def _stage(self, name: str):  # noqa: ANN202
+        """Time one stage for /system/metrics (a no-op without a Metrics)."""
+        if self._metrics is None:
+            return nullcontext()
+        return self._metrics.timer(f"stage.{name}")
 
     def _publish_forecast(self, forecast: Any, complaint_id: Id, now: SimTime) -> None:
         """LC-3 fan-out, after the chain: the analytics projector listens. A failing subscriber is

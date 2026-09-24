@@ -11,12 +11,11 @@ production; this only matters for keeping tests independent).
 
 from __future__ import annotations
 
-from collections import defaultdict, deque
 from datetime import timedelta
 
 from fastapi import HTTPException, Request
 
-from nakabandi.shared import SystemClock
+from nakabandi.shared import SlidingWindowLimiter
 
 MAX_ATTEMPTS_PER_WINDOW = 5
 WINDOW = timedelta(minutes=1)
@@ -26,21 +25,30 @@ case it should become an LC-7 addition (docs/state/track-a.md Learnings)."""
 
 
 class LoginAttempts:
+    """5 login attempts per minute per IP (DOC 3 M5), over the shared sliding-window limiter."""
+
     def __init__(self) -> None:
-        self._by_ip: dict[str, deque] = defaultdict(deque)
+        self._limiter = SlidingWindowLimiter(MAX_ATTEMPTS_PER_WINDOW, WINDOW)
 
     def check(self, ip: str) -> None:
-        now = SystemClock().now()
-        attempts = self._by_ip[ip]
-        while attempts and now - attempts[0] > WINDOW:
-            attempts.popleft()
-        if len(attempts) >= MAX_ATTEMPTS_PER_WINDOW:
+        if not self._limiter.allow(ip):
             raise HTTPException(
                 status_code=429, detail="too many login attempts; try again shortly"
             )
-        attempts.append(now)
+
+
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
 
 
 def enforce_login_rate_limit(request: Request) -> None:
-    ip = request.client.host if request.client else "unknown"
-    request.app.state.login_attempts.check(ip)
+    request.app.state.login_attempts.check(_client_ip(request))
+
+
+def enforce_control_rate_limit(request: Request) -> None:
+    """Rate-limit the control gate (DOC 2 §2.4: every /sim-control call is authorised through
+    GET /auth/check, so limiting THAT limits the simulator's control surface). Not enforced when
+    the limit is 0, i.e. outside hosted-demo mode unless configured."""
+    limiter: SlidingWindowLimiter = request.app.state.control_limiter
+    if not limiter.allow(_client_ip(request)):
+        raise HTTPException(status_code=429, detail="too many control requests; slow down")

@@ -2,20 +2,27 @@
  * MapPage.tsx — GIS Risk Heatmap Dashboard (DOC 3 M3, DOC 4 Step C5).
  *
  * Implements interactive risk forecast visualization over the four demo states
- * (UP, MH, RJ, HR), resolution drill-down (district, cell, location), time slider replay,
+ * (UP, MH, HR, JH), resolution drill-down (district, cell, location), time slider replay,
  * and robust automatic fallback to TableView on WebGL failure.
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useHeatmap, FIXTURE_HOTSPOT_ALERTS } from "./useHeatmap";
 import { useRegions } from "./useRegions";
+import { useLocations } from "./useLocations";
+import { useAlerts } from "../alerts/api/useAlerts";
 import { FilterPanel } from "./FilterPanel";
 import { TimeSlider } from "./TimeSlider";
 import { Legend } from "./Legend";
 import { HotspotDrawer } from "./HotspotDrawer";
 import { TableViewFallback } from "./TableViewFallback";
-import { MapLibreAdapter, BOUNDARIES_FILL_LAYER_ID } from "./maplibre/MapLibreAdapter";
+import {
+  MapLibreAdapter,
+  BOUNDARIES_FILL_LAYER_ID,
+} from "./maplibre/MapLibreAdapter";
 import { cellsToGeoJSON, CELLS_FILL_LAYER_ID } from "./layers/cellsLayer";
+import { locationsToGeoJSON, LOCATIONS_CIRCLE_LAYER_ID } from "./layers/locationsLayer";
+import { alertsToGeoJSON, ALERTS_POINT_LAYER_ID } from "./layers/alertsLayer";
 import type { MapAdapter } from "./MapAdapter";
 import type {
   HeatmapFilters,
@@ -32,9 +39,9 @@ const STATE_BOUNDS: Record<string, [[number, number], [number, number]]> = {
     [72.5, 15.5],
     [81.0, 22.2],
   ],
-  RJ: [
-    [69.5, 23.0],
-    [78.5, 30.2],
+  JH: [
+    [83.3, 21.9],
+    [87.9, 25.3],
   ],
   HR: [
     [74.4, 27.5],
@@ -43,8 +50,8 @@ const STATE_BOUNDS: Record<string, [[number, number], [number, number]]> = {
 };
 
 const ALL_STATES_BOUNDS: [[number, number], [number, number]] = [
-  [69.0, 15.0],
-  [85.0, 31.0],
+  [72.5, 15.5],
+  [87.9, 31.0],
 ];
 
 export default function MapPage() {
@@ -68,6 +75,20 @@ export default function MapPage() {
 
   const { data: heatmapData } = useHeatmap(filters);
   const { regions, bundledGeoJSON } = useRegions();
+  const { data: locations } = useLocations();
+  const { data: alerts } = useAlerts();
+
+  // Coordinates for every kind of alert target (location, cell, or district) so the alerts
+  // layer can place a marker regardless of which level the forecast fired at.
+  const targetCoords = useMemo(() => {
+    const map: Record<string, [number, number]> = {};
+    for (const loc of locations ?? []) map[loc.id] = [loc.lon, loc.lat];
+    for (const cell of heatmapData?.cells ?? []) map[cell.id] = [cell.lon, cell.lat];
+    for (const region of regions) {
+      if (region.lat != null && region.lon != null) map[region.id] = [region.lon, region.lat];
+    }
+    return map;
+  }, [locations, heatmapData, regions]);
 
   // Initialize MapAdapter
   useEffect(() => {
@@ -86,12 +107,21 @@ export default function MapPage() {
     adapterRef.current = adapter;
 
     adapter
-      .init(mapContainerRef.current, { center: [76.5, 24.5], zoom: 5 })
+      .init(mapContainerRef.current, { center: [79.5, 24.5], zoom: 5 })
       .then(() => {
         if (!isMounted) return;
 
         // Set base boundaries from bundled GeoJSON with zero network tile requests
         adapter.setLayerData(BOUNDARIES_FILL_LAYER_ID, bundledGeoJSON);
+
+        // Frame the demo states now that the map is actually ready — the [filters.state]
+        // effect below only re-fires on a later filter change, so without this the map never
+        // explicitly frames anything on first load.
+        if (filters.state && STATE_BOUNDS[filters.state]) {
+          adapter.fitTo(STATE_BOUNDS[filters.state]);
+        } else {
+          adapter.fitTo(ALL_STATES_BOUNDS);
+        }
 
         // Click handler for cells
         adapter.onFeatureClick(CELLS_FILL_LAYER_ID, (feature) => {
@@ -132,6 +162,18 @@ export default function MapPage() {
     const geojson = cellsToGeoJSON(heatmapData.cells);
     adapterRef.current.setLayerData(CELLS_FILL_LAYER_ID, geojson);
   }, [heatmapData]);
+
+  // Update map data when bank infrastructure locations load
+  useEffect(() => {
+    if (!adapterRef.current || !adapterRef.current.isReady() || !locations) return;
+    adapterRef.current.setLayerData(LOCATIONS_CIRCLE_LAYER_ID, locationsToGeoJSON(locations));
+  }, [locations]);
+
+  // Update map data when active alerts change
+  useEffect(() => {
+    if (!adapterRef.current || !adapterRef.current.isReady() || !alerts) return;
+    adapterRef.current.setLayerData(ALERTS_POINT_LAYER_ID, alertsToGeoJSON(alerts, targetCoords));
+  }, [alerts, targetCoords]);
 
   // Adjust map bounds when state filter changes
   useEffect(() => {
@@ -214,7 +256,7 @@ export default function MapPage() {
         <div>
           <h1 className="nk-map-title">GIS Risk Heatmap Dashboard</h1>
           <p className="nk-map-subtitle">
-            Spatial forecast intensity & persistence rollups across UP, MH, RJ, and HR.
+            Spatial forecast intensity & persistence rollups across UP, MH, HR, and JH.
           </p>
         </div>
 

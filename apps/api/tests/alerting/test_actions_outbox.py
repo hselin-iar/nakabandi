@@ -89,7 +89,6 @@ def _service(
         session=session,
         clock=st.clock,
         policy=st.policy,
-        scheduler=st.scheduler,
         role_permissions=st.role_permissions,
         sse_hub=st.sse_hub,
         scope_lookup=scope_lookup,

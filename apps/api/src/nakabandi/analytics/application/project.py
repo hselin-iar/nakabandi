@@ -27,6 +27,22 @@ logger = structlog.get_logger(__name__)
 
 UNKNOWN_CATEGORY = "unknown"
 
+PROJECTED_ITEMS_PER_LEVEL = 25
+"""A forecast ranks up to ~200 candidate locations; the heatmap only ever shows the ones with
+real mass. Each level's top items by mass are projected and the long tail is not: it holds a
+negligible share of the probability, and writing it made every complaint cost two hundred rows
+(the A11 stress run: the projector was 78% of a complaint's time and grew the table without
+bound). Named here, not in policy.yaml, because LC-7's keys are frozen."""
+
+
+def _top_items(items: list) -> list:
+    """The level's top PROJECTED_ITEMS_PER_LEVEL MassItems, per kind, by mass."""
+    kept = []
+    for kind in ("cell", "location"):
+        of_kind = sorted((i for i in items if i.target_kind == kind), key=lambda i: -i.mass)
+        kept.extend(of_kind[:PROJECTED_ITEMS_PER_LEVEL])
+    return kept
+
 
 class ProjectForecastMass:
     def __init__(
@@ -62,7 +78,7 @@ class ProjectForecastMass:
                 mass=item.mass,
                 alert_count=1,
             )
-            for item in mass_from_forecast(facts)
+            for item in _top_items(mass_from_forecast(facts))
         ]
         if deltas:
             self._on_version(self._repo.add(deltas))
