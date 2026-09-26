@@ -5068,3 +5068,50 @@ h1.nk-inbox-title, .nk-system-integrity-title, .nk-ops-page__title { letter-spac
 
 /* Graph legends sit under the canvas instead of over its nodes */
 .nk-cluster-graph .nk-graph-legends { position: static; margin-top: var(--nk-space-2); }
+
+/* -------------------------------------------------------------------------
+   Command page
+   ------------------------------------------------------------------------- */
+.nk-cmd { max-width: 96rem; margin: 0 auto; padding: var(--nk-space-6) var(--nk-space-6) var(--nk-space-8); display: flex; flex-direction: column; gap: var(--nk-space-5); }
+.nk-cmd__sub { margin: 4px 0 0; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--nk-text-secondary); }
+.nk-cmd__sub strong { color: var(--nk-text-primary); }
+.nk-cmd__idle { padding: var(--nk-space-4) var(--nk-space-5); background: var(--nk-surface-raised); border: 1px solid var(--nk-border-subtle); border-radius: 12px; color: var(--nk-text-secondary); font-size: 13px; }
+.nk-cmd .nk-dash-cta { width: 100%; border-radius: 12px; }
+.nk-cmd__kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--nk-space-4); }
+@media (max-width: 900px) { .nk-cmd__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .nk-cmd__kpis { grid-template-columns: 1fr; } }
+.nk-cmd__kpis .nk-dash-kpi-card { min-width: 0; min-height: 8.5rem; border-radius: 12px; }
+.nk-cmd__kpis .nk-dash-kpi-card__value { font-size: 2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nk-cmd__cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--nk-space-4); }
+@media (max-width: 1000px) { .nk-cmd__cols { grid-template-columns: 1fr; } }
+.nk-cmd__panel { background: var(--nk-surface-raised); border: 1px solid var(--nk-border-subtle); border-radius: 12px; padding: var(--nk-space-4); min-width: 0; }
+.nk-cmd__panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--nk-space-3); }
+.nk-cmd__more { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--nk-accent); text-decoration: none; }
+.nk-cmd__empty { margin: 0; color: var(--nk-text-tertiary); font-size: 13px; font-style: italic; }
+.nk-cmd__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.nk-cmd__row { width: 100%; display: flex; align-items: center; gap: var(--nk-space-3); padding: 8px 10px; background: #0C121A; border: 1px solid #1E2732; border-radius: 8px; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.nk-cmd__row:hover { border-color: #3B4A5E; background: #131C29; }
+.nk-cmd__row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.nk-cmd__row-title { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nk-cmd__row-sub { font-family: var(--nk-font-mono); font-size: 10px; color: var(--nk-text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nk-cmd__row-end { font-family: var(--nk-font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--nk-text-secondary); white-space: nowrap; }
+.nk-cmd__mono { font-family: var(--nk-font-mono); font-size: 12px; }
+.nk-cmd__amount { font-size: 13px; font-weight: 700; color: var(--nk-text-primary); }
+
+/* Bottom taskbar brand: a plain, square-cornered button back to Command */
+.nk-sidenav__logo { display: none; }
+.nk-sidenav__brand {
+  padding: 0 var(--nk-space-5);
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #3B4A5E;
+  border-radius: 0;
+  background: #161F2E;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.nk-sidenav__brand:hover { background: var(--nk-accent); border-color: var(--nk-accent); }
+.nk-sidenav__brand:hover .nk-sidenav__wordmark { color: var(--nk-text-inverse); }
+.nk-sidenav__brand.active { border-color: var(--nk-accent); }
+.nk-sidenav__wordmark { display: inline !important; letter-spacing: 0.2em; font-weight: 700; }

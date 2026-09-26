@@ -248,7 +248,6 @@ export function SideNav() {
     <nav className="nk-sidenav" aria-label="Main navigation">
       {/* Brand mark — links to Command (§3.2/§4.1): thin ambient landing, not its own nav item */}
       <NavLink to="/" end className="nk-sidenav__brand" title="Command">
-        <div className="nk-sidenav__logo" aria-hidden="true">NK</div>
         <span className="nk-sidenav__wordmark">Nakabandi</span>
       </NavLink>
 
