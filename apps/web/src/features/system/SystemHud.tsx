@@ -141,9 +141,46 @@ export default function SystemHud() {
                 <div className="nk-hud-stat"><span className="nk-hud-stat__label">Uptime</span><span className="nk-hud-stat__value data-digit">{formatDuration(latest.uptimeS)}</span></div>
                 <div className="nk-hud-stat"><span className="nk-hud-stat__label">Events / s</span><span className="nk-hud-stat__value"><RollingCounter value={latest.eps} format={(n) => n.toFixed(1)} /></span></div>
                 <div className="nk-hud-stat"><span className="nk-hud-stat__label">HTTP p50 / p95 / max</span><span className="nk-hud-stat__value data-digit">{latest.httpP50.toFixed(0)} / {latest.httpP95.toFixed(0)} / {latest.httpMax.toFixed(0)} ms</span></div>
+                <div className="nk-hud-stat"><span className="nk-hud-stat__label">Complaints / s</span><span className="nk-hud-stat__value"><RollingCounter value={latest.complaintsPerS} format={(n) => n.toFixed(2)} /></span></div>
+                <div className="nk-hud-stat"><span className="nk-hud-stat__label">Live streams</span><span className="nk-hud-stat__value data-digit">{latest.streams.open} / {latest.streams.max}</span></div>
                 <div className="nk-hud-stat"><span className="nk-hud-stat__label">Outbox pending</span><span className="nk-hud-stat__value"><RollingCounter value={latest.outboxPending} /></span></div>
                 <div className="nk-hud-stat"><span className="nk-hud-stat__label">Delivery failures</span><span className="nk-hud-stat__value"><RollingCounter value={latest.deliveryFailures} /></span></div>
               </div>
+              <div className="nk-hud-outbox" data-testid="hud-outbox">
+                <span className="nk-hud-stat__label">Outbox</span>
+                {Object.entries(latest.outbox).map(([state, n]) => (
+                  <span key={state} className={`nk-kpi-chip${(state === "failed" || state === "dead") && n > 0 ? " nk-kpi-chip--critical" : ""}`}>
+                    <b className="nk-kpi-chip__n">{n}</b> {state}
+                  </span>
+                ))}
+              </div>
+              {stageNames.length > 0 && (
+                <table className="nk-table nk-hud-stage-table" data-testid="hud-stage-table">
+                  <thead>
+                    <tr>
+                      <th className="nk-table__th">Pipeline stage</th>
+                      <th className="nk-table__th nk-table__th--right">Calls</th>
+                      <th className="nk-table__th nk-table__th--right">p50</th>
+                      <th className="nk-table__th nk-table__th--right">p95</th>
+                      <th className="nk-table__th nk-table__th--right">Max</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stageNames.map((name) => {
+                      const st = latest.stages[name];
+                      return (
+                        <tr key={name} className="nk-table__row">
+                          <td className="nk-table__td"><code className="nk-mono">{name}</code></td>
+                          <td className="nk-table__td nk-table__td--right data-digit">{st?.count ?? 0}</td>
+                          <td className="nk-table__td nk-table__td--right data-digit">{(st?.p50 ?? 0).toFixed(0)} ms</td>
+                          <td className="nk-table__td nk-table__td--right data-digit">{(st?.p95 ?? 0).toFixed(0)} ms</td>
+                          <td className="nk-table__td nk-table__td--right data-digit">{(st?.max ?? 0).toFixed(0)} ms</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
               <div className="nk-hud-spark-grid">
                 <div className="nk-hud-spark">
                   <span className="nk-hud-stat__label">HTTP p95</span>

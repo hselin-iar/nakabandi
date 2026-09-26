@@ -121,7 +121,7 @@ describe("SystemHud", () => {
 });
 
 describe("HUD pure helpers", () => {
-  const sample = (i: number): MetricsSample => ({ at: String(i), eps: i, httpP95: i, httpP50: i, httpMax: i, stageP95: {}, outboxPending: 0, deliveryFailures: 0, uptimeS: i });
+  const sample = (i: number): MetricsSample => ({ at: String(i), eps: i, httpP95: i, httpP50: i, httpMax: i, stageP95: {}, outboxPending: 0, deliveryFailures: 0, uptimeS: i, complaintsPerS: 0, stages: {}, outbox: {}, streams: { open: 0, max: 0 } });
 
   it("keeps only the newest HUD_BUFFER_MAX samples", () => {
     let buf: MetricsSample[] = [];

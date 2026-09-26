@@ -134,9 +134,12 @@ const ALL_STATES_BOUNDS: [[number, number], [number, number]] = [
 ];
 
 export default function MapPage() {
+  // Start at the level the map's initial zoom (5.5) maps to, so the first request is not a
+  // finer level than the camera shows (a cell-level request over a sparse live layer is all
+  // suppressed by the k-threshold and paints nothing).
   const [filters, setFilters] = useState<HeatmapFilters>({
     layer: "live",
-    level: "cell",
+    level: levelForZoom(5.5),
   });
 
   // timeOffsetHours drives both the slider UI and filters.from/to.
@@ -168,7 +171,22 @@ export default function MapPage() {
   const adapterRef = useRef<MapAdapter | null>(null);
   const radarMarkerCleanupRef = useRef<(() => void) | null>(null);
 
-  const { data: heatmapData } = useHeatmap(filters);
+  const { data: primaryHeat } = useHeatmap(filters);
+  // The live layer is often too sparse for area rollups: every district/cell falls below the
+  // k-threshold and is (rightly) suppressed. Facility-level rows are not suppressed by the API
+  // (each is already an alert marker on this map), so fall back to them for the heat instead of
+  // drawing nothing, and say so.
+  const needFallback =
+    filters.layer === "live" &&
+    filters.level !== "location" &&
+    !!primaryHeat &&
+    primaryHeat.cells.length === 0 &&
+    primaryHeat.suppressed_count > 0;
+  const { data: fallbackHeat } = useHeatmap({ ...filters, level: "location" }, needFallback);
+  const usingFallback = needFallback && (fallbackHeat?.cells.length ?? 0) > 0;
+  const heatmapData = usingFallback && fallbackHeat && primaryHeat
+    ? { ...fallbackHeat, suppressed_count: primaryHeat.suppressed_count }
+    : primaryHeat;
   const { regions, bundledGeoJSON } = useRegions();
   const { data: locations } = useLocations();
   const { data: alerts } = useAlerts();
@@ -453,7 +471,7 @@ export default function MapPage() {
   function handleResetFilters() {
     setFilters({
       layer: "live",
-      level: "cell",
+      level: levelForZoom(5.5),
     });
     setTimeOffsetHours(0);
   }
@@ -615,6 +633,13 @@ export default function MapPage() {
             />
             <LayerPanel rows={layerRows} on={layersOn} onToggle={toggleLayer} />
             <MapHud ref={hudRef} layersOn={layersOnCount} layersTotal={layerRows.length} entities={entityCount} />
+            {suppressedCount > 0 && (usingFallback || cells.length === 0) && (
+            <div className="nk-map-empty-note" role="status" data-testid="heat-suppressed-note">
+              {usingFallback
+                ? `Too few alerts per area to show area rollups without singling out a case (${suppressedCount} hidden). Showing facility-level heat instead.`
+                : `No area at this resolution has enough alerts to show (${suppressedCount} hidden below the privacy threshold). Zoom out, or try “Decayed Potential”.`}
+            </div>
+          )}
           </div>
         )}
 

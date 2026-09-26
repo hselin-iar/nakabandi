@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from nakabandi.access import Permission, Principal, Role
 from nakabandi.audit import AuditLog
+from nakabandi.casework.application.explain import ExplainCase, Explanation
 from nakabandi.casework.application.ports import ClusterSource, ComplaintSource
 from nakabandi.casework.application.use_cases import BundleCluster, GetCase, ListCases
 from nakabandi.casework.domain.case import (
@@ -32,12 +33,16 @@ from nakabandi.casework.evidence.file_store import FileStore
 from nakabandi.casework.evidence.repo import EvidencePackMeta, SqlEvidencePackRepo
 from nakabandi.casework.evidence.service import AlertSource, BuildEvidencePack
 from nakabandi.casework.infrastructure.case_repo import SqlCaseRepo
+from nakabandi.casework.infrastructure.llm import NimExplainer
 from nakabandi.shared import Clock, ClusterUpdated, EventBus, Id, NotFound
 
 logger = structlog.get_logger(__name__)
 
 __all__ = [
     "CaseService",
+    "ExplainCase",
+    "Explanation",
+    "NimExplainer",
     "Case",
     "AccountRef",
     "LocationHit",

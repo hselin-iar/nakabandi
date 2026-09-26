@@ -46,6 +46,13 @@ class ClusterModel(BaseModel):
     edges: list[ClusterEdgeModel]
 
 
+class ExplanationModel(BaseModel):
+    available: bool
+    text: str | None
+    model: str | None
+    reason: str | None
+
+
 class AccountRefModel(BaseModel):
     masked_ref: str
     bank: str
@@ -227,6 +234,28 @@ def get_case(
         authorize(principal, Permission.VIEW_CASES, request.app.state.role_permissions)
         case = svc.get(case_id)
     return _case_view(case, principal)
+
+
+@router.get("/cases/{case_id}/explanation", response_model=ExplanationModel)
+def get_case_explanation(
+    case_id: str, request: Request, principal: Principal = Depends(get_principal)
+) -> ExplanationModel:
+    """Optional plain-language reading of the cluster (NVIDIA NIM). Aggregate, anonymised facts
+    only; `available=false` (no key, model error, text rejected by the ethics guard) means the UI
+    keeps the deterministic brief. The model call runs after the unit of work is closed."""
+    explainer = request.app.state.case_explainer
+    if not explainer.configured:
+        return ExplanationModel(available=False, text=None, model=None, reason="not_configured")
+    with get_uow(request) as uow:
+        assert uow.session is not None
+        svc = build_service(request, uow.session)
+        authorize(principal, Permission.VIEW_CASES, request.app.state.role_permissions)
+        case = svc.get(case_id)
+        graph = svc.cluster_graph(case.cluster_ref)
+    result = explainer.run(case, graph)
+    return ExplanationModel(
+        available=result.available, text=result.text, model=result.model, reason=result.reason
+    )
 
 
 # ---------------------------------------------------------------------------

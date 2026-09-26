@@ -4383,8 +4383,10 @@ body {
   align-items: start;
 }
 .nk-alert-panel {
-  max-height: calc(100dvh - 8rem);
-  overflow-y: auto;
+  height: calc(100dvh - 8rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   position: sticky;
   top: var(--nk-space-4);
   background: var(--nk-surface-elevated);
@@ -4399,7 +4401,21 @@ body {
   gap: var(--nk-space-3);
   margin-bottom: var(--nk-space-3);
 }
-.nk-alert-panel__title { font-size: var(--nk-size-16); font-weight: var(--nk-weight-strong); }
+.nk-alert-panel__title {
+  font-size: var(--nk-size-16);
+  font-weight: var(--nk-weight-strong);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nk-alert-panel .nk-alert-detail { flex: 1; min-height: 0; gap: var(--nk-space-3); }
+.nk-alert-panel .nk-detail-top-card { padding: var(--nk-space-3); gap: var(--nk-space-2); }
+.nk-alert-panel .nk-detail-metrics-row { padding-top: var(--nk-space-2); gap: var(--nk-space-3); }
+.nk-alert-panel .nk-action-toolbar { padding: var(--nk-space-2) var(--nk-space-3); }
+.nk-detail-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--nk-border-subtle); }
+.nk-detail-tabpane { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--nk-space-4); }
+.nk-detail-tabpane--flat { overflow: visible; flex: none; }
 
 .nk-inbox-tools {
   display: flex;
@@ -4765,3 +4781,58 @@ body {
 .nk-hud-spark { display: flex; flex-direction: column; gap: 2px; }
 .nk-hud-spark__now { font-size: var(--nk-size-12); color: var(--nk-text-secondary); }
 .nk-sparkline--empty { font-size: var(--nk-size-11); color: var(--nk-text-tertiary); }
+
+/* Compact alert summary row (replaces the four large KPI cards) */
+.nk-inbox-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nk-space-2) var(--nk-space-4);
+  margin-bottom: var(--nk-space-3);
+}
+.nk-inbox-summary .nk-attention-budget-strip { margin-bottom: 0; flex: 1 1 18rem; min-width: 0; }
+.nk-kpi-chips { display: flex; flex-wrap: wrap; gap: var(--nk-space-2); }
+.nk-kpi-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: 999px;
+  background: var(--nk-surface-raised);
+  font-size: var(--nk-size-12);
+  color: var(--nk-text-secondary);
+  white-space: nowrap;
+}
+.nk-kpi-chip__n { font-size: var(--nk-size-16); color: var(--nk-text-primary); font-variant-numeric: tabular-nums; }
+.nk-kpi-chip__sub { color: var(--nk-text-muted); }
+.nk-kpi-chip--critical .nk-kpi-chip__n { color: var(--nk-severity-critical); }
+.nk-kpi-chip--high .nk-kpi-chip__n { color: var(--nk-severity-high); }
+
+.nk-map-empty-note {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  z-index: 12;
+  max-width: 26rem;
+  padding: var(--nk-space-2) var(--nk-space-4);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-md);
+  background: var(--nk-surface-elevated);
+  color: var(--nk-text-secondary);
+  font-size: var(--nk-size-12);
+  text-align: center;
+}
+
+.nk-hud-outbox { display: flex; flex-wrap: wrap; align-items: center; gap: var(--nk-space-2); margin: var(--nk-space-3) 0; }
+.nk-hud-stage-table { margin-bottom: var(--nk-space-3); }
+
+/* Graph controls and notices sit in normal flow above the canvas so they can never overlap each other */
+.nk-cluster-graph { display: flex; flex-direction: column; }
+.nk-cluster-graph .nk-graph-toolbar--flow { position: static; max-width: 100%; justify-content: flex-end; margin-bottom: var(--nk-space-2); }
+.nk-graph-notices { display: flex; flex-wrap: wrap; gap: var(--nk-space-2); margin-bottom: var(--nk-space-2); }
+.nk-graph-notices:empty { display: none; }
+.nk-graph-notices .nk-graph-hidden,
+.nk-graph-notices .nk-graph-notice { position: static; }

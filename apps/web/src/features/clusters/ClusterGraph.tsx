@@ -185,6 +185,7 @@ export function ClusterGraph({
   playbackUntilMs,
 }: ClusterGraphProps) {
   const cyRef = useRef<Core | null>(null);
+  const canvasBoxRef = useRef<HTMLDivElement | null>(null);
   const [selectedNode, setSelectedNode] = useState<ClusterNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<ClusterEdge | null>(null);
 
@@ -396,6 +397,18 @@ export function ClusterGraph({
     return () => window.clearTimeout(t);
   }, [fullscreen]);
 
+  // Keep Cytoscape's canvas in step with its box (window resize, leaving full screen, side panels)
+  useEffect(() => {
+    const box = canvasBoxRef.current;
+    if (!box || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      const cy = cyRef.current;
+      if (cy && !cy.destroyed()) cy.resize();
+    });
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, []);
+
   // Isolate the trail: dim everything that is neither upstream nor downstream of the selection
   useEffect(() => {
     const cy = cyRef.current;
@@ -505,15 +518,10 @@ export function ClusterGraph({
           ? { position: "fixed", inset: 0, zIndex: 1000, width: "100vw", height: "100vh", background: "var(--nk-canvas-bg)", padding: 12 }
           : { position: "relative", width: "100%", height }
       }
+      data-fullscreen={fullscreen || undefined}
     >
-      {isCapped && (
-        <div className="nk-graph-notice" data-testid="node-capped-badge" role="status" style={{ top: 12, left: 12 }}>
-          <span>Graph capped: Showing top 200 nodes (+{hiddenCount} more accounts summarized)</span>
-        </div>
-      )}
-
       {/* Noise controls: what is shown, and an explicit count of what is not */}
-      <div className="nk-graph-toolbar" role="toolbar" aria-label="Graph controls">
+      <div className="nk-graph-toolbar nk-graph-toolbar--flow" role="toolbar" aria-label="Graph controls">
         {view.maxLayer > 1 && (
           <label className="nk-graph-toolbar__item">
             <span>Hops ≤ <b className="data-digit">{hopLimit ?? view.maxLayer}</b></span>
@@ -577,12 +585,18 @@ export function ClusterGraph({
         <button type="button" onClick={() => cyRef.current?.fit(undefined, 30)} title="Fit to View" aria-label="Fit graph to view" className="nk-btn nk-btn--secondary nk-btn--sm">Fit</button>
       </div>
 
+      <div className="nk-graph-notices">
+      {isCapped && (
+        <div className="nk-graph-notice" data-testid="node-capped-badge" role="status">
+          <span>Graph capped: Showing top 200 nodes (+{hiddenCount} more accounts summarized)</span>
+        </div>
+      )}
+
       {view.thinned.edges > 0 && (
         <button
           type="button"
           className="nk-graph-hidden"
           data-testid="thinned-edges-notice"
-          style={anyHidden ? { top: 84 } : undefined}
           onClick={() => setShowAllFlows(true)}
         >
           Showing the strongest flows · {view.thinned.edges} weaker {view.thinned.edges === 1 ? "flow" : "flows"} ({formatInr(view.thinned.paise, { compact: true })}) set aside · show all
@@ -600,15 +614,23 @@ export function ClusterGraph({
         </button>
       )}
 
+      </div>
+
       {/* Main Cytoscape canvas */}
-      <div data-testid="cytoscape-canvas" style={{ width: "100%", height: "100%", background: "var(--nk-canvas-bg)", borderRadius: 8, overflow: "hidden" }}>
+      <div
+        ref={canvasBoxRef}
+        data-testid="cytoscape-canvas"
+        style={{ position: "relative", width: "100%", flex: "1 1 0", minHeight: 0, minWidth: 0, background: "var(--nk-canvas-bg)", borderRadius: 8, overflow: "hidden" }}
+      >
         <CanvasBoundary>
           {canvasAvailable() && (
           <CytoscapeComponent
             elements={elements}
             stylesheet={stylesheet}
             cy={handleCy}
-            style={{ width: "100%", height: "100%" }}
+            // absolutely positioned: the canvas' own pixel size must never widen its parent
+            // (it used to keep the full-screen width after leaving full screen)
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
             minZoom={0.2}
             maxZoom={3}
           />

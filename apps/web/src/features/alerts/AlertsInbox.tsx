@@ -430,30 +430,24 @@ export default function AlertsInbox() {
         </div>
       </header>
 
-      {/* Attention-Budget Strip */}
-      <AttentionBudgetStrip shownCount={alerts.length} backlogCount={backlogAlerts.length} />
-
-      {/* KPI Summary Strip */}
-      <div className="nk-kpi-strip" aria-label="Alert summary statistics">
-        <div className="nk-kpi-card">
-          <span className="nk-kpi-card__label"><span className="nk-live-dot" aria-hidden="true" />Live Alerts</span>
-          <span className={`nk-kpi-card__value${kpiCounts.open > 0 ? " nk-kpi-card__value--brand" : ""}`}><RollingCounter value={alerts.length} /></span>
-          <span className="nk-kpi-card__sub">{kpiCounts.open} open</span>
-        </div>
-        <div className="nk-kpi-card">
-          <span className="nk-kpi-card__label">Critical</span>
-          <span className={`nk-kpi-card__value${kpiCounts.critical > 0 ? " nk-kpi-card__value--critical" : " nk-kpi-card__value--good"}`}><RollingCounter value={kpiCounts.critical} /></span>
-          <span className="nk-kpi-card__sub">immediate action</span>
-        </div>
-        <div className="nk-kpi-card">
-          <span className="nk-kpi-card__label">High Severity</span>
-          <span className={`nk-kpi-card__value${kpiCounts.high > 0 ? " nk-kpi-card__value--high" : " nk-kpi-card__value--good"}`}><RollingCounter value={kpiCounts.high} /></span>
-          <span className="nk-kpi-card__sub">elevated risk</span>
-        </div>
-        <div className="nk-kpi-card">
-          <span className="nk-kpi-card__label">Active Clusters</span>
-          <span className="nk-kpi-card__value nk-kpi-card__value--brand"><RollingCounter value={kpiCounts.clusters} /></span>
-          <span className="nk-kpi-card__sub">mule networks</span>
+      {/* One compact row: attention-budget note on the left, live counts as chips on the right */}
+      <div className="nk-inbox-summary">
+        <AttentionBudgetStrip shownCount={alerts.length} backlogCount={backlogAlerts.length} />
+        <div className="nk-kpi-chips" aria-label="Alert summary statistics">
+          <span className="nk-kpi-chip">
+            <span className="nk-live-dot" aria-hidden="true" />
+            <b className="nk-kpi-chip__n"><RollingCounter value={alerts.length} /></b> live
+            <span className="nk-kpi-chip__sub">{kpiCounts.open} open</span>
+          </span>
+          <span className={`nk-kpi-chip${kpiCounts.critical > 0 ? " nk-kpi-chip--critical" : ""}`}>
+            <b className="nk-kpi-chip__n"><RollingCounter value={kpiCounts.critical} /></b> critical
+          </span>
+          <span className={`nk-kpi-chip${kpiCounts.high > 0 ? " nk-kpi-chip--high" : ""}`}>
+            <b className="nk-kpi-chip__n"><RollingCounter value={kpiCounts.high} /></b> high
+          </span>
+          <span className="nk-kpi-chip">
+            <b className="nk-kpi-chip__n"><RollingCounter value={kpiCounts.clusters} /></b> clusters
+          </span>
         </div>
       </div>
 
@@ -538,7 +532,7 @@ export default function AlertsInbox() {
               onScrolledChange={setScrolled}
               virtualized
               rowHeight={ROW_HEIGHT[density]}
-              height="clamp(20rem, calc(100dvh - 27rem), 60rem)"
+              height="clamp(20rem, calc(100dvh - 21rem), 60rem)"
               caption="Active fraud interception alerts"
               rowClassName={(row) => {
                 const s = String(row.severity ?? "").toUpperCase();

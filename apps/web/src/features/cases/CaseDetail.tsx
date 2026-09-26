@@ -18,7 +18,7 @@ import { Timeline } from "../../shared/ui/Timeline";
 import { MaskedRef } from "../../shared/ui/MaskedRef";
 import { CaseFundFlowSankey } from "./CaseFundFlowSankey";
 import { CaseTimelineScrubber } from "./CaseTimelineScrubber";
-import { REQUIRED_FIR_DISCLAIMER } from "./api/useCases";
+import { REQUIRED_FIR_DISCLAIMER, useCaseExplanation } from "./api/useCases";
 import type { Case } from "./types";
 
 interface CaseDetailProps {
@@ -93,6 +93,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
   // The cluster topology lives behind its own endpoint (DOC 3 S1); compose it in here rather
   // than embedding it in the Case response.
   const { data: cluster } = useCluster(caseData.cluster_ref);
+  const { data: explanation, isLoading: explanationLoading } = useCaseExplanation(caseData.id);
   const [graphTab, setGraphTab] = useState<"network" | "flow">("network");
   const [playbackMs, setPlaybackMs] = useState<number | null>(null);
   const graphData = caseData.graph_data ?? (cluster ? { nodes: cluster.nodes, edges: cluster.edges } : undefined);
@@ -250,6 +251,48 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
       >
         {/* Left Column: Consolidated Case Brief & Accounts */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Plain-language explanation (optional, AI-assisted; absent when no model is configured) */}
+          {(explanationLoading || explanation?.available) && (
+            <div
+              className="nk-panel nk-case-explain"
+              data-testid="case-explanation"
+              style={{
+                background: "var(--nk-surface-raised)",
+                border: "1px solid var(--nk-border-subtle)",
+                borderLeft: "3px solid var(--nk-accent)",
+                borderRadius: 8,
+                padding: 20,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+                <h3 style={{ margin: 0, fontSize: "16px", color: "var(--nk-text-primary)" }}>What this network is doing</h3>
+                <span style={{ fontSize: "11px", color: "var(--nk-text-tertiary)" }}>
+                  AI-assisted summary{explanation?.model ? ` · ${explanation.model}` : ""}
+                </span>
+              </div>
+              {explanationLoading ? (
+                <p style={{ margin: 0, color: "var(--nk-text-secondary)", fontSize: 14 }} aria-live="polite">
+                  Writing a plain-language summary…
+                </p>
+              ) : (
+                <>
+                  {(explanation?.text ?? "")
+                    .replace(REQUIRED_FIR_DISCLAIMER, "")
+                    .trim()
+                    .split(/\n{2,}/)
+                    .map((para, i) => (
+                      <p key={i} style={{ margin: "0 0 10px", color: "var(--nk-text-primary)", fontSize: 14, lineHeight: 1.55 }}>
+                        {para}
+                      </p>
+                    ))}
+                  <p style={{ margin: 0, color: "var(--nk-text-tertiary)", fontSize: 11 }}>
+                    Generated from anonymised counts only. Check it against the facts below; it does not replace them.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Executive Brief Box */}
           <div
             className="nk-panel"
@@ -457,7 +500,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                 {graphTab === "network" ? (
                   <ClusterGraph
                     data={graphData}
-                    height={480}
+                    height={640}
                     clusterRef={caseData.cluster_ref}
                     playbackUntilMs={playbackMs}
                   />

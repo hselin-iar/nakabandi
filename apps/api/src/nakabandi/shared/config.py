@@ -71,6 +71,14 @@ class Settings(BaseSettings):
     evidence_font_path: Path | None = None
     """A Devanagari-capable TrueType font for evidence-pack PDFs (DOC 3 S2). Unset falls back to
     Helvetica (Latin-only) — this build ships no such font file (A12, see Learnings)."""
+    nvidia_api_key: str | None = Field(default=None, validation_alias="NVIDIA_API_KEY")
+    """NVIDIA NIM key for the optional plain-language case explanation (casework). Unset or empty
+    switches the feature off: the API never needs the network, and the deterministic case brief
+    stays the only text (DOC 2 §2.7 offline path)."""
+    nim_model: str = Field(default="meta/llama-3.3-70b-instruct", validation_alias="NIM_MODEL")
+    nim_base_url: str = Field(
+        default="https://integrate.api.nvidia.com/v1", validation_alias="NIM_BASE_URL"
+    )
     model_store_dir: Path = Field(default=Path("models"))
     """Where scripts/train.py (B6) persists the trained v1 scorer/timing models; the live API
     loads from the same directory. Matches ModelStore's own class default."""

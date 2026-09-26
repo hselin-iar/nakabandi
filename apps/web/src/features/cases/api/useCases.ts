@@ -96,3 +96,31 @@ export function useCase(caseId: string | undefined) {
     staleTime: 60_000,
   });
 }
+
+export interface CaseExplanation {
+  available: boolean;
+  text: string | null;
+  model: string | null;
+  reason: string | null;
+}
+
+/**
+ * Optional plain-language reading of a case (server-side NVIDIA NIM call over anonymised
+ * aggregate facts; the browser never sees the key). `available: false` means keep showing the
+ * deterministic brief only. Cached long: the server caches per unchanged cluster too.
+ */
+export function useCaseExplanation(caseId: string | undefined) {
+  return useQuery<CaseExplanation>({
+    queryKey: ["case-explanation", caseId],
+    enabled: Boolean(caseId),
+    staleTime: 5 * 60_000,
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await apiClient.GET("/cases/{case_id}/explanation", {
+        params: { path: { case_id: caseId! } },
+      });
+      if (error || !data) return { available: false, text: null, model: null, reason: "model_error" };
+      return data;
+    },
+  });
+}

@@ -560,6 +560,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cases/{case_id}/explanation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Case Explanation
+         * @description Optional plain-language reading of the cluster (NVIDIA NIM). Aggregate, anonymised facts
+         *     only; `available=false` (no key, model error, text rejected by the ethics guard) means the UI
+         *     keeps the deterministic brief. The model call runs after the unit of work is closed.
+         */
+        get: operations["get_case_explanation_api_v1_cases__case_id__explanation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/alerts/{alert_id}/evidence-pack": {
         parameters: {
             query?: never;
@@ -1088,6 +1110,17 @@ export interface components {
             audit_head_hash: string;
             /** Download Url */
             download_url: string;
+        };
+        /** ExplanationModel */
+        ExplanationModel: {
+            /** Available */
+            available: boolean;
+            /** Text */
+            text: string | null;
+            /** Model */
+            model: string | null;
+            /** Reason */
+            reason: string | null;
         };
         /**
          * ForecastModel
@@ -2592,6 +2625,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaseModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_case_explanation_api_v1_cases__case_id__explanation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExplanationModel"];
                 };
             };
             /** @description Validation Error */

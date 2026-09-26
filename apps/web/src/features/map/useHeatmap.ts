@@ -27,10 +27,11 @@ export function useDebounce<T>(value: T, delayMs = 250): T {
   return debouncedValue;
 }
 
-export function useHeatmap(filters: HeatmapFilters) {
+export function useHeatmap(filters: HeatmapFilters, enabled = true) {
   const debouncedFilters = useDebounce(filters, 250);
 
   return useQuery<HeatmapResponse>({
+    enabled,
     queryKey: [...streamKeys.heatmap(), debouncedFilters],
     queryFn: async () => {
       const queryParams: Record<string, string | number | undefined> = {

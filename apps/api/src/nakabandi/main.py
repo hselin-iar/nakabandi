@@ -40,7 +40,7 @@ from nakabandi.alerting.interfaces.stream import router as stream_router
 from nakabandi.analytics import AnalyticsService
 from nakabandi.analytics.interfaces.routers import router as analytics_router
 from nakabandi.audit.interfaces.routers import router as audit_router
-from nakabandi.casework import CaseService
+from nakabandi.casework import CaseService, ExplainCase, NimExplainer
 from nakabandi.casework.evidence.file_store import LocalFileStore
 from nakabandi.casework.interfaces.routers import router as casework_router
 from nakabandi.forecast import ModelStore
@@ -218,6 +218,13 @@ def create_app() -> FastAPI:
             )
 
         app.state.case_service_factory = case_service_for
+        # Optional plain-language explanation (NVIDIA NIM). No key = feature off, nothing leaves
+        # the process; one instance so its cache is shared across requests.
+        app.state.case_explainer = ExplainCase(
+            NimExplainer(settings.nvidia_api_key, settings.nim_model, settings.nim_base_url)
+            if settings.nvidia_api_key
+            else None
+        )
 
         def register_reconcile(bus: EventBus, session: Session) -> None:
             """ReconcileOutcome listens for ingested cash-outs (DOC 3 M4 on_observation)."""

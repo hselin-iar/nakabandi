@@ -26,6 +26,11 @@ export interface MetricsSample {
   uptimeS: number;
   httpP50: number;
   httpMax: number;
+  complaintsPerS: number;
+  /** stage name -> full latency summary, for the per-stage table. */
+  stages: Record<string, { count: number; p50: number; p95: number; max: number }>;
+  outbox: Record<string, number>;
+  streams: { open: number; max: number };
 }
 
 /** Pure: append a sample, capped to the newest `max`. */
@@ -64,6 +69,12 @@ export function useMetricsBuffer(enabled: boolean) {
         outboxPending: data.outbox.pending ?? 0,
         deliveryFailures: data.delivery_failures,
         uptimeS: data.uptime_s,
+        complaintsPerS: data.complaints_per_second,
+        stages: Object.fromEntries(
+          Object.entries(data.stages).map(([k, v]) => [k, { count: v.count, p50: v.p50_ms, p95: v.p95_ms, max: v.max_ms }]),
+        ),
+        outbox: data.outbox as Record<string, number>,
+        streams: { open: data.streams.open ?? 0, max: data.streams.max ?? 0 },
       }),
     );
   }, [data]);
