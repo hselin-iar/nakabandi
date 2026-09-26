@@ -17,7 +17,6 @@ import { formatInr, formatSimTime, humanizeStatus } from "../../shared/lib/forma
 import { Timeline } from "../../shared/ui/Timeline";
 import { MaskedRef } from "../../shared/ui/MaskedRef";
 import { CaseFundFlowSankey } from "./CaseFundFlowSankey";
-import { CaseTimelineScrubber } from "./CaseTimelineScrubber";
 import { REQUIRED_FIR_DISCLAIMER, useCaseExplanation } from "./api/useCases";
 import type { Case } from "./types";
 
@@ -95,7 +94,6 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
   const { data: cluster } = useCluster(caseData.cluster_ref);
   const { data: explanation, isLoading: explanationLoading } = useCaseExplanation(caseData.id);
   const [graphTab, setGraphTab] = useState<"network" | "flow">("network");
-  const [playbackMs, setPlaybackMs] = useState<number | null>(null);
   const graphData = caseData.graph_data ?? (cluster ? { nodes: cluster.nodes, edges: cluster.edges } : undefined);
 
   // Guarantee that the disclaimer is always present at the end
@@ -487,9 +485,6 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                   Fund flow
                 </button>
               </div>
-              {graphTab === "network" && (
-                <CaseTimelineScrubber edges={graphData.edges} value={playbackMs} onChange={setPlaybackMs} />
-              )}
               <div
                 style={{
                   border: "1px solid var(--nk-border-strong)",
@@ -502,7 +497,6 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                     data={graphData}
                     height={640}
                     clusterRef={caseData.cluster_ref}
-                    playbackUntilMs={playbackMs}
                   />
                 ) : (
                   <CaseFundFlowSankey data={graphData} height={480} />

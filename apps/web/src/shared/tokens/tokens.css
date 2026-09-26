@@ -4852,3 +4852,72 @@ body {
 
 /* With the detail docked beside the list, the alert id line moves to the panel and the facility name gets the room */
 .nk-triage-split .nk-alert-id-cell > :not(:first-child) { display: none; }
+
+/* Trail scrubber inside the graph: sits in the graph's own flow; in full screen its slider takes most of the width */
+.nk-cluster-graph .nk-scrubber { margin-bottom: var(--nk-space-2); }
+.nk-cluster-graph[data-fullscreen] .nk-scrubber { padding: var(--nk-space-3) var(--nk-space-5); }
+.nk-cluster-graph[data-fullscreen] .nk-scrubber input[type="range"] { min-width: 60vw; }
+
+/* -------------------------------------------------------------------------
+   Bottom taskbar — the page navigation is a fixed bar along the bottom edge
+   (was a left sidebar). Same markup (SideNav in app/layout/Shell.tsx); these rules override
+   the sidebar layout above.
+   ------------------------------------------------------------------------- */
+:root { --nk-taskbar-h: 3.5rem; }
+
+.nk-shell { flex-direction: column; }
+.nk-shell__body { padding-bottom: var(--nk-taskbar-h); }
+
+.nk-sidenav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  width: auto;
+  height: var(--nk-taskbar-h);
+  min-height: 0;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--nk-space-4);
+  padding: 0 var(--nk-space-4);
+  z-index: 150;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+}
+.nk-sidenav__brand {
+  padding: 0;
+  margin: 0;
+  border-bottom: 0;
+  flex-shrink: 0;
+}
+.nk-sidenav__list {
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: var(--nk-space-2);
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+.nk-sidenav__link {
+  height: 2.5rem;
+  padding: 0 var(--nk-space-4);
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.nk-sidenav__link:hover { border-color: rgba(255, 255, 255, 0.12); }
+.nk-sidenav__link--active { border-color: var(--nk-sidebar-accent); }
+.nk-sidenav__footer {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+  flex-shrink: 0;
+  max-width: 16rem;
+}
+@media (max-width: 1100px) {
+  .nk-sidenav__footer, .nk-sidenav__wordmark { display: none; }
+}
+@media (max-width: 640px) {
+  .nk-sidenav__link { padding: 0 var(--nk-space-3); gap: var(--nk-space-2); font-size: var(--nk-size-12); }
+}

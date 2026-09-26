@@ -532,7 +532,7 @@ export default function AlertsInbox() {
               onScrolledChange={setScrolled}
               virtualized
               rowHeight={ROW_HEIGHT[density]}
-              height="clamp(20rem, calc(100dvh - 21rem), 60rem)"
+              height="clamp(20rem, calc(100dvh - 25rem), 60rem)"
               caption="Active fraud interception alerts"
               rowClassName={(row) => {
                 const s = String(row.severity ?? "").toUpperCase();

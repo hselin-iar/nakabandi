@@ -23,6 +23,7 @@ import { formatInr } from "../../shared/lib/format";
 import { selectionStore } from "../../shared/state/selectionStore";
 import { registerDossierActions } from "../../shared/state/dossierActions";
 import { ensureCytoscapeExtensions } from "./cytoscapeSetup";
+import { TrailScrubber } from "./TrailScrubber";
 import { EdgeInspector, NodeInspector } from "./EntityInspector";
 import {
   BANK_GROUP_PREFIX,
@@ -182,8 +183,12 @@ export function ClusterGraph({
   className = "",
   height = 500,
   clusterRef,
-  playbackUntilMs,
+  playbackUntilMs: playbackFromProps,
 }: ClusterGraphProps) {
+  // The trail scrubber lives inside the graph, so it is present on every page that shows it and
+  // in full screen. A caller may still drive playback from outside via `playbackUntilMs`.
+  const [playbackState, setPlaybackState] = useState<number | null>(null);
+  const playbackUntilMs = playbackFromProps !== undefined ? playbackFromProps : playbackState;
   const cyRef = useRef<Core | null>(null);
   const canvasBoxRef = useRef<HTMLDivElement | null>(null);
   const [selectedNode, setSelectedNode] = useState<ClusterNode | null>(null);
@@ -584,6 +589,10 @@ export function ClusterGraph({
         </button>
         <button type="button" onClick={() => cyRef.current?.fit(undefined, 30)} title="Fit to View" aria-label="Fit graph to view" className="nk-btn nk-btn--secondary nk-btn--sm">Fit</button>
       </div>
+
+      {playbackFromProps === undefined && (
+        <TrailScrubber edges={data.edges ?? []} value={playbackState} onChange={setPlaybackState} />
+      )}
 
       <div className="nk-graph-notices">
       {isCapped && (
