@@ -118,7 +118,7 @@ export default function AlertsInbox() {
   const [scrolled, setScrolled] = useState(false);
   const [requestedAction, setRequestedAction] = useState<{ type: ActionType; nonce: number } | null>(null);
   const soundOn = useSoundEnabled();
-  const wide = useMediaQuery("(min-width: 1280px)");
+  const wide = useMediaQuery("(min-width: 1100px)");
   const tally = useHoldTally();
 
   useRegisterShortcuts(TRIAGE_SHORTCUTS);

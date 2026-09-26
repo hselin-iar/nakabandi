@@ -526,7 +526,7 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
   }
 
   return (
-    <Drawer open={Boolean(alertId)} onClose={onClose} title={heading} width="lg">
+    <Drawer open={Boolean(alertId)} onClose={onClose} title={heading} width="lg" side="left">
       {body}
     </Drawer>
   );

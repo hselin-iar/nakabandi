@@ -1306,6 +1306,17 @@ body {
   overflow: hidden;
 }
 
+.nk-drawer--left {
+  right: auto;
+  left: 0;
+  border-left: 0;
+  border-right: 1px solid var(--nk-border-subtle);
+  animation-name: nk-slide-in-left;
+}
+@keyframes nk-slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
 .nk-drawer--sm { width: min(24rem, 100vw); }
 .nk-drawer--md { width: min(36rem, 100vw); }
 .nk-drawer--lg { width: min(48rem, 100vw); }

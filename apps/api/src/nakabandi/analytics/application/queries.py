@@ -172,7 +172,10 @@ class QueryHeatmap(_Base):
 
     def _effective_window(self, filters: HeatFilters) -> tuple[SimTime, SimTime]:
         from_, to = self.window(filters)
-        if filters.layer is Layer.POTENTIAL:
+        # The map's default lookback is the same 72 h its time slider spans, for both layers; an
+        # explicit `from` (the slider's replay) still wins on the live layer. (GET /live-metrics
+        # keeps its own 24 h summary window.)
+        if filters.layer is Layer.POTENTIAL or filters.from_ is None:
             from_ = to - timedelta(hours=self._policy.heatmap.potential_lookback_hours)
         return from_, to
 

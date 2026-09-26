@@ -21,6 +21,8 @@ interface DrawerProps {
   children: React.ReactNode;
   /** Width class override. */
   width?: "sm" | "md" | "lg";
+  /** Edge the drawer slides in from (default right). */
+  side?: "left" | "right";
 }
 
 export function Drawer({
@@ -29,6 +31,7 @@ export function Drawer({
   title,
   children,
   width = "md",
+  side = "right",
 }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -94,7 +97,7 @@ export function Drawer({
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`nk-drawer nk-drawer--${width}`}
+        className={`nk-drawer nk-drawer--${width}${side === "left" ? " nk-drawer--left" : ""}`}
         onKeyDown={handleKeyDown}
       >
         <div className="nk-drawer__header">

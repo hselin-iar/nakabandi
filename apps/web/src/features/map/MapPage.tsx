@@ -6,7 +6,13 @@
  * and robust automatic fallback to TableView on WebGL failure.
  */
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useHeatmap } from "./useHeatmap";
 import { useRegions } from "./useRegions";
@@ -19,8 +25,14 @@ import { Legend } from "./Legend";
 import { HotspotDrawer } from "./HotspotDrawer";
 import { LayerPanel, type LayerKey, type LayerRowSpec } from "./LayerPanel";
 import { MapHud, type MapHudHandle } from "./MapHud";
-import { useRegisterShortcuts, type ShortcutScope } from "../../shared/ui/shortcutRegistry";
-import { selectionStore, useSelection } from "../../shared/state/selectionStore";
+import {
+  useRegisterShortcuts,
+  type ShortcutScope,
+} from "../../shared/ui/shortcutRegistry";
+import {
+  selectionStore,
+  useSelection,
+} from "../../shared/state/selectionStore";
 import { TableViewFallback } from "./TableViewFallback";
 import {
   MapLibreAdapter,
@@ -29,9 +41,19 @@ import {
   HEATMAP_LAYER_ID,
   SELECTION_LAYER_ID,
 } from "./maplibre/MapLibreAdapter";
-import { heatCellsToPointGeoJSON, HEATMAP_POINT_LAYER_ID } from "./layers/heatmapLayer";
-import { locationsToGeoJSON, LOCATIONS_CIRCLE_LAYER_ID } from "./layers/locationsLayer";
-import { alertsToGeoJSON, ALERTS_POINT_LAYER_ID, ALERTS_HALO_LAYER_ID } from "./layers/alertsLayer";
+import {
+  heatCellsToPointGeoJSON,
+  HEATMAP_POINT_LAYER_ID,
+} from "./layers/heatmapLayer";
+import {
+  locationsToGeoJSON,
+  LOCATIONS_CIRCLE_LAYER_ID,
+} from "./layers/locationsLayer";
+import {
+  alertsToGeoJSON,
+  ALERTS_POINT_LAYER_ID,
+  ALERTS_HALO_LAYER_ID,
+} from "./layers/alertsLayer";
 import { HOT_RADAR_LAYER_ID, hotCellsToGeoJSON } from "./layers/radarIconLayer";
 import {
   buildRadarGeoJSON,
@@ -56,7 +78,10 @@ const ZOOM_LEVEL_BREAKS: { max: number; level: HeatmapLevel }[] = [
 ];
 
 function levelForZoom(zoom: number): HeatmapLevel {
-  return (ZOOM_LEVEL_BREAKS.find((b) => zoom < b.max) ?? ZOOM_LEVEL_BREAKS[ZOOM_LEVEL_BREAKS.length - 1]).level;
+  return (
+    ZOOM_LEVEL_BREAKS.find((b) => zoom < b.max) ??
+    ZOOM_LEVEL_BREAKS[ZOOM_LEVEL_BREAKS.length - 1]
+  ).level;
 }
 
 // A zoom comfortably inside each level's band, for the reverse direction (manual pick -> zoom).
@@ -89,7 +114,11 @@ const LAYERS_STORAGE_KEY = "nk.map.layers";
 function readLayersOn(): Record<LayerKey, boolean> {
   try {
     const raw = window.localStorage.getItem(LAYERS_STORAGE_KEY);
-    if (raw) return { ...DEFAULT_LAYERS_ON, ...(JSON.parse(raw) as Partial<Record<LayerKey, boolean>>) };
+    if (raw)
+      return {
+        ...DEFAULT_LAYERS_ON,
+        ...(JSON.parse(raw) as Partial<Record<LayerKey, boolean>>),
+      };
   } catch {
     /* storage unavailable or corrupt: defaults */
   }
@@ -133,6 +162,9 @@ const ALL_STATES_BOUNDS: [[number, number], [number, number]] = [
   [87.9, 31.0],
 ];
 
+/** The map's default lookback: what the heat and the time slider (-72h..now) both cover. */
+const HEAT_LOOKBACK_HOURS = 72;
+
 export default function MapPage() {
   // Start at the level the map's initial zoom (5.5) maps to, so the first request is not a
   // finer level than the camera shows (a cell-level request over a sparse live layer is all
@@ -162,7 +194,8 @@ export default function MapPage() {
   // Interception Radar (§7.1) — the alert currently tracked on the map, if any.
   const [radarAlertId, setRadarAlertId] = useState<string | null>(null);
 
-  const [layersOn, setLayersOn] = useState<Record<LayerKey, boolean>>(readLayersOn);
+  const [layersOn, setLayersOn] =
+    useState<Record<LayerKey, boolean>>(readLayersOn);
   const hudRef = useRef<MapHudHandle>(null);
   const selection = useSelection();
   useRegisterShortcuts(MAP_SHORTCUTS);
@@ -172,24 +205,37 @@ export default function MapPage() {
   const radarMarkerCleanupRef = useRef<(() => void) | null>(null);
 
   const { data: primaryHeat } = useHeatmap(filters);
-  // The live layer is often too sparse for area rollups: every district/cell falls below the
-  // k-threshold and is (rightly) suppressed. Facility-level rows are not suppressed by the API
+  // The live layer is often too sparse for area rollups: most districts/cells fall below the
+  // k-threshold and are (rightly) suppressed, which would leave most alerted places dark. Facility-level rows are not suppressed by the API
   // (each is already an alert marker on this map), so fall back to them for the heat instead of
   // drawing nothing, and say so.
   const needFallback =
     filters.layer === "live" &&
     filters.level !== "location" &&
     !!primaryHeat &&
-    primaryHeat.cells.length === 0 &&
     primaryHeat.suppressed_count > 0;
-  const { data: fallbackHeat } = useHeatmap({ ...filters, level: "location" }, needFallback);
+  const { data: fallbackHeat } = useHeatmap(
+    { ...filters, level: "location" },
+    needFallback,
+  );
   const usingFallback = needFallback && (fallbackHeat?.cells.length ?? 0) > 0;
-  const heatmapData = usingFallback && fallbackHeat && primaryHeat
-    ? { ...fallbackHeat, suppressed_count: primaryHeat.suppressed_count }
-    : primaryHeat;
+  const heatmapData =
+    usingFallback && fallbackHeat && primaryHeat
+      ? { ...fallbackHeat, suppressed_count: primaryHeat.suppressed_count }
+      : primaryHeat;
   const { regions, bundledGeoJSON } = useRegions();
   const { data: locations } = useLocations();
-  const { data: alerts } = useAlerts();
+  const { data: allAlerts } = useAlerts();
+  // Alert markers cover the same 72 h the heat (and the time slider) covers, so a marker never
+  // sits where the heat has already dropped it. `created_at` and the sim clock are both sim time.
+  const simNowForAlerts = useSimTime()?.slice(0, 13) ?? null; // by the sim hour: no refilter every tick
+  const alerts = useMemo(() => {
+    if (!allAlerts || !simNowForAlerts) return allAlerts;
+    const from =
+      new Date(`${simNowForAlerts}:00:00Z`).getTime() -
+      HEAT_LOOKBACK_HOURS * 3_600_000;
+    return allAlerts.filter((a) => new Date(a.created_at).getTime() >= from);
+  }, [allAlerts, simNowForAlerts]);
   const { data: radarAlert } = useAlert(radarAlertId);
 
   // Coordinates for every kind of alert target (location, cell, or district) so the alerts
@@ -197,9 +243,11 @@ export default function MapPage() {
   const targetCoords = useMemo(() => {
     const map: Record<string, [number, number]> = {};
     for (const loc of locations ?? []) map[loc.id] = [loc.lon, loc.lat];
-    for (const cell of heatmapData?.cells ?? []) map[cell.id] = [cell.lon, cell.lat];
+    for (const cell of heatmapData?.cells ?? [])
+      map[cell.id] = [cell.lon, cell.lat];
     for (const region of regions) {
-      if (region.lat != null && region.lon != null) map[region.id] = [region.lon, region.lat];
+      if (region.lat != null && region.lon != null)
+        map[region.id] = [region.lon, region.lat];
     }
     return map;
   }, [locations, heatmapData, regions]);
@@ -282,8 +330,14 @@ export default function MapPage() {
 
         // Click handler for heatmap point layer (visible at zoom 9+)
         adapter.onFeatureClick(HEATMAP_LAYER_ID, (feature) => {
-          if (!feature || typeof feature !== "object" || !("properties" in feature)) return;
-          const props = (feature as { properties?: Record<string, unknown> }).properties;
+          if (
+            !feature ||
+            typeof feature !== "object" ||
+            !("properties" in feature)
+          )
+            return;
+          const props = (feature as { properties?: Record<string, unknown> })
+            .properties;
           if (!props) return;
           handleOpenHotspot({
             id: String(props.id),
@@ -300,7 +354,9 @@ export default function MapPage() {
         // disconnected dropdown. levelForZoomRef avoids a stale closure across re-inits.
         adapter.onZoomChange?.((zoom) => {
           const nextLevel = levelForZoom(zoom);
-          setFilters((prev) => (prev.level === nextLevel ? prev : { ...prev, level: nextLevel }));
+          setFilters((prev) =>
+            prev.level === nextLevel ? prev : { ...prev, level: nextLevel },
+          );
         });
 
         // HUD readouts (cursor, zoom) are written straight to the DOM, never through state.
@@ -309,12 +365,15 @@ export default function MapPage() {
 
         // Clicking an alert marker or a location links the selection across the app.
         adapter.onFeatureClick(ALERTS_POINT_LAYER_ID, (feature) => {
-          const id = (feature as { properties?: { id?: unknown } } | null)?.properties?.id;
+          const id = (feature as { properties?: { id?: unknown } } | null)
+            ?.properties?.id;
           if (typeof id === "string") selectionStore.set({ kind: "alert", id });
         });
         adapter.onFeatureClick(LOCATIONS_CIRCLE_LAYER_ID, (feature) => {
-          const id = (feature as { properties?: { id?: unknown } } | null)?.properties?.id;
-          if (typeof id === "string") selectionStore.set({ kind: "location", id });
+          const id = (feature as { properties?: { id?: unknown } } | null)
+            ?.properties?.id;
+          if (typeof id === "string")
+            selectionStore.set({ kind: "location", id });
         });
 
         // Signal that the map is ready — this re-triggers all data-push effects
@@ -340,20 +399,30 @@ export default function MapPage() {
 
   // Push heatmap points to the smooth density heatmap layer.
   useEffect(() => {
-    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady() || !heatmapData) {
+    if (
+      !mapReady ||
+      !adapterRef.current ||
+      !adapterRef.current.isReady() ||
+      !heatmapData
+    ) {
       return;
     }
     const geojson = heatCellsToPointGeoJSON(heatmapData.cells);
     adapterRef.current.setLayerData(HEATMAP_LAYER_ID, geojson);
     // Only the hottest few cells get the animated radar marker (capped in pickHotCells).
-    adapterRef.current.setLayerData(HOT_RADAR_LAYER_ID, hotCellsToGeoJSON(heatmapData.cells));
+    adapterRef.current.setLayerData(
+      HOT_RADAR_LAYER_ID,
+      hotCellsToGeoJSON(heatmapData.cells),
+    );
   }, [mapReady, heatmapData]);
 
   // Apply layer toggles to the map and remember them.
   useEffect(() => {
-    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady()) return;
+    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady())
+      return;
     for (const key of Object.keys(LAYER_IDS) as LayerKey[]) {
-      for (const id of LAYER_IDS[key]) adapterRef.current.setLayerVisibility(id, layersOn[key]);
+      for (const id of LAYER_IDS[key])
+        adapterRef.current.setLayerVisibility(id, layersOn[key]);
     }
     try {
       window.localStorage.setItem(LAYERS_STORAGE_KEY, JSON.stringify(layersOn));
@@ -376,7 +445,13 @@ export default function MapPage() {
     adapter.setLayerData(SELECTION_LAYER_ID, {
       type: "FeatureCollection",
       features: coords
-        ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: coords } }]
+        ? [
+            {
+              type: "Feature",
+              properties: {},
+              geometry: { type: "Point", coordinates: coords },
+            },
+          ]
         : [],
     });
     if (coords) adapter.flyTo?.(coords, 10);
@@ -385,19 +460,38 @@ export default function MapPage() {
 
   // Push bank infrastructure locations to the map.
   useEffect(() => {
-    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady() || !locations) return;
-    adapterRef.current.setLayerData(LOCATIONS_CIRCLE_LAYER_ID, locationsToGeoJSON(locations));
+    if (
+      !mapReady ||
+      !adapterRef.current ||
+      !adapterRef.current.isReady() ||
+      !locations
+    )
+      return;
+    adapterRef.current.setLayerData(
+      LOCATIONS_CIRCLE_LAYER_ID,
+      locationsToGeoJSON(locations),
+    );
   }, [mapReady, locations]);
 
   // Push alert point markers to the map.
   useEffect(() => {
-    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady() || !alerts) return;
-    adapterRef.current.setLayerData(ALERTS_POINT_LAYER_ID, alertsToGeoJSON(alerts, targetCoords));
+    if (
+      !mapReady ||
+      !adapterRef.current ||
+      !adapterRef.current.isReady() ||
+      !alerts
+    )
+      return;
+    adapterRef.current.setLayerData(
+      ALERTS_POINT_LAYER_ID,
+      alertsToGeoJSON(alerts, targetCoords),
+    );
   }, [mapReady, alerts, targetCoords]);
 
   // Adjust map bounds when state filter changes
   useEffect(() => {
-    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady()) return;
+    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady())
+      return;
 
     if (filters.state && STATE_BOUNDS[filters.state]) {
       adapterRef.current.fitTo(STATE_BOUNDS[filters.state]);
@@ -410,16 +504,22 @@ export default function MapPage() {
   // plus a unit marker. A computed illustration of eta_min, not live GPS (§7.1, §9.4).
   const radarLatestAssessment = radarAlert?.interception.at(-1) ?? null;
   const radarBestUnit = radarLatestAssessment?.best_unit ?? null;
-  const radarTargetCoords = radarAlert ? targetCoords[String(radarAlert.target.id)] : undefined;
+  const radarTargetCoords = radarAlert
+    ? targetCoords[String(radarAlert.target.id)]
+    : undefined;
 
   useEffect(() => {
-    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady()) return;
+    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady())
+      return;
 
     radarMarkerCleanupRef.current?.();
     radarMarkerCleanupRef.current = null;
 
     if (!radarBestUnit || !radarTargetCoords || !radarLatestAssessment) {
-      adapterRef.current.setLayerData(RADAR_LINE_LAYER_ID, buildRadarGeoJSON(null));
+      adapterRef.current.setLayerData(
+        RADAR_LINE_LAYER_ID,
+        buildRadarGeoJSON(null),
+      );
       return;
     }
 
@@ -439,7 +539,10 @@ export default function MapPage() {
       el.style.color = radarVerdictColor(radarLatestAssessment.verdict);
       el.textContent = "🚓";
       el.title = `${radarBestUnit.unit_kind} ${radarBestUnit.unit_id} — ${radarBestUnit.eta_min.toFixed(1)} min ETA (computed estimate)`;
-      radarMarkerCleanupRef.current = adapterRef.current.addHtmlMarker(el, unitCoords);
+      radarMarkerCleanupRef.current = adapterRef.current.addHtmlMarker(
+        el,
+        unitCoords,
+      );
     }
   }, [mapReady, radarBestUnit, radarTargetCoords, radarLatestAssessment]);
 
@@ -490,9 +593,7 @@ export default function MapPage() {
 
     // Compute replay window: 1-hour slot ending at the chosen offset.
     // Use sim time if available, otherwise wall clock.
-    const base = currentSimTime
-      ? new Date(currentSimTime)
-      : new Date();
+    const base = currentSimTime ? new Date(currentSimTime) : new Date();
     const windowEnd = new Date(base.getTime() + hours * 3600 * 1000);
     const windowStart = new Date(windowEnd.getTime() - 3600 * 1000);
 
@@ -520,7 +621,9 @@ export default function MapPage() {
   useHotkeys("a", () => toggleLayer("alerts"), { enabled: mapKeysOn });
   useHotkeys("i", () => toggleLayer("route"), { enabled: mapKeysOn });
   useHotkeys("b", () => toggleLayer("boundaries"), { enabled: mapKeysOn });
-  useHotkeys("escape", () => setSelectedHotspot(null), { enabled: selectedHotspot !== null });
+  useHotkeys("escape", () => setSelectedHotspot(null), {
+    enabled: selectedHotspot !== null,
+  });
 
   const cells = heatmapData?.cells ?? [];
   const layerRows: LayerRowSpec[] = [
@@ -529,15 +632,36 @@ export default function MapPage() {
       name: "Risk heat",
       hotkey: "H",
       count: cells.length,
-      note: heatmapData && heatmapData.suppressed_count > 0 ? `+${heatmapData.suppressed_count} hidden` : undefined,
+      note:
+        heatmapData && heatmapData.suppressed_count > 0
+          ? `+${heatmapData.suppressed_count} hidden`
+          : undefined,
     },
-    { key: "locations", name: "Locations", hotkey: "L", count: locations?.length ?? 0 },
-    { key: "alerts", name: "Active alerts", hotkey: "A", count: alerts?.length ?? 0 },
-    { key: "route", name: "Interception route", hotkey: "I", count: radarAlertId ? 1 : 0 },
+    {
+      key: "locations",
+      name: "Locations",
+      hotkey: "L",
+      count: locations?.length ?? 0,
+    },
+    {
+      key: "alerts",
+      name: "Active alerts",
+      hotkey: "A",
+      count: alerts?.length ?? 0,
+    },
+    {
+      key: "route",
+      name: "Interception route",
+      hotkey: "I",
+      count: radarAlertId ? 1 : 0,
+    },
     { key: "boundaries", name: "Boundaries", hotkey: "B", count: null },
   ];
   const layersOnCount = layerRows.filter((r) => layersOn[r.key]).length;
-  const entityCount = layerRows.reduce((n, r) => n + (layersOn[r.key] ? (r.count ?? 0) : 0), 0);
+  const entityCount = layerRows.reduce(
+    (n, r) => n + (layersOn[r.key] ? (r.count ?? 0) : 0),
+    0,
+  );
   const legend = heatmapData?.legend ?? {
     min: 0,
     max: 1,
@@ -553,7 +677,8 @@ export default function MapPage() {
         <div>
           <h1 className="nk-map-title">GIS Risk Heatmap Dashboard</h1>
           <p className="nk-map-subtitle">
-            Spatial forecast intensity & persistence rollups across UP, MH, HR, and JH.
+            Spatial forecast intensity & persistence rollups across UP, MH, HR,
+            and JH.
           </p>
         </div>
 
@@ -632,14 +757,23 @@ export default function MapPage() {
               aria-label="MapLibre GIS Canvas"
             />
             <LayerPanel rows={layerRows} on={layersOn} onToggle={toggleLayer} />
-            <MapHud ref={hudRef} layersOn={layersOnCount} layersTotal={layerRows.length} entities={entityCount} />
+            <MapHud
+              ref={hudRef}
+              layersOn={layersOnCount}
+              layersTotal={layerRows.length}
+              entities={entityCount}
+            />
             {suppressedCount > 0 && (usingFallback || cells.length === 0) && (
-            <div className="nk-map-empty-note" role="status" data-testid="heat-suppressed-note">
-              {usingFallback
-                ? `Too few alerts per area to show area rollups without singling out a case (${suppressedCount} hidden). Showing facility-level heat instead.`
-                : `No area at this resolution has enough alerts to show (${suppressedCount} hidden below the privacy threshold). Zoom out, or try “Decayed Potential”.`}
-            </div>
-          )}
+              <div
+                className="nk-map-empty-note"
+                role="status"
+                data-testid="heat-suppressed-note"
+              >
+                {usingFallback
+                  ? `Some areas have too few alerts to roll up without singling out a case (${suppressedCount} hidden). Showing facility-level heat so every alerted facility is lit.`
+                  : `No area at this resolution has enough alerts to show (${suppressedCount} hidden below the privacy threshold). Zoom out, or try “Decayed Potential”.`}
+              </div>
+            )}
           </div>
         )}
 
@@ -650,9 +784,15 @@ export default function MapPage() {
 
         {/* Interception Radar panel — visible only while an alert is tracked (§7.1) */}
         {radarAlertId && (
-          <div className="nk-map-stage__radar-panel" role="status" aria-label="Interception radar">
+          <div
+            className="nk-map-stage__radar-panel"
+            role="status"
+            aria-label="Interception radar"
+          >
             <div className="nk-radar-panel__header">
-              <span className="nk-radar-panel__title">📡 Interception Radar</span>
+              <span className="nk-radar-panel__title">
+                📡 Interception Radar
+              </span>
               <button
                 type="button"
                 className="nk-btn nk-btn--ghost nk-btn--sm"
@@ -665,24 +805,26 @@ export default function MapPage() {
               <p className="nk-text-xs text-muted">Loading assessment…</p>
             ) : !radarBestUnit ? (
               <p className="nk-text-xs text-muted">
-                No response unit is in reach of this target — interception is not currently
-                possible.
+                No response unit is in reach of this target — interception is
+                not currently possible.
               </p>
             ) : (
               <>
                 <p className="nk-text-xs">
-                  {radarBestUnit.unit_kind} <strong>{radarBestUnit.unit_id}</strong> —{" "}
+                  {radarBestUnit.unit_kind}{" "}
+                  <strong>{radarBestUnit.unit_id}</strong> —{" "}
                   {radarBestUnit.eta_min.toFixed(1)} min ETA · verdict{" "}
                   <strong>{radarLatestAssessment?.verdict}</strong>
                 </p>
                 {radarAlert.forecast?.levels?.location?.abstained && (
                   <p className="nk-radar-panel__abstain nk-text-xs">
-                    ⚠ District-level only — insufficient confidence for a specific location at
-                    this target.
+                    ⚠ District-level only — insufficient confidence for a
+                    specific location at this target.
                   </p>
                 )}
                 <p className="nk-radar-panel__disclaimer nk-text-xs text-muted">
-                  Illustrative vector computed from the unit's ETA — not a live GPS feed.
+                  Illustrative vector computed from the unit's ETA — not a live
+                  GPS feed.
                 </p>
               </>
             )}
