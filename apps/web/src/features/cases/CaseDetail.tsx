@@ -39,7 +39,7 @@ function SafeBriefRenderer({ markdown }: { markdown: string }) {
       elements.push(
         <ul key={`ul-${key}`} style={{ paddingLeft: 20, margin: "8px 0" }}>
           {currentList.map((item, idx) => (
-            <li key={`li-${idx}`} style={{ marginBottom: 4, color: "#cbd5e1" }}>
+            <li key={`li-${idx}`} style={{ marginBottom: 4, color: "var(--nk-text-primary)" }}>
               {item}
             </li>
           ))}
@@ -61,19 +61,19 @@ function SafeBriefRenderer({ markdown }: { markdown: string }) {
 
     if (trimmed.startsWith("### ")) {
       elements.push(
-        <h3 key={idx} style={{ color: "#f8fafc", fontSize: "16px", marginTop: 16, marginBottom: 8 }}>
+        <h3 key={idx} style={{ color: "var(--nk-text-primary)", fontSize: "16px", marginTop: 16, marginBottom: 8 }}>
           {trimmed.slice(4)}
         </h3>,
       );
     } else if (trimmed.startsWith("#### ")) {
       elements.push(
-        <h4 key={idx} style={{ color: "#38bdf8", fontSize: "14px", marginTop: 12, marginBottom: 6 }}>
+        <h4 key={idx} style={{ color: "var(--nk-accent)", fontSize: "14px", marginTop: 12, marginBottom: 6 }}>
           {trimmed.slice(5)}
         </h4>,
       );
     } else if (trimmed.length > 0) {
       elements.push(
-        <p key={idx} style={{ color: "#cbd5e1", lineHeight: 1.6, margin: "6px 0" }}>
+        <p key={idx} style={{ color: "var(--nk-text-primary)", lineHeight: 1.6, margin: "6px 0" }}>
           {trimmed}
         </p>,
       );
@@ -120,7 +120,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
               ← Back to Cases
             </button>
           )}
-          <h2 style={{ margin: 0, fontSize: "20px", color: "#f8fafc" }}>
+          <h2 style={{ margin: 0, fontSize: "20px", color: "var(--nk-text-primary)" }}>
             Case Dossier: {caseData.cluster_ref}
           </h2>
           <span
@@ -149,8 +149,8 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                 fontWeight: 600,
                 padding: "4px 8px",
                 borderRadius: 4,
-                background: "#0369a1",
-                color: "#bae6fd",
+                background: "rgba(255,255,255,0.08)",
+                color: "var(--nk-text-primary)",
               }}
             >
               Single complaint
@@ -181,56 +181,56 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
       >
         <div
           style={{
-            background: "#0f172a",
-            border: "1px solid #1e293b",
+            background: "var(--nk-surface-raised)",
+            border: "1px solid var(--nk-border-subtle)",
             borderRadius: 8,
             padding: "12px 16px",
           }}
         >
-          <div style={{ fontSize: "11px", color: "#94a3b8" }}>Total Disputed Amount</div>
-          <div style={{ fontSize: "20px", fontWeight: 700, color: "#38bdf8", marginTop: 4 }}>
+          <div style={{ fontSize: "11px", color: "var(--nk-text-secondary)" }}>Total Disputed Amount</div>
+          <div style={{ fontSize: "20px", fontWeight: 700, color: "var(--nk-accent)", marginTop: 4 }}>
             {formatInr(caseData.total_paise)}
           </div>
         </div>
 
         <div
           style={{
-            background: "#0f172a",
-            border: "1px solid #1e293b",
+            background: "var(--nk-surface-raised)",
+            border: "1px solid var(--nk-border-subtle)",
             borderRadius: 8,
             padding: "12px 16px",
           }}
         >
-          <div style={{ fontSize: "11px", color: "#94a3b8" }}>Complaints / Victims</div>
-          <div style={{ fontSize: "20px", fontWeight: 700, color: "#f8fafc", marginTop: 4 }}>
+          <div style={{ fontSize: "11px", color: "var(--nk-text-secondary)" }}>Complaints / Victims</div>
+          <div style={{ fontSize: "20px", fontWeight: 700, color: "var(--nk-text-primary)", marginTop: 4 }}>
             {caseData.complaint_count} Complaints ({caseData.victim_count} Victims)
           </div>
         </div>
 
         <div
           style={{
-            background: "#0f172a",
-            border: "1px solid #1e293b",
+            background: "var(--nk-surface-raised)",
+            border: "1px solid var(--nk-border-subtle)",
             borderRadius: 8,
             padding: "12px 16px",
           }}
         >
-          <div style={{ fontSize: "11px", color: "#94a3b8" }}>First Incident</div>
-          <div style={{ fontSize: "14px", fontWeight: 600, color: "#e2e8f0", marginTop: 8 }}>
+          <div style={{ fontSize: "11px", color: "var(--nk-text-secondary)" }}>First Incident</div>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--nk-text-primary)", marginTop: 8 }}>
             {formatSimTime(caseData.first_seen)}
           </div>
         </div>
 
         <div
           style={{
-            background: "#0f172a",
-            border: "1px solid #1e293b",
+            background: "var(--nk-surface-raised)",
+            border: "1px solid var(--nk-border-subtle)",
             borderRadius: 8,
             padding: "12px 16px",
           }}
         >
-          <div style={{ fontSize: "11px", color: "#94a3b8" }}>Latest Activity</div>
-          <div style={{ fontSize: "14px", fontWeight: 600, color: "#e2e8f0", marginTop: 8 }}>
+          <div style={{ fontSize: "11px", color: "var(--nk-text-secondary)" }}>Latest Activity</div>
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--nk-text-primary)", marginTop: 8 }}>
             {formatSimTime(caseData.last_seen)}
           </div>
         </div>
@@ -250,8 +250,8 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
           <div
             className="nk-panel"
             style={{
-              background: "#0f172a",
-              border: "1px solid #1e293b",
+              background: "var(--nk-surface-raised)",
+              border: "1px solid var(--nk-border-subtle)",
               borderRadius: 8,
               padding: 20,
             }}
@@ -261,15 +261,15 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                borderBottom: "1px solid #1e293b",
+                borderBottom: "1px solid var(--nk-border-subtle)",
                 paddingBottom: 10,
                 marginBottom: 12,
               }}
             >
-              <h3 style={{ margin: 0, fontSize: "16px", color: "#f8fafc" }}>
+              <h3 style={{ margin: 0, fontSize: "16px", color: "var(--nk-text-primary)" }}>
                 Consolidated Case Brief
               </h3>
-              <span style={{ fontSize: "11px", color: "#64748b" }}>
+              <span style={{ fontSize: "11px", color: "var(--nk-text-tertiary)" }}>
                 Factual Synthesis
               </span>
             </div>
@@ -284,10 +284,10 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
               style={{
                 marginTop: 16,
                 padding: "12px 16px",
-                background: "rgba(2, 132, 199, 0.1)",
-                border: "1px solid #0284c7",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid var(--nk-border-strong)",
                 borderRadius: 6,
-                color: "#e0f2fe",
+                color: "var(--nk-text-primary)",
                 fontSize: "13px",
                 fontWeight: 600,
                 display: "flex",
@@ -304,8 +304,8 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
           <div
             className="nk-panel"
             style={{
-              background: "#0f172a",
-              border: "1px solid #1e293b",
+              background: "var(--nk-surface-raised)",
+              border: "1px solid var(--nk-border-subtle)",
               borderRadius: 8,
               padding: 20,
             }}
@@ -318,15 +318,15 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                 marginBottom: 12,
               }}
             >
-              <h3 style={{ margin: 0, fontSize: "16px", color: "#f8fafc" }}>
+              <h3 style={{ margin: 0, fontSize: "16px", color: "var(--nk-text-primary)" }}>
                 Identified Accounts ({caseData.accounts.length})
               </h3>
               {!isLea && (
                 <span
                   style={{
                     fontSize: "11px",
-                    color: "#f59e0b",
-                    background: "rgba(245, 158, 11, 0.1)",
+                    color: "var(--nk-text-secondary)",
+                    background: "rgba(255,255,255,0.06)",
                     padding: "2px 8px",
                     borderRadius: 4,
                   }}
@@ -342,7 +342,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
               style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}
             >
               <thead>
-                <tr style={{ borderBottom: "1px solid #334155", color: "#94a3b8", textAlign: "left" }}>
+                <tr style={{ borderBottom: "1px solid var(--nk-border-strong)", color: "var(--nk-text-secondary)", textAlign: "left" }}>
                   <th style={{ padding: "8px 6px" }}>Account Identifier</th>
                   <th style={{ padding: "8px 6px" }}>Bank</th>
                   <th style={{ padding: "8px 6px" }}>Role</th>
@@ -355,7 +355,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                   <tr
                     key={idx}
                     data-testid={`account-row-${idx}`}
-                    style={{ borderBottom: "1px solid #1e293b", color: "#e2e8f0" }}
+                    style={{ borderBottom: "1px solid var(--nk-border-subtle)", color: "var(--nk-text-primary)" }}
                   >
                     <td style={{ padding: "8px 6px" }}>
                       {isLea ? (
@@ -372,13 +372,8 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                         style={{
                           padding: "2px 6px",
                           borderRadius: 3,
-                          background:
-                            acc.role === "aggregator"
-                              ? "#7f1d1d"
-                              : acc.role === "mule"
-                                ? "#78350f"
-                                : "#0c4a6e",
-                          color: "#f8fafc",
+                          background: "rgba(255,255,255,0.08)",
+                          color: "var(--nk-text-primary)",
                           fontSize: "10px",
                           fontWeight: 600,
                         }}
@@ -404,8 +399,8 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
             <div
               className="nk-panel"
               style={{
-                background: "#0f172a",
-                border: "1px solid #1e293b",
+                background: "var(--nk-surface-raised)",
+                border: "1px solid var(--nk-border-subtle)",
                 borderRadius: 8,
                 padding: 16,
               }}
@@ -418,21 +413,21 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                   marginBottom: 10,
                 }}
               >
-                <h3 style={{ margin: 0, fontSize: "15px", color: "#f8fafc" }}>
+                <h3 style={{ margin: 0, fontSize: "15px", color: "var(--nk-text-primary)" }}>
                   Syndicate Graph Topology
                 </h3>
-                <span style={{ fontSize: "11px", color: "#94a3b8" }}>
+                <span style={{ fontSize: "11px", color: "var(--nk-text-secondary)" }}>
                   {graphData.nodes.length} nodes
                 </span>
               </div>
               <div
                 style={{
-                  border: "1px solid #334155",
+                  border: "1px solid var(--nk-border-strong)",
                   borderRadius: 6,
                   overflow: "hidden",
                 }}
               >
-                <ClusterGraph data={graphData} height={360} />
+                <ClusterGraph data={graphData} height={480} />
               </div>
             </div>
           )}
@@ -442,13 +437,13 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
             <div
               className="nk-panel"
               style={{
-                background: "#0f172a",
-                border: "1px solid #1e293b",
+                background: "var(--nk-surface-raised)",
+                border: "1px solid var(--nk-border-subtle)",
                 borderRadius: 8,
                 padding: 16,
               }}
             >
-              <h3 style={{ margin: "0 0 12px 0", fontSize: "15px", color: "#f8fafc" }}>
+              <h3 style={{ margin: "0 0 12px 0", fontSize: "15px", color: "var(--nk-text-primary)" }}>
                 Top Disbursal Locations
               </h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -456,7 +451,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                   <div
                     key={loc.id}
                     style={{
-                      background: "#1e293b",
+                      background: "var(--nk-surface-elevated)",
                       padding: "8px 12px",
                       borderRadius: 6,
                       display: "flex",
@@ -466,15 +461,15 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                     }}
                   >
                     <div>
-                      <strong style={{ color: "#f8fafc" }}>{loc.name}</strong>
-                      <div style={{ color: "#94a3b8", fontSize: "11px" }}>
+                      <strong style={{ color: "var(--nk-text-primary)" }}>{loc.name}</strong>
+                      <div style={{ color: "var(--nk-text-secondary)", fontSize: "11px" }}>
                         Last incident: {formatSimTime(loc.last_at)}
                       </div>
                     </div>
                     <span
                       style={{
-                        background: "#334155",
-                        color: "#38bdf8",
+                        background: "var(--nk-border-strong)",
+                        color: "var(--nk-accent)",
                         fontWeight: 700,
                         padding: "2px 8px",
                         borderRadius: 4,
@@ -492,13 +487,13 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
           <div
             className="nk-panel"
             style={{
-              background: "#0f172a",
-              border: "1px solid #1e293b",
+              background: "var(--nk-surface-raised)",
+              border: "1px solid var(--nk-border-subtle)",
               borderRadius: 8,
               padding: 16,
             }}
           >
-            <h3 style={{ margin: "0 0 12px 0", fontSize: "15px", color: "#f8fafc" }}>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: "15px", color: "var(--nk-text-primary)" }}>
               Case Telemetry Timeline
             </h3>
             <Timeline entries={caseData.timeline} />

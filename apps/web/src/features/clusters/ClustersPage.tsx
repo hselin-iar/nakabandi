@@ -97,7 +97,7 @@ export default function ClustersPage() {
                   <span>·</span>
                   <span
                     style={{
-                      color: c.status === "active" ? "#ef4444" : "var(--nk-text-muted)",
+                      color: c.status === "active" ? "var(--nk-text-primary)" : "var(--nk-text-muted)",
                       fontWeight: 600,
                       textTransform: "uppercase",
                     }}
@@ -162,7 +162,7 @@ export default function ClustersPage() {
                 </Tooltip>
                 <span
                   className="nk-cluster-metric__value"
-                  style={{ color: (cluster.novelty ?? 0) > 0.7 ? "#f59e0b" : "var(--nk-text-primary)" }}
+                  style={{ color: "var(--nk-text-primary)", fontWeight: (cluster.novelty ?? 0) > 0.7 ? "var(--nk-weight-strong)" : undefined }}
                 >
                   {((cluster.novelty ?? 0) * 100).toFixed(0)}%
                 </span>
@@ -177,9 +177,9 @@ export default function ClustersPage() {
                     padding: "3px 10px",
                     borderRadius: 999,
                     textTransform: "uppercase",
-                    background: cluster.status === "active" ? "rgba(239,68,68,0.12)" : "rgba(148,163,184,0.12)",
-                    color: cluster.status === "active" ? "#ef4444" : "#94a3b8",
-                    border: `1px solid ${cluster.status === "active" ? "rgba(239,68,68,0.3)" : "rgba(148,163,184,0.2)"}`,
+                    background: "rgba(255,255,255,0.06)",
+                    color: cluster.status === "active" ? "var(--nk-text-primary)" : "var(--nk-text-secondary)",
+                    border: "1px solid var(--nk-border-strong)",
                   }}
                 >
                   {cluster.status}
@@ -202,7 +202,7 @@ export default function ClustersPage() {
                 border: "1px solid var(--nk-border-subtle)",
                 borderRadius: 8,
                 overflow: "hidden",
-                background: "#090d16",
+                background: "var(--nk-canvas-bg)",
               }}
             >
               <ClusterGraph

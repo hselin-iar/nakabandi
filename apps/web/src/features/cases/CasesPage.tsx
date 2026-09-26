@@ -8,10 +8,29 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useCases, useCase } from "./api/useCases";
 import { CaseDetail } from "./CaseDetail";
 import { formatInr, formatSimTime, humanizeStatus } from "../../shared/lib/format";
+import { DataTable, type Column } from "../../shared/ui/DataTable";
+import { Panel } from "../../shared/ui/Panel";
+import { Button } from "../../shared/ui/Button";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
 import { Select } from "../../shared/ui/Select";
-import type { CaseFilter } from "./types";
+import type { Case, CaseFilter } from "./types";
+
+/**
+ * Case status chip. Neutral fills and weight/inversion tell states apart: a red pill here would
+ * borrow the severity hue for a workflow state (Golden Color Rule).
+ */
+function CaseStatusChip({ status }: { status: string }) {
+  const cls =
+    status === "fir_recommended"
+      ? "nk-badge--verdict-bad"
+      : status === "under_investigation"
+        ? "nk-badge--status-open"
+        : status === "closed"
+          ? "nk-badge--status-expired"
+          : "nk-badge--status-ack";
+  return <span className={`nk-badge ${cls}`}>{humanizeStatus(status)}</span>;
+}
 
 export default function CasesPage() {
   const { id } = useParams<{ id?: string }>();
@@ -82,20 +101,77 @@ export default function CasesPage() {
     );
   }
 
+  const columns: Column<Case>[] = [
+    {
+      key: "id",
+      header: "Case Identifier",
+      sortable: true,
+      cell: (c) => (
+        <>
+          <Link to={`/cases/${c.id}`} className="nk-link" style={{ fontWeight: "var(--nk-weight-strong)" }}>
+            {c.id}
+          </Link>
+          {c.single_complaint && (
+            <span data-testid="single-complaint-badge" className="nk-badge nk-badge--status-ack" style={{ marginLeft: 8 }}>
+              Single
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      key: "cluster_ref",
+      header: "Linked Cluster",
+      sortable: true,
+      cell: (c) => (
+        <Link to={`/clusters/${c.cluster_ref}`} className="nk-link nk-link--muted">
+          {c.cluster_ref}
+        </Link>
+      ),
+    },
+    {
+      key: "complaint_count",
+      header: "Complaints",
+      sortable: true,
+      cell: (c) => `${c.complaint_count} (${c.victim_count} victims)`,
+    },
+    {
+      key: "total_paise",
+      header: "Total Disputed",
+      sortable: true,
+      cell: (c) => <span className="data-digit" style={{ fontWeight: "var(--nk-weight-strong)" }}>{formatInr(c.total_paise)}</span>,
+    },
+    { key: "status", header: "Status", sortable: true, cell: (c) => <CaseStatusChip status={c.status} /> },
+    {
+      key: "first_seen",
+      header: "First Incident",
+      sortable: true,
+      cell: (c) => <span className="data-digit" style={{ color: "var(--nk-text-secondary)" }}>{formatSimTime(c.first_seen)}</span>,
+    },
+    {
+      key: "actions",
+      header: "",
+      cell: (c) => (
+        <Button
+          size="sm"
+          variant="secondary"
+          data-testid={`open-case-btn-${c.id}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/cases/${c.id}`);
+          }}
+        >
+          Open Dossier →
+        </Button>
+      ),
+    },
+  ];
+
   // List view
   return (
     <div className="nk-cases-page" data-testid="cases-page" style={{ padding: "20px" }}>
       {/* Page Title & Filter Bar */}
-      <div
-        className="nk-cases-header"
-        style={{
-          background: "#0f172a",
-          border: "1px solid #1e293b",
-          borderRadius: 8,
-          padding: "16px 20px",
-          marginBottom: 20,
-        }}
-      >
+      <Panel className="nk-cases-header">
         <div
           style={{
             display: "flex",
@@ -107,10 +183,10 @@ export default function CasesPage() {
           }}
         >
           <div>
-            <h2 style={{ margin: 0, fontSize: "20px", color: "#f8fafc" }}>
+            <h2 style={{ margin: 0, fontSize: "20px", color: "var(--nk-text-primary)" }}>
               Bundled Cases & Investigation Files
             </h2>
-            <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#94a3b8" }}>
+            <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "var(--nk-text-secondary)" }}>
               Complaints that share a target, cluster, or fund trail, automatically grouped into
               one case file for investigation.
             </p>
@@ -146,9 +222,9 @@ export default function CasesPage() {
               data-testid="cases-search-input"
               style={{
                 width: "100%",
-                background: "#1e293b",
-                border: "1px solid #334155",
-                color: "#f8fafc",
+                background: "var(--nk-surface-elevated)",
+                border: "1px solid var(--nk-border-strong)",
+                color: "var(--nk-text-primary)",
                 padding: "8px 12px",
                 borderRadius: 4,
                 fontSize: "13px",
@@ -191,7 +267,7 @@ export default function CasesPage() {
             Single complaint only
           </label>
         </div>
-      </div>
+      </Panel>
 
       {/* Cases List Table */}
       {isLoadingList ? (
@@ -226,139 +302,15 @@ export default function CasesPage() {
           }
         />
       ) : (
-        <div
-          style={{
-            background: "#0f172a",
-            border: "1px solid #1e293b",
-            borderRadius: 8,
-            overflow: "hidden",
-          }}
-        >
-          <table
-            data-testid="cases-table"
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "13px",
-              textAlign: "left",
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  borderBottom: "1px solid #334155",
-                  background: "#1e293b",
-                  color: "#94a3b8",
-                }}
-              >
-                <th style={{ padding: "12px 16px" }}>Case Identifier</th>
-                <th style={{ padding: "12px 16px" }}>Linked Cluster</th>
-                <th style={{ padding: "12px 16px" }}>Complaints</th>
-                <th style={{ padding: "12px 16px" }}>Total Disputed</th>
-                <th style={{ padding: "12px 16px" }}>Status</th>
-                <th style={{ padding: "12px 16px" }}>First Incident</th>
-                <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cases.map((c) => (
-                <tr
-                  key={c.id}
-                  data-testid={`case-row-${c.id}`}
-                  style={{
-                    borderBottom: "1px solid #1e293b",
-                    color: "#f8fafc",
-                    transition: "background 0.15s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#131d31";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                  }}
-                >
-                  <td style={{ padding: "12px 16px", fontWeight: 600 }}>
-                    <Link
-                      to={`/cases/${c.id}`}
-                      style={{ color: "#38bdf8", textDecoration: "none" }}
-                    >
-                      {c.id}
-                    </Link>
-                    {c.single_complaint && (
-                      <span
-                        data-testid="single-complaint-badge"
-                        style={{
-                          marginLeft: 8,
-                          fontSize: "10px",
-                          background: "#0369a1",
-                          color: "#bae6fd",
-                          padding: "2px 6px",
-                          borderRadius: 3,
-                          textTransform: "uppercase",
-                          fontWeight: 700,
-                        }}
-                      >
-                        Single
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <Link
-                      to={`/clusters/${c.cluster_ref}`}
-                      style={{ color: "#94a3b8", textDecoration: "none" }}
-                    >
-                      {c.cluster_ref}
-                    </Link>
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    {c.complaint_count} ({c.victim_count} victims)
-                  </td>
-                  <td style={{ padding: "12px 16px", fontWeight: 700, color: "#38bdf8" }}>
-                    {formatInr(c.total_paise)}
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <span
-                      style={{
-                        padding: "3px 8px",
-                        borderRadius: 4,
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        background:
-                          c.status === "fir_recommended"
-                            ? "#7f1d1d"
-                            : c.status === "bundled"
-                              ? "#1e3a8a"
-                              : "#334155",
-                        color:
-                          c.status === "fir_recommended"
-                            ? "#fca5a5"
-                            : c.status === "bundled"
-                              ? "#93c5fd"
-                              : "#cbd5e1",
-                      }}
-                    >
-                      {humanizeStatus(c.status)}
-                    </span>
-                  </td>
-                  <td style={{ padding: "12px 16px", color: "#94a3b8" }}>
-                    {formatSimTime(c.first_seen)}
-                  </td>
-                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/cases/${c.id}`)}
-                      className="nk-btn nk-btn--secondary nk-btn--sm"
-                      data-testid={`open-case-btn-${c.id}`}
-                    >
-                      Open Dossier →
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          testId="cases-table"
+          columns={columns}
+          data={cases}
+          getRowKey={(c) => c.id}
+          getRowTestId={(c) => `case-row-${c.id}`}
+          onRowClick={(c) => navigate(`/cases/${c.id}`)}
+          caption="Bundled cases"
+        />
       )}
     </div>
   );

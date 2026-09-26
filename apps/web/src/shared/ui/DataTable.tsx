@@ -68,6 +68,10 @@ interface DataTableProps<T> {
   onActiveChange?: (row: T | null) => void;
   /** Called when the scroll container leaves / returns to the top (virtualized mode). */
   onScrolledChange?: (scrolled: boolean) => void;
+  /** data-testid for the <table> element. */
+  testId?: string;
+  /** data-testid for each row. */
+  getRowTestId?: (row: T) => string;
 }
 
 export interface DataTableHandle {
@@ -108,6 +112,8 @@ function DataTableInner<T>(
     height = "calc(100dvh - 24rem)",
     onActiveChange,
     onScrolledChange,
+    testId,
+    getRowTestId,
   }: DataTableProps<T>,
   ref: React.ForwardedRef<DataTableHandle>,
 ) {
@@ -237,6 +243,7 @@ function DataTableInner<T>(
       <tr
         key={key}
         data-row-key={key}
+        data-testid={getRowTestId?.(row)}
         aria-selected={onActiveChange ? isActive : undefined}
         className={`nk-table__row${onRowClick ? " nk-table__row--clickable" : ""}${virtualized ? " nk-table__row--virtual" : ""}${isActive ? " nk-table__row--active" : ""}${rowClassName ? " " + rowClassName(row, index) : ""}`}
         onClick={
@@ -285,7 +292,7 @@ function DataTableInner<T>(
       }
       onScroll={virtualized ? handleScroll : undefined}
     >
-      <table className="nk-table">
+      <table className="nk-table" data-testid={testId}>
         {caption && <caption className="nk-table__caption">{caption}</caption>}
         <thead>
           <tr>

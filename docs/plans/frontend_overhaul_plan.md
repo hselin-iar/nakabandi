@@ -469,7 +469,7 @@ Goal: the most visible defect fixed cheaply, before any library migration.
 
 **Target files:**
 - Modify: `apps/web/src/features/clusters/ClusterGraph.tsx` — **on the existing raw-Cytoscape component**, replace the dead `kind`-based selectors with the client-computed `role` (`origin`/`pass-through`/`pooling`/`terminal`, derived from in/out-degree over `cappedEdges`, §2.2) and relabel the legend; extract the `cyNodes`/`cyEdges` mapping into an exported, unit-tested `toCytoscapeElements()` pure function (also becomes the seam for the 4b migration); edge width mapped to `amount_paise`
-- Rewrite: `apps/web/src/features/cases/CasesPage.tsx` and `CaseDetail.tsx` onto `Panel`/`DataTable`/`StatusBadge` (§2.2), `SafeBriefRenderer` logic preserved and re-themed; statuses stop borrowing severity red (§1.3)
+- Rewrite/restyle: `CasesPage.tsx` moves onto `Panel` + `DataTable` (with a neutral `CaseStatusChip` built on the hue-free badge classes: `StatusBadge` itself takes *alert* statuses, which case statuses are not); `CaseDetail.tsx` and `ClustersPage.tsx` keep their structure and are re-themed by replacing every hardcoded hex with tokens (a full Panel rewrite of a 500-line inline-styled file was not worth the regression risk). `SafeBriefRenderer` logic preserved. Statuses and roles stop borrowing severity/hue colours (§1.3)
 - Modify: `apps/web/src/features/clusters/ClustersPage.tsx` — restyle onto tokens
 - Modify: `apps/web/src/features/cases/CaseDetail.tsx` — graph node click writes to `selectionStore` (map already listens, from Phase 3)
 

@@ -4575,3 +4575,9 @@ body {
   pointer-events: none;
 }
 .nk-map-hud__k { color: var(--nk-text-tertiary); margin-right: var(--nk-space-1); }
+
+/* Phase 4a — plain links inside dossier tables */
+.nk-link { color: var(--nk-accent); text-decoration: none; }
+.nk-link:hover { text-decoration: underline; }
+.nk-link--muted { color: var(--nk-text-secondary); }
+.nk-cases-header { margin-bottom: var(--nk-space-4); }

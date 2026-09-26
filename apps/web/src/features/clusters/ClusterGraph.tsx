@@ -6,6 +6,8 @@
  * - Shared between clusters and cases (imported by CaseDetail, never duplicated).
  * - Caps graph nodes at 200 with a visible "+N more" summary node and alert badge.
  * - Non-LEA principals see only masked account references in node labels.
+ * - Node shape encodes TOPOLOGICAL role (see graphModel.ts), because the backend gives every
+ *   node kind="account"; colour is not used for it (colour is reserved for severity).
  */
 
 import React, { useEffect, useRef, useState, useMemo } from "react";
@@ -13,7 +15,15 @@ import cytoscape from "cytoscape";
 import type { Core, EventObject, NodeSingular } from "cytoscape";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import { formatInr } from "../../shared/lib/format";
+import { selectionStore } from "../../shared/state/selectionStore";
 import type { ClusterGraphData, ClusterNode, ClusterEdge } from "./types";
+import {
+  ROLE_LABEL,
+  classifyRoles,
+  maxAmountPaise,
+  toCytoscapeElements,
+  type NodeRole,
+} from "./graphModel";
 
 interface ClusterGraphProps {
   data: ClusterGraphData;
@@ -153,6 +163,9 @@ export function ClusterGraph({
     return map;
   }, [cappedNodes]);
 
+  const roles = useMemo(() => classifyRoles(cappedNodes, cappedEdges), [cappedNodes, cappedEdges]);
+  const maxAmount = useMemo(() => maxAmountPaise(cappedEdges), [cappedEdges]);
+
   const edgeMap = useMemo(() => {
     const map = new Map<string, ClusterEdge>();
     for (const edge of cappedEdges) {
@@ -223,39 +236,12 @@ export function ClusterGraph({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Convert nodes to Cytoscape elements
-    const cyNodes = cappedNodes.map((n) => {
-      // Role-gated display: non-LEA never sees unmasked account refs
-      const displayLabel = n.isSummary
-        ? n.label
-        : isLea
-          ? (n.label ?? n.account_ref ?? n.masked_ref ?? n.id)
-          : (n.label ?? n.masked_ref ?? n.id);
-
-      return {
-        group: "nodes" as const,
-        data: {
-          id: n.id,
-          label: displayLabel,
-          kind: n.kind,
-          bank: n.bank || "",
-          isSummary: Boolean(n.isSummary),
-        },
-      };
-    });
-
-    const cyEdges = cappedEdges.map((e, idx) => {
-      const id = e.id || `e-${idx}-${e.from}-${e.to}`;
-      return {
-        group: "edges" as const,
-        data: {
-          id,
-          source: e.from,
-          target: e.to,
-          label: e.label || "",
-          speedT: edgeSpeed.get(e.id || `${e.from}-${e.to}`) ?? 0,
-        },
-      };
+    const elements = toCytoscapeElements({
+      nodes: cappedNodes,
+      edges: cappedEdges,
+      roles,
+      edgeSpeed,
+      isLea,
     });
 
     try {
@@ -265,107 +251,69 @@ export function ClusterGraph({
 
       const cy = cytoscape({
         container: containerRef.current,
-        elements: [...cyNodes, ...cyEdges],
+        elements: elements,
         style: [
           {
+            // Default: an isolated account (no traced hops): plain circle. Cytoscape cannot read
+            // CSS variables, so these hexes mirror the tokens (--nk-surface-elevated, --nk-text-*).
             selector: "node",
             style: {
-              "background-color": "#475569",
+              "background-color": "#161F2E",
               label: "data(label)",
-              color: "#f8fafc",
+              color: "#E7EAEE",
               "font-size": "11px",
+              "font-family": "Inter Variable, system-ui, sans-serif",
               "text-valign": "bottom",
               "text-margin-y": 6,
               width: 32,
               height: 32,
               "border-width": 2,
-              "border-color": "#334155",
-            },
-          },
-          {
-            selector: 'node[kind = "victim"]',
-            style: {
-              "background-color": "#0284c7", // Sky blue
-              "border-color": "#38bdf8",
+              "border-color": "#5D6673",
               shape: "ellipse",
             },
           },
+          { selector: 'node[role = "origin"]', style: { shape: "ellipse", "border-color": "#E7EAEE", "border-width": 3 } },
+          { selector: 'node[role = "pass-through"]', style: { shape: "round-rectangle", "border-color": "#98A2B3" } },
           {
-            selector: 'node[kind = "mule"]',
-            style: {
-              "background-color": "#d97706", // Amber
-              "border-color": "#fbbf24",
-              shape: "round-rectangle",
-            },
+            selector: 'node[role = "pooling"]',
+            style: { shape: "diamond", "border-color": "#E7EAEE", "background-color": "#2A3548", width: 40, height: 40 },
           },
-          {
-            selector: 'node[kind = "aggregator"]',
-            style: {
-              "background-color": "#dc2626", // Red
-              "border-color": "#f87171",
-              shape: "diamond",
-              width: 38,
-              height: 38,
-            },
-          },
-          {
-            selector: 'node[kind = "exit"]',
-            style: {
-              "background-color": "#9333ea", // Purple
-              "border-color": "#c084fc",
-              shape: "hexagon",
-              width: 36,
-              height: 36,
-            },
-          },
+          { selector: 'node[role = "terminal"]', style: { shape: "hexagon", "border-color": "#98A2B3", width: 36, height: 36 } },
           {
             selector: "node[?isSummary]",
             style: {
-              "background-color": "#334155",
-              "border-color": "#94a3b8",
+              "border-color": "#98A2B3",
               "border-style": "dashed",
               "border-width": 3,
               shape: "barrel",
               width: 44,
               height: 44,
               "font-weight": "bold",
-              color: "#e2e8f0",
             },
           },
+          { selector: "node:selected", style: { "border-width": 4, "border-color": "#38BDF8" } },
           {
-            selector: "node:selected",
-            style: {
-              "border-width": 4,
-              "border-color": "#38bdf8",
-            },
-          },
-          {
-            // Colour/weight by hop tempo (§7.4): earlier hops (small speedT) render thick and
-            // warm (fast layering), later hops thin and cool — tempo, not just topology.
+            // Width by amount moved (paise), colour by tempo: earlier hops bright, later hops dim.
             selector: "edge",
             style: {
-              width: "mapData(speedT, 0, 1, 4, 1.5)",
-              "line-color": "mapData(speedT, 0, 1, #f97316, #6366f1)",
-              "target-arrow-color": "mapData(speedT, 0, 1, #f97316, #6366f1)",
+              width: maxAmount > 0 ? `mapData(amount, 0, ${maxAmount}, 1.5, 8)` : 2,
+              "line-color": "mapData(speedT, 0, 1, #E7EAEE, #5D6673)",
+              "target-arrow-color": "mapData(speedT, 0, 1, #E7EAEE, #5D6673)",
               "target-arrow-shape": "triangle",
               "curve-style": "bezier",
               "arrow-scale": 1.2,
               label: "data(label)",
               "font-size": "9px",
-              color: "#94a3b8",
+              color: "#98A2B3",
               "text-rotation": "autorotate",
               "text-background-opacity": 0.8,
-              "text-background-color": "#090d16",
+              "text-background-color": "#090D12",
               "text-background-padding": "2px",
             },
           },
           {
             selector: "edge:selected",
-            style: {
-              width: 4,
-              "line-color": "#38bdf8",
-              "target-arrow-color": "#38bdf8",
-            },
+            style: { width: 4, "line-color": "#38BDF8", "target-arrow-color": "#38BDF8" },
           },
         ],
         layout: {
@@ -385,6 +333,7 @@ export function ClusterGraph({
         setSelectedNode(node);
         setSelectedEdge(null);
         onNodeSelect?.(node);
+        if (node && !node.isSummary) selectionStore.set({ kind: "account", id: node.id });
       });
 
       cy.on("tap", "edge", (evt: EventObject) => {
@@ -423,6 +372,8 @@ export function ClusterGraph({
     edgeMap,
     edgeSpeed,
     nodePositions,
+    roles,
+    maxAmount,
     onNodeSelect,
     onEdgeSelect,
   ]);
@@ -466,9 +417,9 @@ export function ClusterGraph({
             top: 12,
             left: 12,
             zIndex: 10,
-            background: "rgba(15, 23, 42, 0.9)",
-            border: "1px solid #f59e0b",
-            color: "#fbbf24",
+            background: "rgba(9, 13, 18, 0.9)",
+            border: "1px solid var(--nk-border-strong)",
+            color: "var(--nk-text-primary)",
             padding: "6px 12px",
             borderRadius: 6,
             fontSize: "12px",
@@ -479,8 +430,7 @@ export function ClusterGraph({
             gap: 6,
           }}
         >
-          <span aria-hidden="true">⚠️</span>
-          <span>
+                    <span>
             Graph capped: Showing top 200 nodes (+{hiddenCount} more accounts summarized)
           </span>
         </div>
@@ -496,10 +446,10 @@ export function ClusterGraph({
           zIndex: 10,
           display: "flex",
           gap: 6,
-          background: "rgba(15, 23, 42, 0.85)",
+          background: "rgba(9, 13, 18, 0.88)",
           padding: 4,
           borderRadius: 6,
-          border: "1px solid #334155",
+          border: "1px solid var(--nk-border-strong)",
         }}
       >
         <button
@@ -541,7 +491,7 @@ export function ClusterGraph({
         style={{
           width: "100%",
           height: "100%",
-          background: "#090d16",
+          background: "var(--nk-canvas-bg)",
           borderRadius: 8,
           overflow: "hidden",
         }}
@@ -558,6 +508,7 @@ export function ClusterGraph({
             key={n.id}
             data-testid={`graph-node-${n.id}`}
             data-kind={n.kind}
+            data-role={roles.get(n.id)}
             data-is-summary={n.isSummary ? "true" : "false"}
             data-ref={isLea ? (n.account_ref || n.masked_ref) : n.masked_ref}
           >
@@ -570,43 +521,55 @@ export function ClusterGraph({
         ))}
       </div>
 
-      {/* Node Legend overlay at bottom-left */}
+      {/* Legends stack bottom-left in one container so they can never overlap */}
       <div
-        className="nk-cluster-graph__legend"
         style={{
           position: "absolute",
           bottom: 12,
           left: 12,
           zIndex: 10,
-          background: "rgba(15, 23, 42, 0.85)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          gap: 6,
+          maxWidth: "calc(100% - 24px)",
+        }}
+      >
+      {/* Legend: shape = topological role (colour is reserved for severity). Labels state what
+          the topology shows, not what an account "is". */}
+      <div
+        className="nk-cluster-graph__legend"
+        style={{
+          background: "rgba(9, 13, 18, 0.88)",
           padding: "6px 12px",
           borderRadius: 6,
-          border: "1px solid #334155",
+          border: "1px solid var(--nk-border-strong)",
           fontSize: "11px",
           display: "flex",
+          flexWrap: "wrap",
           gap: 12,
-          color: "#94a3b8",
+          color: "var(--nk-text-secondary)",
         }}
       >
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#0284c7" }} />
-          Victim
+          <span style={{ width: 10, height: 10, borderRadius: "50%", border: "2px solid var(--nk-text-primary)" }} />
+          {ROLE_LABEL.origin}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: "#d97706" }} />
-          Mule
+          <span style={{ width: 10, height: 10, borderRadius: 2, border: "2px solid var(--nk-text-secondary)" }} />
+          {ROLE_LABEL["pass-through"]}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ width: 10, height: 10, transform: "rotate(45deg)", background: "#dc2626" }} />
-          Aggregator
+          <span style={{ width: 9, height: 9, transform: "rotate(45deg)", border: "2px solid var(--nk-text-primary)" }} />
+          {ROLE_LABEL.pooling}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ width: 10, height: 10, background: "#9333ea" }} />
-          Exit ATM
+          <span style={{ width: 10, height: 10, clipPath: "polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)", background: "var(--nk-text-secondary)" }} />
+          {ROLE_LABEL.terminal}
         </span>
         {isCapped && (
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ width: 10, height: 10, border: "1px dashed #94a3b8" }} />
+            <span style={{ width: 10, height: 10, border: "1px dashed var(--nk-text-secondary)" }} />
             +N More
           </span>
         )}
@@ -618,19 +581,15 @@ export function ClusterGraph({
         <div
           className="nk-cluster-graph__tempo-legend"
           style={{
-            position: "absolute",
-            bottom: 44,
-            left: 12,
-            zIndex: 10,
-            background: "rgba(15, 23, 42, 0.85)",
+            background: "rgba(9, 13, 18, 0.88)",
             padding: "6px 12px",
             borderRadius: 6,
-            border: "1px solid #334155",
+            border: "1px solid var(--nk-border-strong)",
             fontSize: "11px",
             display: "flex",
             alignItems: "center",
             gap: 8,
-            color: "#94a3b8",
+            color: "var(--nk-text-secondary)",
           }}
         >
           <span>Money flows →</span>
@@ -639,12 +598,13 @@ export function ClusterGraph({
               width: 60,
               height: 4,
               borderRadius: 2,
-              background: "linear-gradient(90deg, #f97316, #6366f1)",
+              background: "linear-gradient(90deg, #E7EAEE, #5D6673)",
             }}
           />
-          <span>earliest hop → latest hop</span>
+          <span>earliest hop (bright) → latest (dim) · thickness = amount</span>
         </div>
       )}
+      </div>
 
       {/* Selected Node Details Drawer/Card */}
       {selectedNode && (
@@ -656,8 +616,8 @@ export function ClusterGraph({
             bottom: 12,
             right: 12,
             zIndex: 10,
-            background: "#0f172a",
-            border: "1px solid #38bdf8",
+            background: "var(--nk-surface-raised)",
+            border: "1px solid var(--nk-accent)",
             borderRadius: 8,
             padding: 12,
             width: 260,
@@ -666,19 +626,18 @@ export function ClusterGraph({
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-            <strong style={{ color: "#f8fafc" }}>Node Details</strong>
+            <strong style={{ color: "var(--nk-text-primary)" }}>Node Details</strong>
             <button
               type="button"
               onClick={() => setSelectedNode(null)}
-              style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
+              style={{ background: "none", border: "none", color: "var(--nk-text-secondary)", cursor: "pointer" }}
             >
               ✕
             </button>
           </div>
-          <div style={{ color: "#cbd5e1" }}>
+          <div style={{ color: "var(--nk-text-primary)" }}>
             <div>
-              <strong>Kind:</strong>{" "}
-              <span style={{ textTransform: "capitalize" }}>{selectedNode.kind}</span>
+              <strong>Role:</strong> {ROLE_LABEL[(roles.get(selectedNode.id) ?? "isolated") as NodeRole]}
             </div>
             <div>
               <strong>Bank:</strong> {selectedNode.bank || "N/A"}
@@ -697,7 +656,7 @@ export function ClusterGraph({
               </div>
             )}
             {selectedNode.isSummary && (
-              <div style={{ marginTop: 4, color: "#f59e0b", fontStyle: "italic" }}>
+              <div style={{ marginTop: 4, color: "var(--nk-text-secondary)", fontStyle: "italic" }}>
                 Represents {hiddenCount} truncated accounts.
               </div>
             )}
@@ -715,8 +674,8 @@ export function ClusterGraph({
             bottom: 12,
             right: 12,
             zIndex: 10,
-            background: "#0f172a",
-            border: "1px solid #38bdf8",
+            background: "var(--nk-surface-raised)",
+            border: "1px solid var(--nk-accent)",
             borderRadius: 8,
             padding: 12,
             width: 260,
@@ -725,16 +684,16 @@ export function ClusterGraph({
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-            <strong style={{ color: "#f8fafc" }}>Transaction Flow</strong>
+            <strong style={{ color: "var(--nk-text-primary)" }}>Transaction Flow</strong>
             <button
               type="button"
               onClick={() => setSelectedEdge(null)}
-              style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
+              style={{ background: "none", border: "none", color: "var(--nk-text-secondary)", cursor: "pointer" }}
             >
               ✕
             </button>
           </div>
-          <div style={{ color: "#cbd5e1" }}>
+          <div style={{ color: "var(--nk-text-primary)" }}>
             <div>
               <strong>From:</strong> <code>{selectedEdge.from}</code>
             </div>
