@@ -1,0 +1,355 @@
+{
+  "generated_at": "2026-09-26T09:14:15.026574+00:00",
+  "as_of": "2026-01-17T10:15:38.460000+00:00",
+  "n_complaints": 17,
+  "results": {
+    "hgb_v1": {
+      "location": {
+        "n_complaints": 17,
+        "hit_rate_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "brier_score": {
+          "value": 0.008251351775332006,
+          "n": 2047
+        }
+      },
+      "cell": {
+        "n_complaints": 17,
+        "hit_rate_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_5": {
+          "value": NaN,
+          "n": 17
+        }
+      },
+      "district": {
+        "n_complaints": 17,
+        "hit_rate_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_5": {
+          "value": NaN,
+          "n": 17
+        }
+      }
+    },
+    "hotspot_baseline": {
+      "location": {
+        "n_complaints": 17,
+        "hit_rate_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "brier_score": {
+          "value": 0.008303673872616376,
+          "n": 2047
+        }
+      },
+      "cell": {
+        "n_complaints": 17,
+        "hit_rate_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_5": {
+          "value": NaN,
+          "n": 17
+        }
+      },
+      "district": {
+        "n_complaints": 17,
+        "hit_rate_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_5": {
+          "value": NaN,
+          "n": 17
+        }
+      }
+    },
+    "nearest_to_victim_baseline": {
+      "location": {
+        "n_complaints": 17,
+        "hit_rate_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "brier_score": {
+          "value": 0.008304836345872008,
+          "n": 2047
+        }
+      },
+      "cell": {
+        "n_complaints": 17,
+        "hit_rate_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_5": {
+          "value": NaN,
+          "n": 17
+        }
+      },
+      "district": {
+        "n_complaints": 17,
+        "hit_rate_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_5": {
+          "value": NaN,
+          "n": 17
+        }
+      }
+    },
+    "bank_footprint_baseline": {
+      "location": {
+        "n_complaints": 17,
+        "hit_rate_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "brier_score": {
+          "value": 0.03175378602833415,
+          "n": 2047
+        }
+      },
+      "cell": {
+        "n_complaints": 17,
+        "hit_rate_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_5": {
+          "value": NaN,
+          "n": 17
+        }
+      },
+      "district": {
+        "n_complaints": 17,
+        "hit_rate_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_1": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_3": {
+          "value": NaN,
+          "n": 17
+        },
+        "hit_rate_at_5": {
+          "value": NaN,
+          "n": 17
+        },
+        "precision_at_5": {
+          "value": NaN,
+          "n": 17
+        }
+      }
+    }
+  }
+}

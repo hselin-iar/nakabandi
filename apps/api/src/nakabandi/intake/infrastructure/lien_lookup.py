@@ -301,6 +301,17 @@ class LienContextLookup:
             for r in rows
         ]
 
+    def all_cashout_events(self) -> list[tuple[str, SimTime]]:
+        """Every cash-out ever observed, as (location_id, observed_at), across every cluster —
+        the raw feed for forecast's global (cross-cluster) as-of density feature
+        (`global_cashout_rate`, DOC 3 M2). As-of bounding happens downstream in the pure
+        GlobalCashoutIndex, not here (LC-2 still holds: callers must never look past their own
+        as_of when they call snapshot_at)."""
+        rows = self._session.execute(
+            select(CashOutObservationModel.location_id, CashOutObservationModel.observed_at)
+        ).all()
+        return [(r.location_id, to_sim_time(r.observed_at)) for r in rows]
+
     def cluster_delays_min(self, account_ids: list[str], as_of: SimTime) -> list[float]:
         """Observed credit-to-cash-out delays (minutes) at these accounts, from what was known by
         `as_of` (observed_at <= as_of, LC-2): each cash-out is timed from the earliest complaint

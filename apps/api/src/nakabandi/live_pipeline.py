@@ -25,7 +25,13 @@ from typing import Any
 import structlog
 from sqlalchemy.orm import Session
 
-from nakabandi.forecast import ClusterContext, Forecast, Forecaster, LocationInfo
+from nakabandi.forecast import (
+    ClusterContext,
+    Forecast,
+    Forecaster,
+    GlobalCashoutIndex,
+    LocationInfo,
+)
 from nakabandi.forecast.infrastructure.repositories import SqlForecastRepo
 from nakabandi.geo import GeoService
 from nakabandi.graph import ClusterService, compute_footprint
@@ -157,6 +163,9 @@ class LiveClusterPort:
         delays = self._intake.cluster_delays_min(self._intake.accounts_of(complaint_id), as_of)
         elapsed = max(0.0, (as_of - detail.reported_event_at) / timedelta(minutes=1))
 
+        global_index = GlobalCashoutIndex(self._intake.all_cashout_events())
+        global_snap = global_index.snapshot_at(as_of)
+
         return LiveContext(
             forecast_ctx=ClusterContext(
                 complaint_id=complaint_id,
@@ -179,6 +188,9 @@ class LiveClusterPort:
                 radius_km=footprint.radius_km if footprint else 0.0,
                 prior_cashout_count=sum(location_counts.values()),
                 elapsed_min=elapsed,
+                global_cashout_location_counts=global_snap.location_counts,
+                global_cashout_total=global_snap.total,
+                global_n_locations=len(registry.by_id),
             ),
             home_district_id=home_district,
             delays_min=delays,

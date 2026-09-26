@@ -53,6 +53,8 @@ _DEFAULT_WEIGHTS: dict[str, float] = {
     "amount_x_dist": -0.05,
     "activity_index": 1.0,
     "cluster_size_log": 0.3,
+    "global_cashout_count": 0.05,
+    "global_cashout_rate": 5.0,
 }
 
 _CHANNEL_BONUS: dict[str, float] = {
@@ -65,13 +67,13 @@ _CHANNEL_CODE: dict[str, float] = {"ATM": 0.0, "BRANCH": 1.0, "AGENT": 2.0}
 
 
 def features_to_array(rows: list[FeatureRow]) -> np.ndarray:
-    """Convert a list of FeatureRow to a (n, 13) float64 matrix.
+    """Convert a list of FeatureRow to a (n, 15) float64 matrix.
 
     Column order is fixed; channel is label-encoded (no one-hot to preserve
     HGB's native categorical support potential).
     """
     n = len(rows)
-    X = np.empty((n, 13), dtype=np.float64)
+    X = np.empty((n, 15), dtype=np.float64)
     for i, r in enumerate(rows):
         X[i] = [
             r.same_bank,
@@ -86,6 +88,8 @@ def features_to_array(rows: list[FeatureRow]) -> np.ndarray:
             r.amount_x_dist,
             r.activity_index,
             r.cluster_size_log,
+            r.global_cashout_count,
+            r.global_cashout_rate,
             _CHANNEL_CODE.get(r.channel, 0.0),
         ]
     return X
@@ -106,6 +110,10 @@ class HeuristicScorer(LocationScorer):
             # recency_days is NaN for locations never visited by this cluster
             # (see features.py P4). Use 0.0 in the heuristic to avoid NaN propagation.
             recency = row.recency_days if not (row.recency_days != row.recency_days) else 0.0
+            # global_cashout_rate is always populated (defaults to 0.0), but guard defensively
+            # in case an older/serialized FeatureRow ever carries NaN.
+            _grate = row.global_cashout_rate
+            global_rate = _grate if _grate == _grate else 0.0
             s = (
                 self._w.get("same_bank", 0.0) * row.same_bank
                 + self._w.get("dist_home_km", 0.0) * row.dist_home_km
@@ -119,6 +127,8 @@ class HeuristicScorer(LocationScorer):
                 + self._w.get("amount_x_dist", 0.0) * row.amount_x_dist
                 + self._w.get("activity_index", 0.0) * row.activity_index
                 + self._w.get("cluster_size_log", 0.0) * row.cluster_size_log
+                + self._w.get("global_cashout_count", 0.0) * row.global_cashout_count
+                + self._w.get("global_cashout_rate", 0.0) * global_rate
                 + _CHANNEL_BONUS.get(row.channel, 0.0)
             )
             scores[i] = s

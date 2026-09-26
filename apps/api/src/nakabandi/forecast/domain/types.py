@@ -46,6 +46,8 @@ class FeatureRow:
     amount_x_dist: float  # amount_log × dist_home_km interaction
     activity_index: float  # location activity from registry
     cluster_size_log: float  # log(1 + cluster.unique_accounts)
+    global_cashout_count: float = 0.0  # as-of cash-out count at this location, across ALL clusters
+    global_cashout_rate: float = 0.0  # Laplace-smoothed global_cashout_count / global total
 
 
 @dataclass
@@ -146,3 +148,9 @@ class ClusterContext:
     prior_cashout_count: int
     # Elapsed time since complaint reported (for timing conditioning)
     elapsed_min: float
+    # Global (cross-cluster) as-of cash-out density — the hotspot base-rate signal.
+    # Unlike cashout_location_counts (this cluster only), these counts span every cluster's
+    # cash-outs observed by `as_of`. Empty/zero for a build before any global stats are wired.
+    global_cashout_location_counts: dict[Id, int] = field(default_factory=dict)
+    global_cashout_total: int = 0  # total cash-outs, across all locations, observed by as_of
+    global_n_locations: int = 0  # size of the location universe (Laplace smoothing denominator)
