@@ -219,27 +219,35 @@ def build_clusters(
             )
         )
 
-    # 7. Bridge accounts (bridge_rate: share of cluster-1's accounts reused in cluster-0)
+    # 7. Bridge accounts: each cluster (from the second onward) independently has probability
+    # bridge_rate of sharing bridge_rate's worth of its accounts with an earlier, randomly
+    # chosen cluster. Previously this only ever bridged the fixed pair clusters[0]/clusters[1]
+    # — with n_clusters=20, at most one bridge relationship ever existed no matter how high
+    # bridge_rate was set; this scales with n.
     if n >= 2 and cfg.network.bridge_rate > 0:
         b_rng = rng_for(cfg.seed, "bridge")
-        src = clusters[0]
-        dst = clusters[1]
-        n_bridge = max(1, int(len(dst.accounts) * cfg.network.bridge_rate))
-        bridge_accounts = b_rng.choice(len(src.accounts), size=n_bridge, replace=False)
-        bridged = [src.accounts[i] for i in bridge_accounts]
-        # inject into cluster-1's account list (creates genuine merges)
-        new_accounts = list(dst.accounts) + bridged
-        clusters[1] = MuleCluster(
-            id=dst.id,
-            district_id=dst.district_id,
-            accounts=new_accounts,
-            footprint=dst.footprint,
-            channel_mix=dst.channel_mix,
-            timing=dst.timing,
-            lifetime_days=dst.lifetime_days,
-            start_day=dst.start_day,
-            is_bridge=True,
-            bridge_partner_id=src.id,
-        )
+        for i in range(1, n):
+            if b_rng.random() >= cfg.network.bridge_rate:
+                continue
+            src = clusters[int(b_rng.integers(0, i))]
+            dst = clusters[i]
+            n_bridge = max(1, int(len(dst.accounts) * cfg.network.bridge_rate))
+            n_bridge = min(n_bridge, len(src.accounts))
+            bridge_accounts = b_rng.choice(len(src.accounts), size=n_bridge, replace=False)
+            bridged = [src.accounts[k] for k in bridge_accounts]
+            # inject into dst's account list (creates genuine merges)
+            new_accounts = list(dst.accounts) + bridged
+            clusters[i] = MuleCluster(
+                id=dst.id,
+                district_id=dst.district_id,
+                accounts=new_accounts,
+                footprint=dst.footprint,
+                channel_mix=dst.channel_mix,
+                timing=dst.timing,
+                lifetime_days=dst.lifetime_days,
+                start_day=dst.start_day,
+                is_bridge=True,
+                bridge_partner_id=src.id,
+            )
 
     return clusters

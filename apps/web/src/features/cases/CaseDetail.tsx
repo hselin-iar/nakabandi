@@ -121,7 +121,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
             </button>
           )}
           <h2 style={{ margin: 0, fontSize: "20px", color: "#f8fafc" }}>
-            Case Dossier: {caseData.id}
+            Case Dossier: {caseData.cluster_ref}
           </h2>
           <span
             className={`nk-badge ${

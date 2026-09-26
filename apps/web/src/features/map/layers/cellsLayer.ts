@@ -19,7 +19,7 @@ export function getRiskColor(value: number): string {
 
 export function cellsToGeoJSON(
   cells: HeatCell[],
-  cellSizeDeg = 0.25,
+  cellSizeDeg = 1.5,           // 1.5° ≈ ~165 km — visible at zoom 5–7
 ): GeoJSON.FeatureCollection {
   const half = cellSizeDeg / 2;
   const features: GeoJSON.Feature[] = cells.map((cell) => {

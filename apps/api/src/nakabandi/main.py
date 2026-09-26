@@ -43,6 +43,7 @@ from nakabandi.audit.interfaces.routers import router as audit_router
 from nakabandi.casework import CaseService
 from nakabandi.casework.evidence.file_store import LocalFileStore
 from nakabandi.casework.interfaces.routers import router as casework_router
+from nakabandi.forecast import ModelStore
 from nakabandi.geo import LocationScopeLookup
 from nakabandi.geo.interfaces.routers import router as geo_router
 from nakabandi.graph import CashOutFact, ClusterService
@@ -196,6 +197,10 @@ def create_app() -> FastAPI:
         app.state.alert_service_factory = alert_service_for
         app.state.registry_cache = RegistryCache()
         app.state.evidence_file_store = LocalFileStore(settings.evidence_store_path)
+        # scripts/train.py writes here; GenerateForecast.load_scorer()/load_timing() read it at
+        # forecast time. Missing files just fall back to the heuristic scorer with a boot
+        # warning — a fresh checkout with no models/ directory yet still boots fine.
+        app.state.model_store = ModelStore(settings.model_store_dir)
 
         def case_service_for(session: Session, bus: EventBus | None = None) -> CaseService:
             """THE way a CaseService is built for a unit of work (DOC 3 A12, mirrors
@@ -280,6 +285,7 @@ def create_app() -> FastAPI:
                 bus=bus,
                 registry_cache=app.state.registry_cache,
                 alert_service=alert_service_for(session, bus),
+                model_store=app.state.model_store,
                 metrics=app.state.metrics,
             )
 

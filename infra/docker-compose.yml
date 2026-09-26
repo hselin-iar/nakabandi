@@ -11,8 +11,10 @@ services:
       DATABASE_URL: sqlite:////data/nakabandi.db
     volumes:
       - api-data:/data
-    expose:
-      - "8000"
+    ports:
+      # 8001 avoids conflicts with other projects occupying :8000 on this dev machine.
+      # The Vite dev proxy (vite.config.ts) points at localhost:8001.
+      - "8001:8000"
     healthcheck:
       test:
         [
@@ -39,16 +41,16 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    expose:
-      - "8100"
+    ports:
+      - "8101:8100"
     restart: unless-stopped
 
   bank-sim:
     build:
       context: ..
       dockerfile: infra/Dockerfile.banksim
-    expose:
-      - "4000"
+    ports:
+      - "4001:4000"
     restart: unless-stopped
 
   caddy:

@@ -22,7 +22,7 @@ from worldsim.core.clusters import build_clusters
 from worldsim.core.config import SimConfig
 from worldsim.core.generator import World
 from worldsim.core.observe import observe
-from worldsim.core.real_seed import load_real_registry
+from worldsim.core.real_seed import load_category_weights, load_real_registry
 from worldsim.core.registry import build_registry
 from worldsim.core.rng import rng_for
 from worldsim.writer.batches import (
@@ -45,6 +45,9 @@ def _build_world(cfg: SimConfig) -> World:
     states) over registry.py's synthetic generator; falls back to synthetic if that data isn't
     present (offline sandboxes, images that don't ship data/). This is the one place all four
     CLI commands (history, hash, live, ledger) build a World, so the choice applies uniformly.
+    Same fallback for complaint category weights: real shares from
+    data/seed/complaint_category_priors.csv when present, else generator.py's previous uniform
+    behaviour (an empty dict).
     """
     rng = rng_for(cfg.seed, "world")
     states = set(cfg.geo.state_weights.keys())
@@ -52,7 +55,8 @@ def _build_world(cfg: SimConfig) -> World:
     if registry is None:
         registry = build_registry(cfg, rng)
     clusters = build_clusters(cfg, registry, rng)
-    return World(cfg=cfg, registry=registry, clusters=clusters)
+    category_weights = load_category_weights(Path("data/seed")) or {}
+    return World(cfg=cfg, registry=registry, clusters=clusters, category_weights=category_weights)
 
 
 def _stream_events(world: World, out_emitter: JsonlEmitter, run_id: str) -> str:
@@ -277,7 +281,7 @@ def live(
     )
 
     set_runner(runner, world, clock)
-    set_store(truth_store, run_id)
+    set_store(truth_store, clock)
 
     click.echo(f"[worldsim] live run_id={run_id} seed={cfg.seed} speed={clock.speed}x")
     click.echo(f"[worldsim] control API  â†’ http://localhost:{control_port}/control/status")

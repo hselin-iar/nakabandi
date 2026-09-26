@@ -7,7 +7,7 @@
  */
 
 import React from "react";
-import type { Severity, Verdict, LadderLevel, AlertStatus } from "../api/enums.ts";
+import type { Severity, Verdict, LadderLevel, AlertStatus, DeliveryStatus } from "../api/enums.ts";
 
 // ---------------------------------------------------------------------------
 // Base badge
@@ -249,6 +249,38 @@ export function StatusBadge({
   className?: string;
 }) {
   const cfg = STATUS_CONFIG[status];
+  return (
+    <Badge
+      icon={cfg.icon}
+      label={cfg.label}
+      colorClass={cfg.colorClass}
+      className={className}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DeliveryStatusBadge
+// ---------------------------------------------------------------------------
+
+const DELIVERY_STATUS_CONFIG: Record<
+  DeliveryStatus,
+  { label: string; colorClass: string; icon: React.ReactNode }
+> = {
+  sent: { label: "Delivered", colorClass: "nk-badge--status-actioned", icon: <Icons.CheckCircle /> },
+  pending: { label: "Pending", colorClass: "nk-badge--status-ack", icon: <Icons.Clock /> },
+  failed: { label: "Retrying", colorClass: "nk-badge--severity-high", icon: <Icons.Medium /> },
+  dead: { label: "Failed", colorClass: "nk-badge--status-expired", icon: <Icons.X /> },
+};
+
+export function DeliveryStatusBadge({
+  status,
+  className,
+}: {
+  status: DeliveryStatus;
+  className?: string;
+}) {
+  const cfg = DELIVERY_STATUS_CONFIG[status];
   return (
     <Badge
       icon={cfg.icon}

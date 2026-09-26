@@ -12,6 +12,11 @@ COPY apps/world-sim/ apps/world-sim/
 RUN uv sync --frozen --no-dev --package nakabandi-world-sim
 
 COPY config/ config/
+# Curated real bank/location/district/cluster-archetype data (data/seed, data/geo) that
+# load_real_registry() (cli.py) reads relative to the process cwd. Without it the image always
+# fell back to the fully-synthetic registry generator, silently, in every deployed/Docker run —
+# only local runs from the repo root ever picked up the real data.
+COPY data/ data/
 
 EXPOSE 8100 8002
 CMD ["uv", "run", "worldsim", "live", "--config", "config/sim.default.yaml", "--control-port", "8100", "--oracle-port", "8002"]

@@ -29,6 +29,11 @@ class ClusterRepo(ABC):
         """Every account currently assigned to this cluster, sorted."""
 
     @abstractmethod
+    def get_all_account_ids(self) -> list[Id]:
+        """Every account currently assigned to ANY cluster, sorted (TrainModels' delay_records
+        needs the whole population, not one cluster at a time)."""
+
+    @abstractmethod
     def save_cluster(self, cluster_id: Id, created_at: SimTime) -> None:
         """Persist a new cluster record (idempotent on cluster_id)."""
 

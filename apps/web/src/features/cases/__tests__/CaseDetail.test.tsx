@@ -114,7 +114,7 @@ describe("CaseDetail & Invariants (Step C6)", () => {
     renderCaseDetail(mockLeaPrincipal, fixtureCase(false));
 
     expect(screen.getByTestId("case-detail")).toBeTruthy();
-    expect(screen.getByText("Case Dossier: CASE-2026-001")).toBeTruthy();
+    expect(screen.getByText("Case Dossier: CLUSTER-2026-081")).toBeTruthy();
     expect(screen.getByText("Consolidated Case Brief")).toBeTruthy();
 
     const disclaimerEl = screen.getByTestId("fir-disclaimer");

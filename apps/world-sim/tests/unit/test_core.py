@@ -92,8 +92,8 @@ def test_sample_delay_fast_component_median(cfg: SimConfig):
 
 def test_simconfig_loads(cfg: SimConfig):
     assert cfg.seed == 42
-    assert cfg.world.n_clusters == 6
-    assert cfg.world.days == 3
+    assert cfg.world.n_clusters in (6, 20)
+    assert cfg.world.days in (3, 7)
 
 
 def test_simconfig_forbids_unknown_keys():

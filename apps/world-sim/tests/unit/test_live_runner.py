@@ -377,8 +377,8 @@ class TestControlApi:
 
 
 @pytest.fixture(autouse=False)
-def oracle_client(store: TruthStore) -> TestClient:
-    set_store(store, "test-run")
+def oracle_client(store: TruthStore, clock: ClockState) -> TestClient:
+    set_store(store, clock)
     return TestClient(oracle_app)
 
 

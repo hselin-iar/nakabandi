@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../shared/api/client";
 import { streamKeys } from "../../../shared/stream/streamKeys";
 import type { AlertStatus, Severity } from "../../../shared/api/enums.ts";
-import type { ActionIn, ActionModel, AlertDetail, AlertSummary, OutcomeIn, OutcomeView } from "../../../shared/api/types.ts";
+import type { ActionIn, ActionModel, AlertDetail, AlertSummary, EvidencePack, OutcomeIn, OutcomeView } from "../../../shared/api/types.ts";
 
 // ---------------------------------------------------------------------------
 // Query Filters
@@ -24,6 +24,8 @@ export interface AlertFilters {
   severity?: Severity | "all";
   district_id?: string;
   search?: string;
+  /** "queue" (default, the alert budget) | "backlog" (deferred) | "all" | "review". */
+  view?: "queue" | "backlog" | "all" | "review";
 }
 
 // ---------------------------------------------------------------------------
@@ -41,6 +43,7 @@ export function useAlerts(filters: AlertFilters = {}) {
       const queryParams: Record<string, string> = {};
       if (filters.status && filters.status !== "all") queryParams.status = filters.status;
       if (filters.district_id) queryParams.district_id = filters.district_id;
+      if (filters.view) queryParams.view = filters.view;
 
       const { data, error } = await apiClient.GET("/alerts", {
         params: { query: queryParams },
@@ -105,6 +108,23 @@ export function useAlertAction() {
     onSuccess: (_, { alertId }) => {
       void qc.invalidateQueries({ queryKey: streamKeys.alerts() });
       void qc.invalidateQueries({ queryKey: streamKeys.alert(alertId) });
+    },
+  });
+}
+
+/**
+ * useBuildEvidencePack — POST /alerts/{id}/evidence-pack: builds a court-ready evidence pack
+ * (PDF, SHA-256, s.63 draft certificate) anchored to the audit hash chain's current head.
+ * Fully implemented on the backend, unwired on the frontend until now (Frontend Strategy §4.2).
+ */
+export function useBuildEvidencePack() {
+  return useMutation<EvidencePack, Error, { alertId: string }>({
+    mutationFn: async ({ alertId }) => {
+      const { data, error } = await apiClient.POST("/alerts/{alert_id}/evidence-pack", {
+        params: { path: { alert_id: alertId } },
+      });
+      if (error) throw new Error("Failed to build evidence pack");
+      return data;
     },
   });
 }

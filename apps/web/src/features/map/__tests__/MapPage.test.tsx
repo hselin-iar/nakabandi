@@ -7,7 +7,7 @@
  *   - moving the time slider pauses live updates and shows "return to live".
  */
 
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
@@ -17,6 +17,11 @@ import MapPage from "../MapPage";
 import { AuthContext } from "../../../app/auth/AuthContext";
 import type { Principal } from "../../../shared/api/types.ts";
 import { MapLibreAdapter } from "../maplibre/MapLibreAdapter";
+import { apiClient } from "../../../shared/api/client";
+
+vi.mock("../../../shared/api/client", () => ({
+  apiClient: { GET: vi.fn(), POST: vi.fn() },
+}));
 
 const mockOfficerPrincipal: Principal = {
   user_id: "USR-MAP-01",
@@ -25,6 +30,71 @@ const mockOfficerPrincipal: Principal = {
   scope: { state_id: "DL" },
   permissions: ["VIEW_ALERTS"],
 };
+
+// Test-only fixture — production no longer carries one (DOC1 §1.0). Mirrors the shape
+// GET /analytics/heatmap returns; the mock GET below applies the same state/min_confidence
+// filtering the real server does, so these tests exercise MapPage's actual query-building.
+const TEST_HEATMAP_CELLS = [
+  { id: "C+0107_+0309", kind: "cell", name: "Connaught Place Hub (DL/UP)", lat: 28.63, lon: 77.22, value: 0.94, alert_count: 8 },
+  { id: "C+0076_+0291", kind: "cell", name: "Bandra-Kurla Complex (MH)", lat: 19.07, lon: 72.87, value: 0.82, alert_count: 7 },
+  { id: "C+0080_+0316", kind: "cell", name: "Nagpur Central (MH)", lat: 21.15, lon: 79.09, value: 0.67, alert_count: 4 },
+  { id: "C+0113_+0308", kind: "cell", name: "Cyber City Gurugram (HR)", lat: 28.49, lon: 77.09, value: 0.91, alert_count: 9 },
+  { id: "C+0093_+0341", kind: "cell", name: "Ranchi Central Corridor (JH)", lat: 23.34, lon: 85.31, value: 0.69, alert_count: 4 },
+];
+
+function mockApiForMapPage() {
+  vi.mocked(apiClient.GET).mockImplementation(((
+    path: string,
+    opts?: { params?: { query?: Record<string, unknown> } },
+  ) => {
+    if (path === "/analytics/heatmap") {
+      const q = opts?.params?.query ?? {};
+      let cells = [...TEST_HEATMAP_CELLS];
+      if (typeof q.state === "string") {
+        const st = q.state.toUpperCase();
+        cells = cells.filter((c) => c.name.includes(`(${st}`) || c.name.includes(`/${st}`));
+      }
+      if (typeof q.min_confidence === "number") {
+        const minConfidence = q.min_confidence;
+        cells = cells.filter((c) => c.value >= minConfidence);
+      }
+      return Promise.resolve({
+        data: {
+          layer: (q.layer as string) ?? "live",
+          level: (q.level as string) ?? "cell",
+          generated_at: "2026-01-15T12:00:00Z",
+          version: 1,
+          cells,
+          suppressed_count: 0,
+          legend: {
+            min: 0,
+            max: 1,
+            unit: "Forecast Intensity (Mass)",
+            // Matches the real backend's LIVE_NOTE (analytics/application/queries.py) —
+            // this exact string only ever existed client-side in the fixture this test used
+            // to exercise; the real API has never said "real-time active forecast intensity".
+            note: "Expected cash-out mass behind alerts raised in this window.",
+          },
+        },
+        error: undefined,
+      });
+    }
+    if (path === "/alerts") {
+      return Promise.resolve({ data: { items: [], next_cursor: null }, error: undefined });
+    }
+    if (path === "/geo/locations") {
+      return Promise.resolve({ data: [], error: undefined });
+    }
+    if (path === "/geo/regions") {
+      return Promise.resolve({ data: [], error: undefined });
+    }
+    return Promise.resolve({ data: undefined, error: undefined });
+  }) as unknown as typeof apiClient.GET);
+}
+
+beforeEach(() => {
+  mockApiForMapPage();
+});
 
 function renderWithProviders(ui: React.ReactNode) {
   const qc = new QueryClient({
@@ -77,8 +147,8 @@ describe("MapPage & Risk Heatmap Dashboard (Step C5)", () => {
     expect(screen.getByText("Cyber City Gurugram (HR)")).toBeTruthy();
 
     // Legend renders
-    expect(screen.getByText("Forecast Risk Intensity")).toBeTruthy();
-    expect(await screen.findByText(/Real-time active forecast intensity/i)).toBeTruthy();
+    expect(screen.getByText(/Fraud Risk Density|Forecast Risk Intensity/i)).toBeTruthy();
+    expect(await screen.findByText(/Expected cash-out mass behind alerts raised/i)).toBeTruthy();
   });
 
   it("filters heatmap cells by state dropdown", async () => {

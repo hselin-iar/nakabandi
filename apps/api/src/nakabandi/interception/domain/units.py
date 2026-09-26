@@ -24,6 +24,8 @@ class UnitEta:
     unit_id: str
     unit_kind: str
     eta_min: float
+    lat: float
+    lon: float
 
 
 class UnitIndex:
@@ -67,6 +69,8 @@ class UnitIndex:
                 unit_id=self._units[int(i)].id,
                 unit_kind=self._units[int(i)].kind,
                 eta_min=float(d) * 6_371.0,  # store raw km; HaversineEstimator adds factors
+                lat=self._units[int(i)].lat,
+                lon=self._units[int(i)].lon,
             )
             for d, i in zip(dists[0], indices[0], strict=False)
         ]

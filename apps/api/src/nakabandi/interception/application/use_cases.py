@@ -170,7 +170,13 @@ class AssessInterception:
         verd = verdict_from(prob, self._policy)
         level = ladder_level(channel, verd, confidence, self._policy)
 
-        best_unit = BestUnit(unit_id=best_raw.unit_id, unit_kind=best_raw.unit_kind, eta_min=eta)
+        best_unit = BestUnit(
+            unit_id=best_raw.unit_id,
+            unit_kind=best_raw.unit_kind,
+            eta_min=eta,
+            lat=best_raw.lat,
+            lon=best_raw.lon,
+        )
 
         # Build lien for L1 level only
         lien: LienProposal | None = None

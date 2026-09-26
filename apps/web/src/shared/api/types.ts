@@ -35,6 +35,11 @@ export type DeliveryModel = components["schemas"]["DeliveryModel"];
 export type ForecastModel = components["schemas"]["ForecastModel"];
 export type InterceptAssessmentModel = components["schemas"]["InterceptAssessmentModel"];
 export type TimelineEntryModel = components["schemas"]["TimelineEntryModel"];
+export type EvidenceModel = components["schemas"]["EvidenceModel"];
+export type ProportionalityModel = components["schemas"]["ProportionalityModel"];
+export type BestUnitModel = components["schemas"]["BestUnitModel"];
+export type TimingForecastModel = components["schemas"]["TimingForecastModel"];
+export type LevelForecastModel = components["schemas"]["LevelForecastModel"];
 
 export type Case = components["schemas"]["CaseModel"];
 export type CasePage = components["schemas"]["CasePageModel"];

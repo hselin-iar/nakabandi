@@ -827,6 +827,10 @@ export interface components {
             unit_kind: string;
             /** Eta Min */
             eta_min: number;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
         };
         /** CaseModel */
         CaseModel: {
@@ -917,6 +921,10 @@ export interface components {
             to: string;
             /** Amount Paise */
             amount_paise: number | null;
+            /** Layer */
+            layer: number;
+            /** Event At */
+            event_at: string;
         };
         /** ClusterModel */
         ClusterModel: {

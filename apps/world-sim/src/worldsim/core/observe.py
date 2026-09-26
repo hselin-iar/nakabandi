@@ -21,7 +21,6 @@ import numpy as np
 
 from worldsim.core.config import SimConfig
 from worldsim.core.generator import CashOutTruth, ComplaintTruth, HopTruth, TruthEvent
-from worldsim.core.rng import rng_for
 
 # ---------------------------------------------------------------------------
 # ObservedEvent types
@@ -98,9 +97,11 @@ def observe(
     if n == 0:
         return []
 
-    obs_rng = rng_for(cfg.seed, "observe", f"{n}")
-    # Triangular: min, mode, max
-    lags_h = obs_rng.triangular(lag_min_h, lag_med_h, lag_max_h, size=n)
+    # Use the caller's own rng (each caller seeds it uniquely per day/tick — cli.py's
+    # "observe_step"/day, runner.py's "live_observe"/tick). Reseeding here from `n` alone
+    # (event count) instead made every call with the same count draw an identical lag
+    # sequence, silently defeating that per-call uniqueness.
+    lags_h = rng.triangular(lag_min_h, lag_med_h, lag_max_h, size=n)
     lags_days = lags_h * _DAYS_PER_HOUR  # convert hours → days
 
     # Index complaints by ref so hops can share their observed_at

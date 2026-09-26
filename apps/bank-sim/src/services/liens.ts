@@ -129,6 +129,40 @@ export async function releaseLien(
 }
 
 // ---------------------------------------------------------------------------
+// rejectLien
+// ---------------------------------------------------------------------------
+
+/**
+ * Reject a pending hold_request. Unlike applyLien/releaseLien this has no `liens` row to check
+ * (a rejection never creates one), so it validates against `requests` directly instead.
+ *
+ * @throws if the request is not found, is not a hold_request, or is not in pending status.
+ */
+export async function rejectLien(requestId: string, simTime: SimTimeSource): Promise<void> {
+  const db = getDb();
+
+  const row = db
+    .prepare(`SELECT status, kind FROM requests WHERE request_id = ?`)
+    .get(requestId) as { status: string; kind: string } | undefined;
+
+  if (!row) throw new Error(`request_id ${requestId} not found`);
+  if (row.kind !== "hold_request") throw new Error(`${requestId} is not a hold_request`);
+  if (row.status !== "pending") throw new Error(`${requestId} is not in pending status`);
+
+  const simNow = simTime.now();
+
+  db.prepare(`UPDATE requests SET status = 'rejected' WHERE request_id = ?`).run(requestId);
+
+  console.log(`[bank-sim] rejectLien: request=${requestId} at_sim=${simNow}`);
+
+  await sendCallback({
+    request_id: requestId,
+    status: "rejected",
+    at_sim: simNow,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // autoReleaseDue
 // ---------------------------------------------------------------------------
 

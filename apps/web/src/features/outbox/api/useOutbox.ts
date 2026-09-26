@@ -11,11 +11,9 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "../../../shared/api/client";
 import type { Delivery } from "../../../shared/api/types.ts";
+import type { DeliveryStatus } from "../../../shared/api/enums.ts";
 
-export type { Delivery };
-/** The backend types `status` as a plain string (looser API coupling); these are its only
- * real values (alerting/domain/delivery.py DeliveryStatus). */
-export type DeliveryStatus = "pending" | "sent" | "failed" | "dead";
+export type { Delivery, DeliveryStatus };
 
 export function useOutboxDeliveries() {
   return useQuery<Delivery[]>({

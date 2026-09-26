@@ -113,6 +113,8 @@ class BestUnitModel(BaseModel):
     unit_id: str
     unit_kind: str
     eta_min: float
+    lat: float
+    lon: float
 
 
 class ProportionalityModel(BaseModel):
@@ -190,6 +192,8 @@ def _assessment_view(a) -> InterceptAssessmentModel:  # noqa: ANN001
                 unit_id=a.best_unit.unit_id,
                 unit_kind=a.best_unit.unit_kind,
                 eta_min=a.best_unit.eta_min,
+                lat=a.best_unit.lat,
+                lon=a.best_unit.lon,
             )
             if a.best_unit
             else None

@@ -15,12 +15,15 @@ interface HotspotDrawerProps {
   hotspot: HotspotDetail | null;
   onClose: () => void;
   onSelectAlert?: (alertId: string) => void;
+  /** Opens the Interception Radar for this alert on the map, in place (§7.1). */
+  onTrackAlert?: (alertId: string) => void;
 }
 
 export function HotspotDrawer({
   hotspot,
   onClose,
   onSelectAlert,
+  onTrackAlert,
 }: HotspotDrawerProps) {
   if (!hotspot) return null;
 
@@ -69,7 +72,7 @@ export function HotspotDrawer({
               {hotspot.contributing_alerts.map((alert) => (
                 <div key={alert.id} className="nk-hotspot-alert-card">
                   <div className="nk-hotspot-alert-header">
-                    <span className="font-mono font-bold text-sm">{alert.id}</span>
+                    <span className="font-mono font-bold text-sm">{alert.cluster_ref}</span>
                     <div className="flex gap-1">
                       <SeverityBadge severity={alert.severity} />
                       <StatusBadge status={alert.status} />
@@ -77,7 +80,7 @@ export function HotspotDrawer({
                   </div>
 
                   <div className="text-xs text-secondary font-mono">
-                    Cluster: {alert.cluster_ref}
+                    Alert: {alert.id}
                   </div>
 
                   {alert.reason && (
@@ -92,19 +95,30 @@ export function HotspotDrawer({
                       <Countdown target={alert.window_end} warnThreshold={900} />
                     </div>
 
-                    {onSelectAlert ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onSelectAlert(alert.id)}
-                      >
-                        Inspect Alert →
-                      </Button>
-                    ) : (
-                      <Link to={`/alerts/${alert.id}`} className="nk-btn nk-btn--outline nk-btn--sm">
-                        Inspect Alert →
-                      </Link>
-                    )}
+                    <div className="flex gap-1">
+                      {onTrackAlert && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onTrackAlert(alert.id)}
+                        >
+                          📡 Track on Map
+                        </Button>
+                      )}
+                      {onSelectAlert ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onSelectAlert(alert.id)}
+                        >
+                          Inspect Alert →
+                        </Button>
+                      ) : (
+                        <Link to={`/alerts/${alert.id}`} className="nk-btn nk-btn--outline nk-btn--sm">
+                          Inspect Alert →
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

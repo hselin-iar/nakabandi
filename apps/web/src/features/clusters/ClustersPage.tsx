@@ -10,7 +10,6 @@ import { ClusterGraph } from "./ClusterGraph";
 import { formatInr, formatSimTime } from "../../shared/lib/format";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
-import { Select } from "../../shared/ui/Select";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import type { ClusterNode } from "./types";
 
@@ -55,229 +54,210 @@ export default function ClustersPage() {
     );
   }
 
-  if (!cluster) {
+  if (!cluster && clusters.length === 0) {
     return (
       <EmptyState
-        title="Cluster Not Found"
-        message={
-          selectedRef
-            ? `No cluster matching reference "${selectedRef}".`
-            : "No clusters are currently available."
-        }
+        title="No Clusters Available"
+        message="The simulator has not generated any mule clusters yet. Start the simulation from the Demo console."
       />
     );
   }
 
-  const handleSelectCluster = (nextRef: string) => {
-    navigate(`/clusters/${nextRef}`);
-  };
-
   return (
-    <div className="nk-clusters-page" data-testid="clusters-page" style={{ padding: "20px" }}>
+    <div className="nk-clusters-page" data-testid="clusters-page" style={{ padding: "20px", height: "100%" }}>
+      {/* Page Title */}
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: 0, fontSize: "20px", color: "#f8fafc" }}>Cluster Topology Explorer</h1>
-        <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#94a3b8" }}>
-          A cluster is a set of accounts and transactions the system believes are working
-          together to move stolen funds. Select one below to inspect its network.
+        <h1 style={{ margin: 0, fontSize: "20px", color: "var(--nk-text-primary)", fontWeight: 700 }}>
+          Cluster Topology Explorer
+        </h1>
+        <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "var(--nk-text-secondary)" }}>
+          {clusters.length} mule network{clusters.length !== 1 ? "s" : ""} identified — select one to inspect its transaction graph.
         </p>
       </div>
 
-      {/* Header bar with Cluster selector & key metrics */}
-      <div
-        className="nk-clusters-header"
-        style={{
-          background: "#0f172a",
-          border: "1px solid #1e293b",
-          borderRadius: 8,
-          padding: "16px 20px",
-          marginBottom: 16,
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 16,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div>
-            <label
-              htmlFor="cluster-select"
-              style={{
-                display: "block",
-                fontSize: "11px",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                color: "#94a3b8",
-                marginBottom: 4,
-              }}
-            >
-              Select Cluster
-            </label>
-            <Select
-              id="cluster-select"
-              testId="cluster-select"
-              value={cluster.cluster_ref}
-              onValueChange={handleSelectCluster}
-              options={clusters.map((c) => ({
-                value: c.cluster_ref,
-                label: `${c.cluster_ref} (${c.size} nodes — ${c.status})`,
-              }))}
-            />
-          </div>
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 14 }}>
-            <span
-              className={`nk-badge ${
-                cluster.status === "active" ? "nk-badge--danger" : "nk-badge--neutral"
-              }`}
-              style={{
-                textTransform: "uppercase",
-                fontSize: "11px",
-                fontWeight: 700,
-                padding: "3px 8px",
-                borderRadius: 4,
-                background: cluster.status === "active" ? "#7f1d1d" : "#334155",
-                color: cluster.status === "active" ? "#fca5a5" : "#cbd5e1",
-              }}
-            >
-              {cluster.status}
-            </span>
-
-            {cluster.single_complaint && (
-              <span
-                className="nk-badge nk-badge--info"
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  padding: "3px 8px",
-                  borderRadius: 4,
-                  background: "#0369a1",
-                  color: "#bae6fd",
-                }}
+      <div className="nk-clusters-layout">
+        {/* ---- Sidebar: scrollable cluster list ---- */}
+        <div className="nk-cluster-sidebar" aria-label="Cluster list">
+          {clusters.map((c) => {
+            const isActive = c.cluster_ref === selectedRef;
+            return (
+              <button
+                key={c.cluster_ref}
+                type="button"
+                className={`nk-cluster-sidebar-item${isActive ? " nk-cluster-sidebar-item--active" : ""}`}
+                onClick={() => navigate(`/clusters/${c.cluster_ref}`)}
+                aria-current={isActive ? "true" : undefined}
               >
-                Single complaint
-              </span>
+                <div className="nk-cluster-sidebar-item__id">{c.cluster_ref}</div>
+                <div className="nk-cluster-sidebar-item__district">
+                  {((c as unknown) as Record<string, string>).district_ref ?? "Unknown district"}
+                </div>
+                <div className="nk-cluster-sidebar-item__stats">
+                  <span>{c.size ?? "?"} nodes</span>
+                  <span>·</span>
+                  <span
+                    style={{
+                      color: c.status === "active" ? "#ef4444" : "var(--nk-text-muted)",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {c.status}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ---- Main: health strip + graph + node inspector ---- */}
+        {cluster ? (
+          <div className="nk-cluster-graph-area">
+            {/* Health Strip */}
+            <div className="nk-cluster-health-strip" aria-label="Cluster metrics">
+              <div className="nk-cluster-metric">
+                <span className="nk-cluster-metric__label">Cluster ID</span>
+                <span className="nk-cluster-metric__value" style={{ fontFamily: "var(--nk-font-mono)" }}>
+                  {cluster.cluster_ref}
+                </span>
+              </div>
+
+              <div className="nk-cluster-metric__divider" />
+
+              <div className="nk-cluster-metric">
+                <span className="nk-cluster-metric__label">Total Disputed</span>
+                <span className="nk-cluster-metric__value" style={{ color: "var(--nk-brand-primary)" }}>
+                  {formatInr(cluster.total_paise ?? 0)}
+                </span>
+              </div>
+
+              <div className="nk-cluster-metric__divider" />
+
+              <div className="nk-cluster-metric">
+                <span className="nk-cluster-metric__label">Accounts</span>
+                <span className="nk-cluster-metric__value">{cluster.size ?? (cluster.nodes?.length ?? "—")}</span>
+              </div>
+
+              <div className="nk-cluster-metric__divider" />
+
+              <div className="nk-cluster-metric">
+                <span className="nk-cluster-metric__label">Transactions</span>
+                <span className="nk-cluster-metric__value">{cluster.edges?.length ?? "—"}</span>
+              </div>
+
+              <div className="nk-cluster-metric__divider" />
+
+              <div className="nk-cluster-metric">
+                <span className="nk-cluster-metric__label">First Seen</span>
+                <span className="nk-cluster-metric__value" style={{ fontSize: "13px" }}>
+                  {cluster.first_seen ? formatSimTime(cluster.first_seen) : "—"}
+                </span>
+              </div>
+
+              <div className="nk-cluster-metric__divider" />
+
+              <div className="nk-cluster-metric">
+                <Tooltip content="How different this cluster's behaviour is from previously-seen patterns. Higher novelty = less historical precedent.">
+                  <span className="nk-cluster-metric__label" style={{ cursor: "help" }}>Novelty ⓘ</span>
+                </Tooltip>
+                <span
+                  className="nk-cluster-metric__value"
+                  style={{ color: (cluster.novelty ?? 0) > 0.7 ? "#f59e0b" : "var(--nk-text-primary)" }}
+                >
+                  {((cluster.novelty ?? 0) * 100).toFixed(0)}%
+                </span>
+              </div>
+
+              {/* Status & bridge badges pushed right */}
+              <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                    textTransform: "uppercase",
+                    background: cluster.status === "active" ? "rgba(239,68,68,0.12)" : "rgba(148,163,184,0.12)",
+                    color: cluster.status === "active" ? "#ef4444" : "#94a3b8",
+                    border: `1px solid ${cluster.status === "active" ? "rgba(239,68,68,0.3)" : "rgba(148,163,184,0.2)"}`,
+                  }}
+                >
+                  {cluster.status}
+                </span>
+                {cluster.single_complaint && (
+                  <span className="nk-geo-badge">Single complaint</span>
+                )}
+                {/* Sub-communities */}
+                {cluster.sub_communities && cluster.sub_communities.length > 0 && (
+                  <span className="nk-bridge-badge">
+                    🔗 {cluster.sub_communities.length} sub-communities
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Cytoscape Graph */}
+            <div
+              style={{
+                border: "1px solid var(--nk-border-subtle)",
+                borderRadius: 8,
+                overflow: "hidden",
+                background: "#090d16",
+              }}
+            >
+              <ClusterGraph
+                data={{ nodes: cluster.nodes, edges: cluster.edges }}
+                height={520}
+                onNodeSelect={setInspectedNode}
+                selectedNodeId={inspectedNode?.id}
+              />
+            </div>
+
+            {/* Node Inspector Panel */}
+            {inspectedNode && (
+              <div className="nk-node-inspector" data-testid="selected-node-panel">
+                <div className="nk-node-inspector__title">
+                  Node Inspector
+                  <button
+                    type="button"
+                    onClick={() => setInspectedNode(null)}
+                    className="nk-btn nk-btn--ghost nk-btn--sm"
+                    style={{ marginLeft: "auto", float: "right", fontSize: "11px" }}
+                  >
+                    ✕ Clear
+                  </button>
+                </div>
+                <div className="nk-node-inspector__field">
+                  <span className="nk-node-inspector__field-label">Kind</span>
+                  <span className={`nk-node-inspector__field-value nk-node-kind--${inspectedNode.kind}`}>
+                    {inspectedNode.kind}
+                  </span>
+                </div>
+                <div className="nk-node-inspector__field">
+                  <span className="nk-node-inspector__field-label">Account Ref</span>
+                  <span className="nk-node-inspector__field-value">
+                    {inspectedNode.label || inspectedNode.masked_ref || inspectedNode.id}
+                  </span>
+                </div>
+                <div className="nk-node-inspector__field">
+                  <span className="nk-node-inspector__field-label">Bank</span>
+                  <span className="nk-node-inspector__field-value">{inspectedNode.bank || "—"}</span>
+                </div>
+                <div className="nk-node-inspector__field">
+                  <span className="nk-node-inspector__field-label">Amount</span>
+                  <span className="nk-node-inspector__field-value" style={{ color: "var(--nk-brand-primary)" }}>
+                    {inspectedNode.amount_paise != null ? formatInr(inspectedNode.amount_paise) : "—"}
+                  </span>
+                </div>
+              </div>
             )}
-
-            <Tooltip content="How different this cluster's behaviour is from previously-seen patterns. Higher novelty means the model has less past experience to judge it against.">
-              <span
-                style={{
-                  fontSize: "12px",
-                  color: "#fbbf24",
-                  background: "rgba(245, 158, 11, 0.1)",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
-                  padding: "3px 8px",
-                  borderRadius: 4,
-                  cursor: "help",
-                }}
-              >
-                Novelty: {((cluster.novelty ?? 0) * 100).toFixed(0)}%
-              </span>
-            </Tooltip>
           </div>
-        </div>
-
-        {/* Aggregate Stats */}
-        <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
-          <div>
-            <div style={{ fontSize: "11px", color: "#94a3b8" }}>Total Disputed</div>
-            <div style={{ fontSize: "18px", fontWeight: 700, color: "#38bdf8" }}>
-              {formatInr(cluster.total_paise ?? 0)}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: "11px", color: "#94a3b8" }}>Cluster Size</div>
-            <div style={{ fontSize: "18px", fontWeight: 700, color: "#f8fafc" }}>
-              {cluster.size} Accounts
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: "11px", color: "#94a3b8" }}>First / Last Activity</div>
-            <div style={{ fontSize: "12px", color: "#cbd5e1" }}>
-              {cluster.first_seen ? formatSimTime(cluster.first_seen) : "—"}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sub-communities tags if any */}
-      {cluster.sub_communities && cluster.sub_communities.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 12,
-            fontSize: "12px",
-            color: "#94a3b8",
-          }}
-        >
-          <span>Sub-communities:</span>
-          {cluster.sub_communities.map((sub) => (
-            <span
-              key={sub.id}
-              style={{
-                background: "#1e293b",
-                border: "1px solid #334155",
-                borderRadius: 4,
-                padding: "2px 8px",
-                color: "#e2e8f0",
-              }}
-            >
-              {sub.label} ({sub.account_count})
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Inspected Node Bar */}
-      {inspectedNode && (
-        <div
-          data-testid="selected-node-panel"
-          style={{
-            marginBottom: 12,
-            background: "#1e293b",
-            border: "1px solid #38bdf8",
-            borderRadius: 6,
-            padding: "8px 14px",
-            fontSize: "12px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <span style={{ color: "#e2e8f0" }}>
-            Inspected Entity: <strong style={{ color: "#f8fafc" }}>{inspectedNode.label || inspectedNode.masked_ref}</strong>{" "}
-            ({inspectedNode.kind}, {inspectedNode.bank || "N/A"})
-          </span>
-          <button
-            type="button"
-            onClick={() => setInspectedNode(null)}
-            className="nk-btn nk-btn--secondary nk-btn--sm"
-            style={{ padding: "2px 8px", fontSize: "11px" }}
-          >
-            Clear Selection
-          </button>
-        </div>
-      )}
-
-      {/* Interactive Cluster Graph Component */}
-      <div
-        style={{
-          border: "1px solid #1e293b",
-          borderRadius: 8,
-          overflow: "hidden",
-          background: "#090d16",
-        }}
-      >
-        <ClusterGraph
-          data={{ nodes: cluster.nodes, edges: cluster.edges }}
-          height={600}
-          onNodeSelect={setInspectedNode}
-          selectedNodeId={inspectedNode?.id}
-        />
+        ) : (
+          <EmptyState
+            title="Select a Cluster"
+            message="Choose a mule network from the list on the left to inspect its account graph."
+          />
+        )}
       </div>
     </div>
   );

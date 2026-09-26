@@ -42,7 +42,7 @@ export function TimeSlider({
         <div className="nk-time-slider__timestamp font-mono text-xs">
           {formatSimTime(replayTime.toISOString())}
           {offsetHours < 0 && (
-            <span className="nk-text-secondary ml-1 font-sans">
+            <span className="text-muted ml-1 font-sans">
               ({Math.abs(offsetHours)}h ago)
             </span>
           )}

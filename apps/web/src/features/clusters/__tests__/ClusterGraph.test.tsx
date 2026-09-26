@@ -47,13 +47,13 @@ const STANDARD_NODES_MASKED: ClusterNode[] = STANDARD_NODES_RAW.map((n) => ({
 }));
 
 const STANDARD_EDGES: ClusterEdge[] = [
-  { from: "node-vic-1", to: "node-mule-1", amount_paise: 15_00_000_00 },
-  { from: "node-vic-2", to: "node-mule-2", amount_paise: 27_00_000_00 },
-  { from: "node-mule-1", to: "node-mule-3", amount_paise: 16_00_000_00 },
-  { from: "node-mule-2", to: "node-mule-3", amount_paise: 25_00_000_00 },
-  { from: "node-mule-3", to: "node-agg-1", amount_paise: 40_00_000_00 },
-  { from: "node-agg-1", to: "node-exit-1", amount_paise: 20_00_000_00 },
-  { from: "node-agg-1", to: "node-exit-2", amount_paise: 20_00_000_00 },
+  { from: "node-vic-1", to: "node-mule-1", amount_paise: 15_00_000_00, layer: 1, event_at: "2026-01-15T10:00:00Z" },
+  { from: "node-vic-2", to: "node-mule-2", amount_paise: 27_00_000_00, layer: 1, event_at: "2026-01-15T10:01:00Z" },
+  { from: "node-mule-1", to: "node-mule-3", amount_paise: 16_00_000_00, layer: 2, event_at: "2026-01-15T10:05:00Z" },
+  { from: "node-mule-2", to: "node-mule-3", amount_paise: 25_00_000_00, layer: 2, event_at: "2026-01-15T10:06:00Z" },
+  { from: "node-mule-3", to: "node-agg-1", amount_paise: 40_00_000_00, layer: 3, event_at: "2026-01-15T10:10:00Z" },
+  { from: "node-agg-1", to: "node-exit-1", amount_paise: 20_00_000_00, layer: 4, event_at: "2026-01-15T10:15:00Z" },
+  { from: "node-agg-1", to: "node-exit-2", amount_paise: 20_00_000_00, layer: 4, event_at: "2026-01-15T10:16:00Z" },
 ];
 
 function generateBigCluster(): { nodes: ClusterNode[]; edges: ClusterEdge[] } {
@@ -63,7 +63,13 @@ function generateBigCluster(): { nodes: ClusterNode[]; edges: ClusterEdge[] } {
   for (let i = 1; i < totalNodes; i++) {
     nodes.push({ id: `big-node-${i}`, kind: "account", masked_ref: `AXIS-4000${String(i).padStart(4, "0")}`, bank: "AXIS" });
     const parentId = i % 5 === 0 ? "big-root" : `big-node-${Math.max(0, i - (i % 7 || 1))}`;
-    edges.push({ from: parentId, to: `big-node-${i}`, amount_paise: 50_000_00 });
+    edges.push({
+      from: parentId,
+      to: `big-node-${i}`,
+      amount_paise: 50_000_00,
+      layer: 1 + (i % 7),
+      event_at: new Date(Date.UTC(2026, 0, 15, 10, 0, 0) + i * 60_000).toISOString(),
+    });
   }
   return { nodes, edges };
 }
@@ -248,9 +254,11 @@ describe("ClustersPage Component (Step C6)", () => {
 
     expect(await screen.findByTestId("clusters-page")).toBeTruthy();
 
-    expect(await screen.findByText("CLUSTER-2026-081 (8 nodes — active)")).toBeTruthy();
+    // Cluster ref appears in sidebar list + health strip metric
+    const clusterRefs = await screen.findAllByText("CLUSTER-2026-081");
+    expect(clusterRefs.length).toBeGreaterThanOrEqual(1);
+    // Health strip values
     expect(screen.getByText("₹45,00,000.00")).toBeTruthy();
-    expect(screen.getByText("8 Accounts")).toBeTruthy();
-    expect(screen.getByText("Novelty: 88%")).toBeTruthy();
+    expect(screen.getByText(/88%/)).toBeTruthy();
   });
 });

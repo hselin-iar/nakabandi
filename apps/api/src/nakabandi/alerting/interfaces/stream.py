@@ -3,7 +3,7 @@
 Events:
   alert.created {alert_id, version}
   alert.updated {alert_id, version}
-  sim.time {sim_time, speed, state}
+  sim.time {sim_time}                 (emitted by intake's POST /ingest/tick; passthrough here)
   heat.version {version}              (emitted by analytics; passthrough here)
 Heartbeat: comment `:heartbeat` every 15 s (LC-5).
 Events are filtered by the principal's scope (VIEW_ALERTS required).
@@ -91,10 +91,12 @@ def event_visible(principal: Principal, event: SseEvent, role_permissions) -> bo
 
 
 async def _heartbeat_loop(hub: SseHub) -> None:
-    """Emit a sim.time heartbeat comment to keep connections alive (LC-5: every 15 s)."""
+    """Emit an empty `:heartbeat` comment to keep connections alive (LC-5: every 15 s).
+    The sim clock itself is carried by the separate `sim.time` event, published by
+    intake's POST /ingest/tick router each time world-sim advances the clock — not by
+    this heartbeat, which only resets the client's inactivity timer."""
     from nakabandi.alerting.infrastructure.channels.sse_hub import SseEvent
 
     while True:
         await asyncio.sleep(HEARTBEAT_INTERVAL_S)
-        # Heartbeat is a sim.time event (also useful to the client for clock sync)
         hub.publish(SseEvent(name=":heartbeat", data={}))

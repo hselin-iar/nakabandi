@@ -49,6 +49,7 @@ export function DemoConsole() {
     isInjecting,
     requestLog,
     clearRequestLog,
+    refetchStatus,
   } = useDemoControl();
 
   const { data: demoUsers, isLoading: isLoadingUsers } = useDemoUsers();
@@ -264,7 +265,26 @@ export function DemoConsole() {
 
           {status.last_error && (
             <div className="nk-demo-error-banner" role="alert">
-              <strong>Engine Error:</strong> {status.last_error}
+              <div className="nk-demo-error-banner__headline">
+                <strong>World-sim isn't responding as expected.</strong>
+                <span>
+                  The engine may have stalled or the runner process may be down. Retry the
+                  status check, or restart the simulation below.
+                </span>
+              </div>
+              <div className="nk-demo-error-banner__actions">
+                <button
+                  type="button"
+                  className="nk-btn nk-btn--outline nk-btn--sm"
+                  onClick={() => void refetchStatus()}
+                >
+                  ↻ Retry Status Check
+                </button>
+                <details className="nk-demo-error-banner__detail">
+                  <summary>Technical detail</summary>
+                  <code>{status.last_error}</code>
+                </details>
+              </div>
             </div>
           )}
         </section>

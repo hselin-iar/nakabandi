@@ -90,6 +90,10 @@ class ClusterService:
         """Every account currently in this cluster (casework's build_case, S1)."""
         return self._repo.get_account_ids(cluster_id)
 
+    def all_account_ids(self) -> list[Id]:
+        """Every account currently assigned to any cluster (TrainModels' delay_records, B6)."""
+        return self._repo.get_all_account_ids()
+
     def apply_cashouts(self, facts: list[CashOutFact], as_of: SimTime) -> int:
         """Fold observed cash-outs into their clusters' location affinity; returns how many."""
         return self._apply_cashouts_uc.run(facts, as_of)

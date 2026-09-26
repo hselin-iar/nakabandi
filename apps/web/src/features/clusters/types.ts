@@ -27,6 +27,10 @@ export interface ClusterEdge {
   to: string;
   amount_paise?: number;
   label?: string;
+  /** Hop depth from the traced complaint's first credit (DOC 3 S1 FundHop.layer). */
+  layer: number;
+  /** ISO sim-time the hop occurred — drives the fund-flow timeline's speed colouring (§7.4). */
+  event_at: string;
 }
 
 export interface ClusterGraphData {

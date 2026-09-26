@@ -127,6 +127,9 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClie
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'casework.db'}")
     monkeypatch.setenv("JWT_SECRET", "test-only-jwt-secret-at-least-32-bytes-long")
     monkeypatch.setenv("NAKABANDI_EVIDENCE_STORE_PATH", str(tmp_path / "evidence"))
+    # Isolated, guaranteed-empty model store — see integration/conftest.py's client fixture for
+    # why: without it, tests pick up whatever real model scripts/train.py last wrote to disk.
+    monkeypatch.setenv("NAKABANDI_MODEL_STORE_DIR", str(tmp_path / "models"))
     with TestClient(create_app()) as c:
         yield c
 

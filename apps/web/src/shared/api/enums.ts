@@ -62,6 +62,10 @@ export type Permission = (typeof PERMISSIONS)[number];
 export const CHANNELS = ["ATM", "BRANCH", "AGENT"] as const;
 export type Channel = (typeof CHANNELS)[number];
 
+/** alerting/domain/action.py DeliveryStatus: pending, sent, failed (will retry), dead (gave up). */
+export const DELIVERY_STATUSES = ["pending", "sent", "failed", "dead"] as const;
+export type DeliveryStatus = (typeof DELIVERY_STATUSES)[number];
+
 export const COMPLAINT_CATEGORIES = [
   "digital_arrest",
   "investment_scam",

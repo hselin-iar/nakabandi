@@ -20,9 +20,15 @@ def db_url(tmp_path: Path) -> str:
 
 
 @pytest.fixture
-def client(db_url: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+def client(db_url: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     monkeypatch.setenv("API_SERVICE_KEY", SERVICE_KEY)
     monkeypatch.setenv("DATABASE_URL", db_url)
+    # Isolated, guaranteed-empty model store: without this, tests pick up whatever real model
+    # scripts/train.py last wrote to the repo's models/ dir, trained on a completely different
+    # (and much larger) registry — its predictions don't clear these tests' tiny fixtures'
+    # confidence floor, so alerts silently stop raising. Tests must see the same fallback
+    # heuristic scorer they were written against, not whatever happens to be on disk.
+    monkeypatch.setenv("NAKABANDI_MODEL_STORE_DIR", str(tmp_path / "models"))
     app = create_app()
     with TestClient(app) as c:
         yield c

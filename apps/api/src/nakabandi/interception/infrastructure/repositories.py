@@ -4,6 +4,7 @@ Tables owned by the interception module (DOC 3 LC-10):
   units              (id, kind, lat, lon, district_id, active)
   intercept_assessments (id, forecast_id, target_kind, target_id, channel,
                           window_min, best_unit_id, best_unit_kind, best_unit_eta_min,
+                          best_unit_lat, best_unit_lon,
                           interception_probability, verdict, ladder_level,
                           reason_code, reason_params_json,
                           disputed_paise, proposed_paise, expires_at, review_at,
@@ -58,6 +59,8 @@ intercept_assessments = sa.Table(
     sa.Column("best_unit_id", sa.String, nullable=True),
     sa.Column("best_unit_kind", sa.String, nullable=True),
     sa.Column("best_unit_eta_min", sa.Float, nullable=True),
+    sa.Column("best_unit_lat", sa.Float, nullable=True),
+    sa.Column("best_unit_lon", sa.Float, nullable=True),
     sa.Column("interception_probability", sa.Float, nullable=False),
     sa.Column("verdict", sa.String, nullable=False),
     sa.Column("ladder_level", sa.String, nullable=False),
@@ -106,6 +109,8 @@ class SqlAssessmentRepo(AssessmentRepo):
                 best_unit_id=assessment.best_unit.unit_id if assessment.best_unit else None,
                 best_unit_kind=assessment.best_unit.unit_kind if assessment.best_unit else None,
                 best_unit_eta_min=assessment.best_unit.eta_min if assessment.best_unit else None,
+                best_unit_lat=assessment.best_unit.lat if assessment.best_unit else None,
+                best_unit_lon=assessment.best_unit.lon if assessment.best_unit else None,
                 interception_probability=assessment.interception_probability,
                 verdict=assessment.verdict.value,
                 ladder_level=assessment.ladder_level.value,
@@ -136,6 +141,8 @@ def _row_to_assessment(r: sa.Row) -> InterceptAssessment:  # type: ignore[type-a
             unit_id=r.best_unit_id,
             unit_kind=r.best_unit_kind or "",
             eta_min=float(r.best_unit_eta_min or 0),
+            lat=float(r.best_unit_lat or 0),
+            lon=float(r.best_unit_lon or 0),
         )
     lien: LienProposal | None = None
     prop_view: ProportionalityView | None = None

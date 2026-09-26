@@ -10,7 +10,7 @@
 
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import cytoscape from "cytoscape";
-import type { Core, EventObject } from "cytoscape";
+import type { Core, EventObject, NodeSingular } from "cytoscape";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import { formatInr } from "../../shared/lib/format";
 import type { ClusterGraphData, ClusterNode, ClusterEdge } from "./types";
@@ -116,6 +116,8 @@ export function ClusterGraph({
             from: edge.from,
             to: "node-capped-summary",
             label: "Aggregated flow",
+            layer: edge.layer,
+            event_at: edge.event_at,
           });
         }
       } else if (!fromKept && toKept) {
@@ -127,6 +129,8 @@ export function ClusterGraph({
             from: "node-capped-summary",
             to: edge.to,
             label: "Aggregated flow",
+            layer: edge.layer,
+            event_at: edge.event_at,
           });
         }
       }
@@ -159,6 +163,61 @@ export function ClusterGraph({
   }, [cappedEdges]);
 
   // ---------------------------------------------------------------------------
+  // Fund-flow directed timeline (§4.4, §7.4): order nodes left-to-right by
+  // FundHop.layer instead of a force-directed blob, and colour/weight edges by
+  // how early they happened relative to the cluster's first traced hop — tempo,
+  // not just topology, is the actual differentiator (DOC1: layering is instant,
+  // cash-out is the physical bottleneck).
+  // ---------------------------------------------------------------------------
+  const { nodeColumn, edgeSpeed, timelineSpan } = useMemo(() => {
+    const column = new Map<string, number>();
+    for (const e of cappedEdges) {
+      const existing = column.get(e.to);
+      if (existing === undefined || e.layer < existing) column.set(e.to, e.layer);
+      if (!column.has(e.from)) column.set(e.from, Math.max(0, e.layer - 1));
+    }
+
+    let minAt = Infinity;
+    let maxAt = -Infinity;
+    for (const e of cappedEdges) {
+      const t = new Date(e.event_at).getTime();
+      if (!Number.isNaN(t)) {
+        if (t < minAt) minAt = t;
+        if (t > maxAt) maxAt = t;
+      }
+    }
+    const span = maxAt > minAt ? maxAt - minAt : 0;
+
+    const speed = new Map<string, number>();
+    for (const e of cappedEdges) {
+      const id = e.id || `${e.from}-${e.to}`;
+      const t = new Date(e.event_at).getTime();
+      speed.set(id, span > 0 && !Number.isNaN(t) ? (t - minAt) / span : 0);
+    }
+
+    return { nodeColumn: column, edgeSpeed: speed, timelineSpan: span };
+  }, [cappedEdges]);
+
+  // Preset positions: column from nodeColumn (0 for anything untouched by an edge, e.g. a
+  // singleton account or the capped-summary node), row = index within that column.
+  const nodePositions = useMemo(() => {
+    const columnCounts = new Map<number, number>();
+    const positions = new Map<string, { x: number; y: number }>();
+    const COL_WIDTH = 160;
+    const ROW_HEIGHT = 70;
+
+    for (const n of cappedNodes) {
+      const col = n.isSummary
+        ? (Math.max(0, ...Array.from(nodeColumn.values())) + 1)
+        : (nodeColumn.get(n.id) ?? 0);
+      const row = columnCounts.get(col) ?? 0;
+      columnCounts.set(col, row + 1);
+      positions.set(n.id, { x: col * COL_WIDTH, y: row * ROW_HEIGHT });
+    }
+    return positions;
+  }, [cappedNodes, nodeColumn]);
+
+  // ---------------------------------------------------------------------------
   // Cytoscape initialization and updates
   // ---------------------------------------------------------------------------
   useEffect(() => {
@@ -185,15 +244,19 @@ export function ClusterGraph({
       };
     });
 
-    const cyEdges = cappedEdges.map((e, idx) => ({
-      group: "edges" as const,
-      data: {
-        id: e.id || `e-${idx}-${e.from}-${e.to}`,
-        source: e.from,
-        target: e.to,
-        label: e.label || "",
-      },
-    }));
+    const cyEdges = cappedEdges.map((e, idx) => {
+      const id = e.id || `e-${idx}-${e.from}-${e.to}`;
+      return {
+        group: "edges" as const,
+        data: {
+          id,
+          source: e.from,
+          target: e.to,
+          label: e.label || "",
+          speedT: edgeSpeed.get(e.id || `${e.from}-${e.to}`) ?? 0,
+        },
+      };
+    });
 
     try {
       if (cyRef.current) {
@@ -277,11 +340,13 @@ export function ClusterGraph({
             },
           },
           {
+            // Colour/weight by hop tempo (§7.4): earlier hops (small speedT) render thick and
+            // warm (fast layering), later hops thin and cool — tempo, not just topology.
             selector: "edge",
             style: {
-              width: 2,
-              "line-color": "#475569",
-              "target-arrow-color": "#64748b",
+              width: "mapData(speedT, 0, 1, 4, 1.5)",
+              "line-color": "mapData(speedT, 0, 1, #f97316, #6366f1)",
+              "target-arrow-color": "mapData(speedT, 0, 1, #f97316, #6366f1)",
               "target-arrow-shape": "triangle",
               "curve-style": "bezier",
               "arrow-scale": 1.2,
@@ -304,10 +369,13 @@ export function ClusterGraph({
           },
         ],
         layout: {
-          name: cyNodes.length > 50 ? "concentric" : "breadthfirst",
-          directed: true,
+          // Ordered left-to-right by FundHop.layer (nodePositions), not a force-directed
+          // blob or a BFS-computed depth — the domain's own hop depth, directly (§4.4, §7.4).
+          name: "preset",
+          positions: (node: NodeSingular) =>
+            nodePositions.get(node.id()) ?? { x: 0, y: 0 },
+          fit: true,
           padding: 30,
-          spacingFactor: 1.25,
         } as cytoscape.LayoutOptions,
       });
 
@@ -347,7 +415,17 @@ export function ClusterGraph({
         cyRef.current = null;
       }
     };
-  }, [cappedNodes, cappedEdges, isLea, nodeMap, edgeMap, onNodeSelect, onEdgeSelect]);
+  }, [
+    cappedNodes,
+    cappedEdges,
+    isLea,
+    nodeMap,
+    edgeMap,
+    edgeSpeed,
+    nodePositions,
+    onNodeSelect,
+    onEdgeSelect,
+  ]);
 
   // Update selection externally if selectedNodeId changes
   useEffect(() => {
@@ -533,6 +611,40 @@ export function ClusterGraph({
           </span>
         )}
       </div>
+
+      {/* Fund-flow tempo legend — money flows left to right by hop layer; edge colour is
+          when that hop happened relative to the cluster's traced timeline, not distance. */}
+      {timelineSpan > 0 && (
+        <div
+          className="nk-cluster-graph__tempo-legend"
+          style={{
+            position: "absolute",
+            bottom: 44,
+            left: 12,
+            zIndex: 10,
+            background: "rgba(15, 23, 42, 0.85)",
+            padding: "6px 12px",
+            borderRadius: 6,
+            border: "1px solid #334155",
+            fontSize: "11px",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            color: "#94a3b8",
+          }}
+        >
+          <span>Money flows →</span>
+          <span
+            style={{
+              width: 60,
+              height: 4,
+              borderRadius: 2,
+              background: "linear-gradient(90deg, #f97316, #6366f1)",
+            }}
+          />
+          <span>earliest hop → latest hop</span>
+        </div>
+      )}
 
       {/* Selected Node Details Drawer/Card */}
       {selectedNode && (
