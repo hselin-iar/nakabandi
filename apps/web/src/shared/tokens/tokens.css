@@ -4995,19 +4995,6 @@ button > .nk-icon, a > .nk-icon { margin-right: 2px; }
 /* -------------------------------------------------------------------------
    Operations-console finish: opaque surfaces, quiet chrome, one accent
    ------------------------------------------------------------------------- */
-.nk-classification {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 1.375rem;
-  background: #111826;
-  border-bottom: 1px solid #1E2732;
-  font-family: var(--nk-font-mono);
-  font-size: 10px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--nk-text-secondary);
-}
 .nk-topbar__title { letter-spacing: 0.18em; }
 .nk-topbar__subtitle { letter-spacing: 0.08em; text-transform: uppercase; font-size: 10px; }
 h1.nk-inbox-title, .nk-system-integrity-title, .nk-ops-page__title { letter-spacing: 0.04em; text-transform: uppercase; }
