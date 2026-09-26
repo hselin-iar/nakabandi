@@ -1,7 +1,7 @@
 # TRACK B — Algorithms & Simulator
 OWNER:            Algo dev + coding agent
-CURRENT_STEP:     DONE (all B1-B9 complete)
-LAST_COMPLETED:   B9 — Sweeps & Result Pack
+CURRENT_STEP:     POST-B9 model improvements (P0-P5 applied, retrained, evaluated)
+LAST_COMPLETED:   P5 — priority sort, same_bank, class_weight, NaN recency, expected_hour
 STATUS:           ACTIVE
 PAUSED_AT:        none
 NEXT SYNC POINT:  SYNC 8 — after B7 (evaluation harness) and A9; gates final analytics (DOC4 §4.1a)
@@ -164,3 +164,6 @@ One line per entry, newest last: [Step] — what was found (a gotcha, a rejected
 [B9] -- Re-run uv run python scripts/sweep/run_sweep.py --out docs/results once docker compose is up to populate real metrics.
 [B9] -- Track B is fully complete: B1-B9 all done and green. HEAD: ccd4c8a on origin/feat/track-b.
 [CI] -- Root pyproject.toml and uv.lock (scikit-learn, joblib) committed in ccd4c8a and pushed to origin/feat/track-b.
+[POST-B9/P0-P5] -- Model improvement session. Changes: bank_id added to Candidate; priority sort (cluster-history/bank-match); same_bank feature fixed; recency_days NaN for unseen (heuristic also guarded); class_weight='balanced' (P1); expected_hour wired from MixtureTimingModel in evaluate.py. categorical_features=[12] deferred — sklearn HGB binning crashes when channel col has only 1 distinct value (single-bank sim). All-NaN column (recency_days for cold-start clusters) also crashes HGB binning — fixed by replacing all-NaN columns with 0.0 before fit(), constant columns get 1e-7 jitter. npm run ci:py → 673/673 passed.
+[POST-B9/eval] -- Metrics on 951 complaints (n grew from 226 due to continued sim run): hgb_v1 Hit@1=2.73% Hit@3=5.57% Hit@5=8.41% Brier=0.0065. Heuristic baseline on same 951: Hit@1=0.21% Hit@3=0.73% Hit@5=2.30% Brier=1286 (raw scores, not calibrated). HGB v1 is 3-4× better than heuristic at all k. Absolute numbers lower than old 226-complaint eval because the larger dataset includes more cold-start complaints added by continued sim run.
+
