@@ -92,6 +92,28 @@ export class MapLibreAdapter implements MapAdapter {
     }
   }
 
+  /** Push the dark basemap to near-black and mute its labels so the heat carries the contrast. */
+  private darkenBasemap(): void {
+    const map = this.map;
+    if (!map) return;
+    for (const layer of map.getStyle().layers ?? []) {
+      try {
+        if (layer.type === "background") {
+          map.setPaintProperty(layer.id, "background-color", "#04060a");
+        } else if (layer.type === "fill") {
+          map.setPaintProperty(layer.id, "fill-opacity", 0.55);
+        } else if (layer.type === "line") {
+          map.setPaintProperty(layer.id, "line-opacity", 0.45);
+        } else if (layer.type === "symbol") {
+          map.setPaintProperty(layer.id, "text-opacity", 0.5);
+          map.setPaintProperty(layer.id, "icon-opacity", 0.4);
+        }
+      } catch {
+        /* a layer without that paint property: leave it as styled */
+      }
+    }
+  }
+
   public isReady(): boolean {
     return this.isLoaded && this.map !== null;
   }
@@ -122,6 +144,7 @@ export class MapLibreAdapter implements MapAdapter {
         mapInstance.on("load", () => {
           this.isLoaded = true;
           try {
+            this.darkenBasemap();
             this.setupDataLayers();
 
             // Apply any pending data that arrived before load event
@@ -200,7 +223,8 @@ export class MapLibreAdapter implements MapAdapter {
         data: emptyPoints,
       });
 
-      // Main smooth density heatmap
+      // Main smooth density heatmap (inserted under the basemap's labels so place names stay legible)
+      const firstLabel = this.map.getStyle().layers?.find((l) => l.type === "symbol")?.id;
       this.map.addLayer({
         id: HEATMAP_LAYER_ID,
         type: "heatmap",
@@ -215,21 +239,21 @@ export class MapLibreAdapter implements MapAdapter {
           // Boost intensity — higher at state-overview zoom so blobs are visible
           "heatmap-intensity": [
             "interpolate", ["linear"], ["zoom"],
-            3,  1.5,
-            6,  2.5,
-            10, 4,
-            14, 6,
+            3,  2.2,
+            6,  3.5,
+            10, 5.5,
+            14, 8,
           ],
-          // Classic warm density color ramp (blue → yellow → orange → red)
+          // Ops-centre ramp: transparent black → dark red → crimson → orange → white-hot core
           "heatmap-color": [
             "interpolate", ["linear"], ["heatmap-density"],
-            0,    "rgba(30,64,175,0)",
-            0.1,  "rgba(37,99,235,0.35)",
-            0.3,  "rgba(245,158,11,0.55)",
-            0.5,  "rgba(249,115,22,0.75)",
-            0.7,  "rgba(239,68,68,0.85)",
-            0.85, "rgba(220,38,38,0.92)",
-            1,    "rgb(254,202,202)",
+            0,    "rgba(0,0,0,0)",
+            0.08, "rgba(60,0,8,0.45)",
+            0.25, "rgba(139,0,20,0.7)",
+            0.45, "rgba(220,20,40,0.85)",
+            0.65, "rgba(255,90,20,0.92)",
+            0.85, "rgba(255,190,80,0.97)",
+            1,    "rgb(255,250,235)",
           ],
           // Large radius at state overview (zoom 5–6), tighter at street level
           "heatmap-radius": [
@@ -240,9 +264,9 @@ export class MapLibreAdapter implements MapAdapter {
             12, 40,
             15, 25,
           ],
-          "heatmap-opacity": 0.85,
+          "heatmap-opacity": 0.95,
         },
-      });
+      }, firstLabel);
 
       // Optional: individual point dots at high zoom levels for precision
       this.map.addLayer({

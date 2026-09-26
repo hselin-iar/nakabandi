@@ -2300,12 +2300,12 @@ body {
   border-radius: var(--nk-radius-full);
   background: linear-gradient(
     to right,
-    rgba(37,99,235,0.45) 0%,
-    rgb(37,99,235)   20%,
-    rgb(245,158,11)  45%,
-    rgb(249,115,22)  65%,
-    rgb(239,68,68)   85%,
-    rgb(254,202,202) 100%
+    rgb(20,0,4)      0%,
+    rgb(139,0,20)    25%,
+    rgb(220,20,40)   45%,
+    rgb(255,90,20)   65%,
+    rgb(255,190,80)  85%,
+    rgb(255,250,235) 100%
   );
 }
 
@@ -2332,10 +2332,10 @@ body {
   border-radius: 50%;
 }
 
-.nk-legend-dot--low  { background: rgb(37,99,235); }
-.nk-legend-dot--med  { background: rgb(245,158,11); }
-.nk-legend-dot--high { background: rgb(249,115,22); }
-.nk-legend-dot--crit { background: rgb(239,68,68); }
+.nk-legend-dot--low  { background: rgb(139,0,20); }
+.nk-legend-dot--med  { background: rgb(220,20,40); }
+.nk-legend-dot--high { background: rgb(255,90,20); }
+.nk-legend-dot--crit { background: rgb(255,220,160); }
 
 .nk-legend-infra {
   display: flex;
