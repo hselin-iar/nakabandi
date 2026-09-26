@@ -1,9 +1,9 @@
 {
-  "version_id": "01M3E2G67N4486D3ZM4HGD94RS",
+  "version_id": "01M3EFJXFEW4PHNVGCQ9FFYQZ8",
   "name": "mixture_v1",
-  "data_hash": "f9018866ea87829a576413fa55eb10ff03c535673a54138e44f3b76fefc11b09",
-  "trained_as_of": "2026-01-23T23:27:34.965667+00:00",
-  "created_at": "2026-09-26T05:20:10.485102",
+  "data_hash": "11098378417caef6e9a8f47569dbf5ef9d5fc3dfb48acf602c0f00facee15d80",
+  "trained_as_of": "2026-01-17T10:15:38.460000+00:00",
+  "created_at": "2026-09-26T09:08:51.310552",
   "brier_before": null,
   "brier_after": null
 }

@@ -24,6 +24,8 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
+from nakabandi.forecast.domain.features import build_features, global_cashout_rate
+from nakabandi.forecast.domain.global_stats import GlobalCashoutIndex
 from nakabandi.forecast.domain.novelty import DistrictPrior, novelty
 from nakabandi.forecast.domain.scorers import (
     HeuristicScorer,
@@ -64,6 +66,8 @@ def _make_feature_row(**overrides: Any) -> FeatureRow:
         amount_x_dist=20.0,
         activity_index=0.8,
         cluster_size_log=2.0,
+        global_cashout_count=0.0,
+        global_cashout_rate=0.0,
     )
     defaults.update(overrides)
     return FeatureRow(
@@ -80,6 +84,8 @@ def _make_feature_row(**overrides: Any) -> FeatureRow:
         amount_x_dist=float(defaults["amount_x_dist"]),
         activity_index=float(defaults["activity_index"]),
         cluster_size_log=float(defaults["cluster_size_log"]),
+        global_cashout_count=float(defaults["global_cashout_count"]),
+        global_cashout_rate=float(defaults["global_cashout_rate"]),
     )
 
 
@@ -180,6 +186,125 @@ class TestPointInTimeStats:
 
 
 # ---------------------------------------------------------------------------
+# GlobalCashoutIndex — as-of, cross-cluster cash-out density (P6, [NEXT_ACTION])
+# ---------------------------------------------------------------------------
+
+
+class TestGlobalCashoutIndex:
+    def test_zero_history_is_empty(self) -> None:
+        index = GlobalCashoutIndex([])
+        snap = index.snapshot_at(datetime(2025, 1, 1, tzinfo=_UTC))
+        assert snap.total == 0
+        assert snap.location_counts == {}
+
+    def test_single_atm_repeated(self) -> None:
+        events = [
+            ("LOC-A", datetime(2025, 1, 1, tzinfo=_UTC)),
+            ("LOC-A", datetime(2025, 1, 2, tzinfo=_UTC)),
+            ("LOC-A", datetime(2025, 1, 3, tzinfo=_UTC)),
+        ]
+        index = GlobalCashoutIndex(events)
+        snap = index.snapshot_at(datetime(2025, 1, 2, tzinfo=_UTC))
+        assert snap.total == 2
+        assert snap.location_counts == {"LOC-A": 2}
+
+    def test_multiple_locations_counted_independently(self) -> None:
+        events = [
+            ("LOC-A", datetime(2025, 1, 1, tzinfo=_UTC)),
+            ("LOC-B", datetime(2025, 1, 1, tzinfo=_UTC)),
+            ("LOC-A", datetime(2025, 1, 1, tzinfo=_UTC)),
+        ]
+        index = GlobalCashoutIndex(events)
+        snap = index.snapshot_at(datetime(2025, 1, 1, tzinfo=_UTC))
+        assert snap.total == 3
+        assert snap.location_counts == {"LOC-A": 2, "LOC-B": 1}
+
+    def test_future_observation_excluded(self) -> None:
+        events = [
+            ("LOC-A", datetime(2025, 1, 1, tzinfo=_UTC)),
+            ("LOC-A", datetime(2025, 6, 1, tzinfo=_UTC)),
+        ]
+        index = GlobalCashoutIndex(events)
+        snap = index.snapshot_at(datetime(2025, 2, 1, tzinfo=_UTC))
+        assert snap.total == 1
+        assert snap.location_counts == {"LOC-A": 1}
+
+    def test_exactly_at_cutoff_is_included(self) -> None:
+        as_of = datetime(2025, 1, 1, tzinfo=_UTC)
+        index = GlobalCashoutIndex([("LOC-A", as_of)])
+        snap = index.snapshot_at(as_of)
+        assert snap.total == 1
+
+    def test_insertion_order_independent(self) -> None:
+        """snapshot_at must not depend on the order events were passed in — the index
+        sorts internally, so a shuffled feed gives the same answer as a sorted one."""
+        events = [
+            ("LOC-B", datetime(2025, 1, 3, tzinfo=_UTC)),
+            ("LOC-A", datetime(2025, 1, 1, tzinfo=_UTC)),
+            ("LOC-A", datetime(2025, 1, 2, tzinfo=_UTC)),
+        ]
+        index = GlobalCashoutIndex(events)
+        snap = index.snapshot_at(datetime(2025, 1, 2, tzinfo=_UTC))
+        assert snap.total == 2
+        assert snap.location_counts == {"LOC-A": 2}
+
+
+# ---------------------------------------------------------------------------
+# global_cashout_rate — Laplace/empirical-Bayes smoothing (alpha=5)
+# ---------------------------------------------------------------------------
+
+
+class TestGlobalCashoutRate:
+    def test_zero_count_is_not_exactly_zero(self) -> None:
+        rate = global_cashout_rate(count=0.0, total=1000, n_locations=50)
+        assert rate > 0.0
+
+    def test_higher_count_gives_higher_rate(self) -> None:
+        low = global_cashout_rate(count=1.0, total=1000, n_locations=50)
+        high = global_cashout_rate(count=50.0, total=1000, n_locations=50)
+        assert high > low
+
+    def test_empty_universe_does_not_raise(self) -> None:
+        # n_locations=0 falls back to a universe of 1 (no ZeroDivisionError); with no
+        # observations at all the smoothed rate is uninformative (1.0, i.e. alpha/alpha).
+        rate = global_cashout_rate(count=0.0, total=0, n_locations=0)
+        assert rate == 1.0
+
+    def test_rate_matches_formula(self) -> None:
+        rate = global_cashout_rate(count=10.0, total=100, n_locations=20, alpha=5.0)
+        assert abs(rate - (10.0 + 5.0) / (100 + 5.0 * 20)) < 1e-9
+
+    def test_build_features_wires_global_rate(self) -> None:
+        from dataclasses import replace
+
+        cand = _make_candidate("LOC-1")
+        ctx = replace(
+            _make_ctx(),
+            global_cashout_location_counts={"LOC-1": 9},
+            global_cashout_total=100,
+            global_n_locations=20,
+        )
+        row = build_features(ctx, cand)
+        assert row.global_cashout_count == 9.0
+        assert abs(row.global_cashout_rate - (9.0 + 5.0) / (100 + 5.0 * 20)) < 1e-9
+
+    def test_build_features_cold_start_location(self) -> None:
+        """A location with zero global cash-outs still gets a positive smoothed rate."""
+        from dataclasses import replace
+
+        cand = _make_candidate("LOC-NEVER-SEEN")
+        ctx = replace(
+            _make_ctx(),
+            global_cashout_location_counts={"LOC-1": 9},
+            global_cashout_total=100,
+            global_n_locations=20,
+        )
+        row = build_features(ctx, cand)
+        assert row.global_cashout_count == 0.0
+        assert row.global_cashout_rate > 0.0
+
+
+# ---------------------------------------------------------------------------
 # T7 — TrainingSetBuilder: time-ordered split
 # ---------------------------------------------------------------------------
 
@@ -239,7 +364,7 @@ class TestFeaturesToArray:
     def test_shape(self) -> None:
         rows = [_make_feature_row() for _ in range(5)]
         X = features_to_array(rows)
-        assert X.shape == (5, 13)
+        assert X.shape == (5, 15)
         assert X.dtype == np.float64
 
     def test_same_bank_column(self) -> None:
@@ -265,9 +390,15 @@ class TestFeaturesToArray:
             cluster_size_log=1.0,
         )
         X = features_to_array([row_atm, row_branch])
-        # ATM -> 0.0, BRANCH -> 1.0 (column index 12)
-        assert X[0, 12] == 0.0
-        assert X[1, 12] == 1.0
+        # ATM -> 0.0, BRANCH -> 1.0 (column index 14 — channel is the last column)
+        assert X[0, 14] == 0.0
+        assert X[1, 14] == 1.0
+
+    def test_global_cashout_columns(self) -> None:
+        row = _make_feature_row(global_cashout_count=7.0, global_cashout_rate=0.25)
+        X = features_to_array([row])
+        assert X[0, 12] == 7.0
+        assert X[0, 13] == 0.25
 
 
 # ---------------------------------------------------------------------------

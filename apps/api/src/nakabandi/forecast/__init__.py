@@ -21,6 +21,7 @@ from nakabandi.forecast.application.train import ModelVersionIds, TrainingDataPo
 from nakabandi.forecast.application.use_cases import GenerateForecast
 from nakabandi.forecast.domain.candidates import LocationInfo
 from nakabandi.forecast.domain.features import BLOCKLIST, FEATURE_REGISTRY
+from nakabandi.forecast.domain.global_stats import GlobalCashoutIndex
 from nakabandi.forecast.domain.scorers import (
     HeuristicScorer,
     HistGradientBoostingScorer,
@@ -57,6 +58,7 @@ __all__ = [
     "TrainModels",
     "TrainingDataPort",
     "FEATURE_REGISTRY",
+    "GlobalCashoutIndex",
     "BLOCKLIST",
 ]
 

@@ -32,7 +32,36 @@ FEATURE_REGISTRY: tuple[str, ...] = (
     "amount_x_dist",
     "activity_index",
     "cluster_size_log",
+    "global_cashout_count",
+    "global_cashout_rate",
 )
+
+# ---------------------------------------------------------------------------
+# Global (cross-cluster) as-of cash-out density smoothing.
+# alpha=5: light empirical-Bayes / Laplace prior so a location with zero observed
+# cash-outs gets a small positive rate instead of exactly 0 (HGB can otherwise
+# treat "0" as a hard signal rather than "no evidence yet"). Chosen small relative
+# to typical per-location counts in the sim (tens-hundreds) so it barely perturbs
+# well-observed locations while giving cold-start locations a non-zero floor.
+_GLOBAL_ALPHA = 5.0
+
+
+def global_cashout_rate(
+    count: float, total: int, n_locations: int, alpha: float = _GLOBAL_ALPHA
+) -> float:
+    """Laplace/empirical-Bayes smoothed global cash-out rate for one location.
+
+    rate = (count + alpha) / (total + alpha * n_locations)
+
+    Pure arithmetic — count/total/n_locations must already be as-of bounded by the caller
+    (GlobalCashoutIndex.snapshot_at). Returns 0.0 for the degenerate case of an empty
+    location universe rather than raising.
+    """
+    denom = total + alpha * max(n_locations, 1)
+    if denom <= 0:
+        return 0.0
+    return (count + alpha) / denom
+
 
 # ---------------------------------------------------------------------------
 # BLOCKLIST — names that may NEVER enter FEATURE_REGISTRY.
@@ -117,6 +146,11 @@ def build_features(
     amount_x_dist = amount_log * dist_home
     cluster_size_log = math.log1p(float(ctx.unique_accounts))
 
+    global_count = float(ctx.global_cashout_location_counts.get(cand.location_id, 0))
+    global_rate = global_cashout_rate(
+        global_count, ctx.global_cashout_total, ctx.global_n_locations
+    )
+
     return FeatureRow(
         same_bank=same_bank,
         dist_home_km=dist_home,
@@ -131,4 +165,6 @@ def build_features(
         amount_x_dist=amount_x_dist,
         activity_index=cand.activity_index,
         cluster_size_log=cluster_size_log,
+        global_cashout_count=global_count,
+        global_cashout_rate=global_rate,
     )

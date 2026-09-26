@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from nakabandi.forecast.application.train import TrainingDataPort
 from nakabandi.forecast.domain.candidates import LocationInfo, generate_candidates
+from nakabandi.forecast.domain.global_stats import GlobalCashoutIndex
 from nakabandi.forecast.domain.types import Candidate
 from nakabandi.forecast.domain.types import ClusterContext as ForecastClusterContext
 from nakabandi.geo import GeoService
@@ -78,6 +79,8 @@ class SqlTrainingDataPort(TrainingDataPort):
         cluster_id: Id,
         as_of: SimTime,
         by_id: dict[Id, _Loc],
+        global_index: GlobalCashoutIndex,
+        n_locations: int,
     ) -> ForecastClusterContext:
         """Build forecast's per-complaint ClusterContext from graph's cluster-level one — the
         same mapping live_pipeline.py's LiveClusterPort.context_for does for live serving,
@@ -99,6 +102,7 @@ class SqlTrainingDataPort(TrainingDataPort):
             stats, {i: (loc.lat, loc.lon) for i, loc in by_id.items()}
         )
         home = by_id.get(complaint.layer1_home_location_id or "")
+        global_snap = global_index.snapshot_at(as_of)
 
         return ForecastClusterContext(
             complaint_id=complaint.id,
@@ -124,6 +128,9 @@ class SqlTrainingDataPort(TrainingDataPort):
             # represents the forecast as it would have looked the moment the complaint arrived,
             # the most common real case (first forecast, generated right at ingestion).
             elapsed_min=max(0.0, (as_of - complaint.reported_event_at).total_seconds() / 60.0),
+            global_cashout_location_counts=global_snap.location_counts,
+            global_cashout_total=global_snap.total,
+            global_n_locations=n_locations,
         )
 
     def complaint_records(
@@ -135,6 +142,8 @@ class SqlTrainingDataPort(TrainingDataPort):
         known at the moment it actually ran — the same leakage-free rule cluster_delays_min
         already applies for the timing side."""
         all_locations, by_id = self._registry()
+        global_index = GlobalCashoutIndex(self._lien.all_cashout_events())
+        n_locations = len(by_id)
         records: list[tuple[ForecastClusterContext, list[Candidate], str]] = []
 
         for complaint in self._lien.complaints_up_to(as_of_end):
@@ -150,7 +159,14 @@ class SqlTrainingDataPort(TrainingDataPort):
                 continue  # this complaint's cluster hasn't been observed cashing out yet
             actual_location_id, _event_at = outcome
 
-            ctx = self._forecast_ctx(complaint, cluster_id, complaint.reported_event_at, by_id)
+            ctx = self._forecast_ctx(
+                complaint,
+                cluster_id,
+                complaint.reported_event_at,
+                by_id,
+                global_index,
+                n_locations,
+            )
             home_district_id = complaint.layer1_home_district_id or complaint.victim_district_id
             candidates = generate_candidates(ctx, all_locations, home_district_id, self._policy)
             if not any(c.location_id == actual_location_id for c in candidates):
