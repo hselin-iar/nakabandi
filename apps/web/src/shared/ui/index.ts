@@ -42,3 +42,5 @@ export { RollingCounter } from "./RollingCounter";
 export { ConsequenceTally } from "./ConsequenceTally";
 export { CommandPalette } from "./CommandPalette";
 export type { PaletteGroup, PaletteItem } from "./CommandPalette";
+export { ProgressRing } from "./ProgressRing";
+export { Sparkline } from "./Sparkline";

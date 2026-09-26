@@ -8,6 +8,7 @@
  */
 
 import React from "react";
+import { toast } from "sonner";
 import { Button } from "../../shared/ui/Button";
 import { formatSimTime } from "../../shared/lib/format";
 import { useBuildEvidencePack } from "./api/useAlerts";
@@ -30,7 +31,14 @@ export function EvidencePackPanel({ alertId }: EvidencePackPanelProps) {
           size="sm"
           variant="outline"
           loading={buildPack.isPending}
-          onClick={() => buildPack.mutate({ alertId })}
+          onClick={() =>
+            // Not undoable (a sealed, hash-anchored artifact), so a plain outcome toast: no undo window.
+            toast.promise(buildPack.mutateAsync({ alertId }), {
+              loading: "Building evidence pack…",
+              success: (pack) => `Evidence pack v${pack.version} built`,
+              error: (err: unknown) => (err instanceof Error ? err.message : "Could not build the evidence pack"),
+            })
+          }
         >
           📄 Generate Evidence Pack
         </Button>

@@ -12,12 +12,17 @@ import { useSearchParams } from "react-router-dom";
 import EvaluationPage from "../evaluation/EvaluationPage";
 import OpsPage from "../ops/OpsPage";
 import AuditPage from "../audit/AuditPage";
+import SystemHud from "./SystemHud";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import type { Permission } from "../../shared/api/enums.ts";
 
-type Tab = "evaluation" | "ops" | "audit";
+type Tab = "overview" | "evaluation" | "ops" | "audit";
 
-const TABS: { id: Tab; label: string; require: Permission }[] = [
+// The overview shows only the sections a role may see, so it needs at least one of these.
+const OVERVIEW_PERMISSIONS: Permission[] = ["VIEW_AUDIT", "VIEW_EVALUATION", "SIM_CONTROL", "VIEW_ALERTS"];
+
+const TABS: { id: Tab; label: string; require: Permission | Permission[] }[] = [
+  { id: "overview", label: "Overview", require: OVERVIEW_PERMISSIONS },
   { id: "evaluation", label: "Evaluation", require: "VIEW_EVALUATION" },
   { id: "ops", label: "Ops", require: "SIM_CONTROL" },
   { id: "audit", label: "Audit", require: "VIEW_AUDIT" },
@@ -26,7 +31,7 @@ const TABS: { id: Tab; label: string; require: Permission }[] = [
 export default function SystemIntegrityPage() {
   const { can } = usePrincipal();
   const [searchParams] = useSearchParams();
-  const availableTabs = TABS.filter((t) => can(t.require));
+  const availableTabs = TABS.filter((t) => (Array.isArray(t.require) ? t.require.some(can) : can(t.require)));
   const requestedTab = searchParams.get("tab") as Tab | null;
   const [tab, setTab] = useState<Tab | null>(requestedTab ?? availableTabs[0]?.id ?? null);
   const activeTab = tab && availableTabs.some((t) => t.id === tab) ? tab : availableTabs[0]?.id;
@@ -62,6 +67,7 @@ export default function SystemIntegrityPage() {
           </div>
 
           <div className="nk-system-integrity-body">
+            {activeTab === "overview" && <SystemHud />}
             {activeTab === "evaluation" && <EvaluationPage />}
             {activeTab === "ops" && <OpsPage />}
             {activeTab === "audit" && <AuditPage />}

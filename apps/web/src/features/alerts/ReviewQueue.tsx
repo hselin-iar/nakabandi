@@ -3,6 +3,7 @@
  * DOC 3 Web App Shell: features/alerts — ReviewQueue
  */
 
+import { toast } from "sonner";
 import React, { useState } from "react";
 import type { AlertSummary } from "../../shared/api/types.ts";
 import type { AlertStatus, Severity } from "../../shared/api/enums.ts";
@@ -61,14 +62,15 @@ export function ReviewQueue({
 
   function handleAckAndNext() {
     if (!current) return;
-    actionMutation.mutate(
-      { alertId: current.id, action: { type: "acknowledge" } },
-      {
-        onSuccess: () => {
-          handleNext();
-        },
-      },
-    );
+    // Optimistic (the mutation flips the status in every cached list) with a toast that
+    // reports the real outcome; the queue advances only once the server accepted it.
+    const request = actionMutation.mutateAsync({ alertId: current.id, action: { type: "acknowledge" } });
+    toast.promise(request, {
+      loading: "Acknowledging…",
+      success: "Acknowledged",
+      error: (err: unknown) => (err instanceof Error ? err.message : "Acknowledge failed"),
+    });
+    request.then(handleNext, () => undefined);
   }
 
   return (

@@ -18,40 +18,17 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
+import { fetchEvalResults } from "../../../shared/api/fetchEvalResults";
+import type { EvalReport, MetricPoint } from "../../../shared/api/fetchEvalResults";
 
-export interface MetricPoint {
-  value: number;
-  n: number;
-}
-
-export interface EvalReport {
-  generated_at: string;
-  as_of: string;
-  scorer: string;
-  metrics: {
-    n_complaints: number;
-    hit_rate_at_1: MetricPoint;
-    hit_rate_at_3: MetricPoint;
-    hit_rate_at_5: MetricPoint;
-    precision_at_1: MetricPoint;
-    precision_at_3: MetricPoint;
-    precision_at_5: MetricPoint;
-    brier_score: MetricPoint;
-  };
-}
+export type { EvalReport, MetricPoint };
 
 export function useEvalReport() {
   return useQuery<EvalReport | null>({
     queryKey: ["eval-report"],
-    queryFn: async () => {
-      const res = await fetch("/eval-results.json", { cache: "no-store" });
-      if (!res.ok) {
-        // scripts/evaluate.py has never been run in this environment — an honest empty
-        // state, not a fixture standing in for it.
-        return null;
-      }
-      return (await res.json()) as EvalReport;
-    },
+    // null when scripts/evaluate.py has never been run: an honest empty state, not a fixture.
+    // The file can contain bare NaN (Python allow_nan), which fetchEvalResults sanitises.
+    queryFn: fetchEvalResults,
     staleTime: 60_000,
   });
 }

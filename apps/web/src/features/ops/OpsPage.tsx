@@ -94,8 +94,8 @@ function LatencyChart({ stages }: { stages: StageLatency[] }) {
               fontSize: 12,
             }}
           />
-          <Bar dataKey="p50" name="p50" fill="#6366f1" radius={[3, 3, 0, 0]} />
-          <Bar dataKey="p95" name="p95" fill="#22d3ee" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="p50" name="p50" fill="var(--nk-text-secondary)" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="p95" name="p95" fill="var(--nk-accent)" radius={[3, 3, 0, 0]} />
           {/* SLO reference line at 200 ms */}
           <ReferenceLine y={200} stroke="var(--nk-severity-high)" strokeDasharray="4 2" label={{ value: "200 ms SLO", fill: "var(--nk-severity-high)", fontSize: 10 }} />
         </BarChart>
@@ -131,7 +131,7 @@ function EpsChart({ series }: { series: { at: string; eps: number }[] }) {
               fontSize: 12,
             }}
           />
-          <Line type="monotone" dataKey="eps" stroke="#6366f1" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="eps" stroke="var(--nk-accent)" strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>

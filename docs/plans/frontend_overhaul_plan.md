@@ -508,7 +508,7 @@ Manual: dagre renders left-to-right in hop order matching the previous hand-comp
 
 **Target files:**
 - New: `apps/web/src/shared/api/fetchEvalResults.ts` — NaN-sanitizing fetch helper (§2.4): fetch as text, sanitize bare `NaN` tokens, `{ value: number | null, n: number }` per metric
-- Rewrite: `apps/web/src/features/evaluation/EvaluationPage.tsx` (or a new `features/system/SystemIntegrityPage.tsx` composition, matching the existing `feature:system → feature:[evaluation, ops, audit]` boundaries rule) — wire `/system/metrics`, `/audit/verify`, `/analytics/live-metrics`, sanitized `eval-results.json` per §2.4; `RollingCounter` on the exposure tiles; latency sparklines from a 10s client-side rolling buffer
+- Modify: `features/system/SystemIntegrityPage.tsx` gains an **Overview** tab (new `features/system/SystemHud.tsx`, gated per section by the same permissions as the endpoints) wiring `/audit/verify`, `/system/metrics` (10 s poll into a 30-sample client buffer), `/analytics/live-metrics` and the sanitised `eval-results.json`; `EvaluationPage` keeps its own tab and now uses the shared `ProgressRing` and the null-safe parser. Feature-local hooks (`features/system/api/useSystemHud.ts`) were written instead of importing `dashboard`, because `system` may only import `evaluation`/`ops`/`audit` under the boundaries rule.
 - Audit pass: every mutation across `alerts`, `casework`-adjacent actions (`EvidencePackPanel`'s generate action, `OutcomeButtons`), and `ops`/`audit` pages gets the consistent optimistic-update + `sonner` treatment of the tiered model in §2.1 (evidence-pack generation gets plain success/error toasts)
 - Modify: `apps/web/src/shared/ui/ShortcutSheet.tsx` — final pass so every scope is listed and matches the real bindings
 

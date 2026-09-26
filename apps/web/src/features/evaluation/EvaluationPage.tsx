@@ -10,56 +10,7 @@
 import React from "react";
 import { useEvalReport } from "./api/useEvaluation";
 import type { EvalReport, MetricPoint } from "./api/useEvaluation";
-
-// ---------------------------------------------------------------------------
-// ProgressRing — animated SVG arc showing a 0-1 score as a ring
-// ---------------------------------------------------------------------------
-
-function ProgressRing({
-  value,
-  size = 96,
-  strokeWidth = 8,
-  label,
-  color,
-}: {
-  value: number;
-  size?: number;
-  strokeWidth?: number;
-  label: string;
-  color: string;
-}) {
-  const r = (size - strokeWidth) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ * (1 - Math.max(0, Math.min(1, value)));
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-        <circle
-          cx={size / 2} cy={size / 2} r={r}
-          fill="none" stroke="var(--nk-border-subtle)" strokeWidth={strokeWidth}
-        />
-        <circle
-          cx={size / 2} cy={size / 2} r={r}
-          fill="none" stroke={color} strokeWidth={strokeWidth}
-          strokeDasharray={circ} strokeDashoffset={offset}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          style={{ transition: "stroke-dashoffset 0.8s ease" }}
-        />
-        <text
-          x="50%" y="50%" dominantBaseline="middle" textAnchor="middle"
-          fill="var(--nk-text-primary)" fontSize={size * 0.22} fontWeight={700}
-          fontFamily="var(--nk-font-sans)"
-        >
-          {(value * 100).toFixed(1)}%
-        </text>
-      </svg>
-      <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--nk-text-muted)" }}>
-        {label}
-      </span>
-    </div>
-  );
-}
+import { ProgressRing } from "../../shared/ui/ProgressRing";
 
 // ---------------------------------------------------------------------------
 // MetricsTable
@@ -95,10 +46,14 @@ function MetricsTable({ report }: { report: EvalReport }) {
                 <td className="nk-table__td">
                   <span className="nk-eval-metric-name">{label}</span>
                 </td>
-                <td className="nk-table__td nk-table__td--right nk-eval-value">
-                  {key === "brier_score" ? m.value.toFixed(4) : `${(m.value * 100).toFixed(1)}%`}
+                <td className="nk-table__td nk-table__td--right nk-eval-value data-digit">
+                  {m.value === null
+                    ? "insufficient sample"
+                    : key === "brier_score"
+                      ? m.value.toFixed(4)
+                      : `${(m.value * 100).toFixed(1)}%`}
                 </td>
-                <td className="nk-table__td nk-table__td--right nk-eval-value">{m.n}</td>
+                <td className="nk-table__td nk-table__td--right nk-eval-value data-digit">{m.n}</td>
               </tr>
             );
           })}
@@ -170,18 +125,12 @@ export default function EvaluationPage() {
           >
             <ProgressRing
               value={report.metrics.hit_rate_at_5.value}
+              n={report.metrics.hit_rate_at_5.n}
               label="Hit Rate @5"
-              color={
-                report.metrics.hit_rate_at_5.value >= 0.3
-                  ? "#22c55e"
-                  : report.metrics.hit_rate_at_5.value >= 0.1
-                    ? "#f59e0b"
-                    : "#ef4444"
-              }
             />
             <div style={{ width: 1, height: 72, background: "var(--nk-border-subtle)", flexShrink: 0 }} />
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--nk-text-muted)" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--nk-text-secondary)" }}>
                 Scorer
               </span>
               <span style={{ fontSize: 20, fontWeight: 700, color: "var(--nk-text-primary)" }}>
@@ -189,7 +138,7 @@ export default function EvaluationPage() {
               </span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--nk-text-muted)" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--nk-text-secondary)" }}>
                 Complaints scored
               </span>
               <span style={{ fontSize: 20, fontWeight: 700, color: "var(--nk-text-primary)" }}>
@@ -197,10 +146,10 @@ export default function EvaluationPage() {
               </span>
             </div>
             <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              <span style={{ fontSize: 11, color: "var(--nk-text-muted)" }}>
+              <span style={{ fontSize: 11, color: "var(--nk-text-secondary)" }}>
                 As of {new Date(report.as_of).toLocaleString("en-IN")}
               </span>
-              <span style={{ fontSize: 11, color: "var(--nk-text-muted)" }}>
+              <span style={{ fontSize: 11, color: "var(--nk-text-secondary)" }}>
                 Generated {new Date(report.generated_at).toLocaleString("en-IN")}
               </span>
             </div>

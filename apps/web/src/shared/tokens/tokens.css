@@ -4704,3 +4704,63 @@ body {
 }
 .nk-scrubber input[type="range"] { flex: 1; accent-color: var(--nk-accent); }
 .nk-scrubber__time { min-width: 10rem; text-align: right; color: var(--nk-text-primary); }
+
+/* -------------------------------------------------------------------------
+   Phase 5 — System Integrity HUD: monospaced tabular figures throughout
+   ------------------------------------------------------------------------- */
+
+.nk-hud { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: var(--nk-space-4); }
+.nk-hud-card {
+  padding: var(--nk-space-4) var(--nk-space-5);
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-xl);
+}
+.nk-hud-card--wide { grid-column: 1 / -1; }
+.nk-hud-card__title {
+  margin-bottom: var(--nk-space-3);
+  font-size: var(--nk-size-11);
+  font-weight: var(--nk-weight-strong);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nk-text-secondary);
+}
+.nk-hud-card__note { font-size: var(--nk-size-12); font-weight: var(--nk-weight-read); letter-spacing: 0; text-transform: none; color: var(--nk-text-tertiary); }
+
+.nk-hud-chain { display: flex; align-items: center; gap: var(--nk-space-4); }
+.nk-hud-chain__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.5rem;
+  font-weight: var(--nk-weight-strong);
+  color: var(--nk-text-primary);
+  border: 2px solid var(--nk-text-primary);
+  border-radius: 50%;
+  box-shadow: var(--nk-glow-live);
+}
+/* A broken chain inverts to a solid chip and takes the one severity hue: this IS the critical state */
+.nk-hud-chain__glyph--broken {
+  color: var(--nk-text-inverse);
+  background: var(--nk-severity-critical);
+  border-color: var(--nk-severity-critical);
+  box-shadow: var(--nk-glow-critical);
+}
+.nk-hud-chain__state { font-size: var(--nk-size-20); font-weight: var(--nk-weight-strong); }
+
+.nk-hud-gauges { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--nk-space-5); margin-bottom: var(--nk-space-3); }
+.nk-ring-gauge { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.nk-ring-gauge__label { font-size: var(--nk-size-10); font-weight: var(--nk-weight-strong); letter-spacing: 0.06em; text-transform: uppercase; color: var(--nk-text-secondary); }
+.nk-ring-gauge__note { font-size: var(--nk-size-10); color: var(--nk-text-tertiary); }
+
+.nk-hud-tiles { display: flex; flex-wrap: wrap; gap: var(--nk-space-6); margin-bottom: var(--nk-space-3); }
+.nk-hud-stat { display: flex; flex-direction: column; gap: 2px; }
+.nk-hud-stat__label { font-size: var(--nk-size-10); font-weight: var(--nk-weight-strong); letter-spacing: 0.08em; text-transform: uppercase; color: var(--nk-text-tertiary); }
+.nk-hud-stat__value { font-family: var(--nk-font-mono); font-variant-numeric: tabular-nums slashed-zero; font-size: var(--nk-size-20); font-weight: var(--nk-weight-strong); }
+
+.nk-hud-spark-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: var(--nk-space-4); }
+.nk-hud-spark { display: flex; flex-direction: column; gap: 2px; }
+.nk-hud-spark__now { font-size: var(--nk-size-12); color: var(--nk-text-secondary); }
+.nk-sparkline--empty { font-size: var(--nk-size-11); color: var(--nk-text-tertiary); }

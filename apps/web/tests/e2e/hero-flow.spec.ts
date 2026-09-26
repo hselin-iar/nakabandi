@@ -119,9 +119,17 @@ test.describe("Hero Flow E2E (Step C9)", () => {
       await reasonInput.fill("Urgent lien hold request — Step C9 Hero Flow verification");
     }
 
-    const confirmBtn = page.locator("button:has-text('Confirm & Execute')");
+    // A hold is confirmed by press-and-hold (600 ms), not a click. The amount and the traced
+    // account are preselected from the alert's own proposal and cluster.
+    const confirmBtn = page.locator("button:has-text('Hold to request lien')");
     await expect(confirmBtn).toBeVisible();
-    await confirmBtn.click();
+    await expect(confirmBtn).toBeEnabled({ timeout: 10_000 });
+    const box = await confirmBtn.boundingBox();
+    if (!box) throw new Error("hold button has no bounding box");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(900);
+    await page.mouse.up();
 
     // Verify status updates to actioned
     await expect(
