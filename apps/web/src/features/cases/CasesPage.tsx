@@ -183,7 +183,7 @@ export default function CasesPage() {
           }}
         >
           <div>
-            <h2 style={{ margin: 0, fontSize: "20px", color: "var(--nk-text-primary)" }}>
+            <h2 className="nk-console-title">
               Bundled Cases & Investigation Files
             </h2>
             <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "var(--nk-text-secondary)" }}>

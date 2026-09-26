@@ -5019,3 +5019,65 @@ h1.nk-inbox-title, .nk-system-integrity-title, .nk-ops-page__title { letter-spac
 }
 .nk-kpi-chip .nk-live-dot { display: none; }
 .nk-kbd { border-radius: 6px; }
+
+/* -------------------------------------------------------------------------
+   Investigate: console finish (cases list, dossier, cluster explorer)
+   ------------------------------------------------------------------------- */
+.nk-console-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nk-text-primary);
+}
+.nk-dossier-h {
+  margin: 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--nk-accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nk-text-primary);
+}
+
+/* Segmented view switch: two equal, emphasised buttons spanning the panel */
+.nk-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 12px; }
+.nk-seg__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 3rem;
+  border: 1px solid #2C3745;
+  border-radius: 10px;
+  background: #161F2E;
+  color: var(--nk-text-secondary);
+  font-family: var(--nk-font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.nk-seg__btn:hover { color: var(--nk-text-primary); border-color: #3B4A5E; }
+.nk-seg__btn--active,
+.nk-seg__btn--active:hover { background: var(--nk-accent); border-color: var(--nk-accent); color: var(--nk-text-inverse); }
+
+/* Cases list */
+.nk-cases-page .nk-link { font-family: var(--nk-font-mono); letter-spacing: 0.02em; }
+.nk-cases-page .nk-btn { text-transform: uppercase; letter-spacing: 0.1em; font-size: 11px; }
+.nk-cases-page .nk-badge { text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; }
+.nk-cases-page tbody tr:hover td { background: #131C29; }
+
+/* Cluster explorer */
+.nk-cluster-sidebar-item { border-radius: 10px; }
+.nk-cluster-sidebar-item--active { border-color: var(--nk-accent); box-shadow: inset 3px 0 0 var(--nk-accent); }
+.nk-cluster-sidebar-item__id { font-family: var(--nk-font-mono); font-size: 11px; letter-spacing: 0.02em; }
+.nk-cluster-sidebar-item__stats { text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; }
+.nk-cluster-metric__label { text-transform: uppercase; letter-spacing: 0.12em; }
+
+/* Graph legends sit under the canvas instead of over its nodes */
+.nk-cluster-graph .nk-graph-legends { position: static; margin-top: var(--nk-space-2); }

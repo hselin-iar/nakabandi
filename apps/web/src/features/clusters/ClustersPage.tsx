@@ -68,7 +68,7 @@ export default function ClustersPage() {
     <div className="nk-clusters-page" data-testid="clusters-page" style={{ padding: "20px", height: "100%" }}>
       {/* Page Title */}
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: 0, fontSize: "20px", color: "var(--nk-text-primary)", fontWeight: 700 }}>
+        <h1 className="nk-console-title">
           Cluster Topology Explorer
         </h1>
         <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "var(--nk-text-secondary)" }}>
@@ -94,7 +94,7 @@ export default function ClustersPage() {
                   {((c as unknown) as Record<string, string>).district_ref ?? "Unknown district"}
                 </div>
                 <div className="nk-cluster-sidebar-item__stats">
-                  <span>{c.size ?? "?"} nodes</span>
+                  <span>{c.size ?? "?"} {c.size === 1 ? "node" : "nodes"}</span>
                   <span>·</span>
                   <span
                     style={{
@@ -208,7 +208,7 @@ export default function ClustersPage() {
             >
               <ClusterGraph
                 data={{ nodes: cluster.nodes, edges: cluster.edges }}
-                height={520}
+                height={640}
                 onNodeSelect={setInspectedNode}
                 selectedNodeId={inspectedNode?.id}
               />

@@ -13,7 +13,11 @@ import { Link } from "react-router-dom";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import { isLeaRole, ClusterGraph } from "../clusters/ClusterGraph";
 import { useCluster } from "../clusters/api/useClusters";
-import { formatInr, formatSimTime, humanizeStatus } from "../../shared/lib/format";
+import {
+  formatInr,
+  formatSimTime,
+  humanizeStatus,
+} from "../../shared/lib/format";
 import { Timeline } from "../../shared/ui/Timeline";
 import { MaskedRef } from "../../shared/ui/MaskedRef";
 import { CaseFundFlowSankey } from "./CaseFundFlowSankey";
@@ -41,7 +45,10 @@ function SafeBriefRenderer({ markdown }: { markdown: string }) {
       elements.push(
         <ul key={`ul-${key}`} style={{ paddingLeft: 20, margin: "8px 0" }}>
           {currentList.map((item, idx) => (
-            <li key={`li-${idx}`} style={{ marginBottom: 4, color: "var(--nk-text-primary)" }}>
+            <li
+              key={`li-${idx}`}
+              style={{ marginBottom: 4, color: "var(--nk-text-primary)" }}
+            >
               {item}
             </li>
           ))}
@@ -63,19 +70,42 @@ function SafeBriefRenderer({ markdown }: { markdown: string }) {
 
     if (trimmed.startsWith("### ")) {
       elements.push(
-        <h3 key={idx} style={{ color: "var(--nk-text-primary)", fontSize: "16px", marginTop: 16, marginBottom: 8 }}>
+        <h3
+          key={idx}
+          style={{
+            color: "var(--nk-text-primary)",
+            fontSize: "16px",
+            marginTop: 16,
+            marginBottom: 8,
+          }}
+        >
           {trimmed.slice(4)}
         </h3>,
       );
     } else if (trimmed.startsWith("#### ")) {
       elements.push(
-        <h4 key={idx} style={{ color: "var(--nk-accent)", fontSize: "14px", marginTop: 12, marginBottom: 6 }}>
+        <h4
+          key={idx}
+          style={{
+            color: "var(--nk-accent)",
+            fontSize: "14px",
+            marginTop: 12,
+            marginBottom: 6,
+          }}
+        >
           {trimmed.slice(5)}
         </h4>,
       );
     } else if (trimmed.length > 0) {
       elements.push(
-        <p key={idx} style={{ color: "var(--nk-text-primary)", lineHeight: 1.6, margin: "6px 0" }}>
+        <p
+          key={idx}
+          style={{
+            color: "var(--nk-text-primary)",
+            lineHeight: 1.6,
+            margin: "6px 0",
+          }}
+        >
           {trimmed}
         </p>,
       );
@@ -93,9 +123,12 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
   // The cluster topology lives behind its own endpoint (DOC 3 S1); compose it in here rather
   // than embedding it in the Case response.
   const { data: cluster } = useCluster(caseData.cluster_ref);
-  const { data: explanation, isLoading: explanationLoading } = useCaseExplanation(caseData.id);
+  const { data: explanation, isLoading: explanationLoading } =
+    useCaseExplanation(caseData.id);
   const [graphTab, setGraphTab] = useState<"network" | "flow">("network");
-  const graphData = caseData.graph_data ?? (cluster ? { nodes: cluster.nodes, edges: cluster.edges } : undefined);
+  const graphData =
+    caseData.graph_data ??
+    (cluster ? { nodes: cluster.nodes, edges: cluster.edges } : undefined);
 
   // Guarantee that the disclaimer is always present at the end
   const briefText = caseData.brief_md.includes(REQUIRED_FIR_DISCLAIMER)
@@ -103,7 +136,11 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
     : `${caseData.brief_md}\n\n${REQUIRED_FIR_DISCLAIMER}`;
 
   return (
-    <div className="nk-case-detail" data-testid="case-detail" style={{ padding: "4px" }}>
+    <div
+      className="nk-case-detail"
+      data-testid="case-detail"
+      style={{ padding: "4px" }}
+    >
       {/* Back button & Action Header */}
       <div
         style={{
@@ -124,7 +161,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
               ← Back to Cases
             </button>
           )}
-          <h2 style={{ margin: 0, fontSize: "20px", color: "var(--nk-text-primary)" }}>
+          <h2 className="nk-console-title">
             Case Dossier: {caseData.cluster_ref}
           </h2>
           <span
@@ -153,7 +190,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                 fontWeight: 600,
                 padding: "4px 8px",
                 borderRadius: 4,
-                background: "rgba(255,255,255,0.08)",
+                background: "#1E2732",
                 color: "var(--nk-text-primary)",
               }}
             >
@@ -187,12 +224,28 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
           style={{
             background: "var(--nk-surface-raised)",
             border: "1px solid var(--nk-border-subtle)",
-            borderRadius: 8,
+            borderRadius: 12,
             padding: "12px 16px",
           }}
         >
-          <div style={{ fontSize: "11px", color: "var(--nk-text-secondary)" }}>Total Disputed Amount</div>
-          <div style={{ fontSize: "20px", fontWeight: 700, color: "var(--nk-accent)", marginTop: 4 }}>
+          <div
+            style={{
+              fontSize: "10px",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--nk-text-secondary)",
+            }}
+          >
+            Total Disputed Amount
+          </div>
+          <div
+            style={{
+              fontSize: "20px",
+              fontWeight: 700,
+              color: "var(--nk-accent)",
+              marginTop: 4,
+            }}
+          >
             {formatInr(caseData.total_paise)}
           </div>
         </div>
@@ -201,13 +254,30 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
           style={{
             background: "var(--nk-surface-raised)",
             border: "1px solid var(--nk-border-subtle)",
-            borderRadius: 8,
+            borderRadius: 12,
             padding: "12px 16px",
           }}
         >
-          <div style={{ fontSize: "11px", color: "var(--nk-text-secondary)" }}>Complaints / Victims</div>
-          <div style={{ fontSize: "20px", fontWeight: 700, color: "var(--nk-text-primary)", marginTop: 4 }}>
-            {caseData.complaint_count} Complaints ({caseData.victim_count} Victims)
+          <div
+            style={{
+              fontSize: "10px",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--nk-text-secondary)",
+            }}
+          >
+            Complaints / Victims
+          </div>
+          <div
+            style={{
+              fontSize: "20px",
+              fontWeight: 700,
+              color: "var(--nk-text-primary)",
+              marginTop: 4,
+            }}
+          >
+            {caseData.complaint_count} Complaints ({caseData.victim_count}{" "}
+            Victims)
           </div>
         </div>
 
@@ -215,12 +285,28 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
           style={{
             background: "var(--nk-surface-raised)",
             border: "1px solid var(--nk-border-subtle)",
-            borderRadius: 8,
+            borderRadius: 12,
             padding: "12px 16px",
           }}
         >
-          <div style={{ fontSize: "11px", color: "var(--nk-text-secondary)" }}>First Incident</div>
-          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--nk-text-primary)", marginTop: 8 }}>
+          <div
+            style={{
+              fontSize: "10px",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--nk-text-secondary)",
+            }}
+          >
+            First Incident
+          </div>
+          <div
+            style={{
+              fontSize: "14px",
+              fontWeight: 600,
+              color: "var(--nk-text-primary)",
+              marginTop: 8,
+            }}
+          >
             {formatSimTime(caseData.first_seen)}
           </div>
         </div>
@@ -229,12 +315,28 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
           style={{
             background: "var(--nk-surface-raised)",
             border: "1px solid var(--nk-border-subtle)",
-            borderRadius: 8,
+            borderRadius: 12,
             padding: "12px 16px",
           }}
         >
-          <div style={{ fontSize: "11px", color: "var(--nk-text-secondary)" }}>Latest Activity</div>
-          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--nk-text-primary)", marginTop: 8 }}>
+          <div
+            style={{
+              fontSize: "10px",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--nk-text-secondary)",
+            }}
+          >
+            Latest Activity
+          </div>
+          <div
+            style={{
+              fontSize: "14px",
+              fontWeight: 600,
+              color: "var(--nk-text-primary)",
+              marginTop: 8,
+            }}
+          >
             {formatSimTime(caseData.last_seen)}
           </div>
         </div>
@@ -259,18 +361,35 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                 background: "var(--nk-surface-raised)",
                 border: "1px solid var(--nk-border-subtle)",
                 borderLeft: "3px solid var(--nk-accent)",
-                borderRadius: 8,
+                borderRadius: 12,
                 padding: 20,
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
-                <h3 style={{ margin: 0, fontSize: "16px", color: "var(--nk-text-primary)" }}>What this network is doing</h3>
-                <span style={{ fontSize: "11px", color: "var(--nk-text-tertiary)" }}>
-                  AI-assisted summary{explanation?.model ? ` · ${explanation.model}` : ""}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  marginBottom: 10,
+                }}
+              >
+                <h3 className="nk-dossier-h">What this network is doing</h3>
+                <span
+                  style={{ fontSize: "11px", color: "var(--nk-text-tertiary)" }}
+                >
+                  AI-assisted summary
+                  {explanation?.model ? ` · ${explanation.model}` : ""}
                 </span>
               </div>
               {explanationLoading ? (
-                <p style={{ margin: 0, color: "var(--nk-text-secondary)", fontSize: 14 }} aria-live="polite">
+                <p
+                  style={{
+                    margin: 0,
+                    color: "var(--nk-text-secondary)",
+                    fontSize: 14,
+                  }}
+                  aria-live="polite"
+                >
                   Writing a plain-language summary…
                 </p>
               ) : (
@@ -280,12 +399,27 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                     .trim()
                     .split(/\n{2,}/)
                     .map((para, i) => (
-                      <p key={i} style={{ margin: "0 0 10px", color: "var(--nk-text-primary)", fontSize: 14, lineHeight: 1.55 }}>
+                      <p
+                        key={i}
+                        style={{
+                          margin: "0 0 10px",
+                          color: "var(--nk-text-primary)",
+                          fontSize: 14,
+                          lineHeight: 1.55,
+                        }}
+                      >
                         {para}
                       </p>
                     ))}
-                  <p style={{ margin: 0, color: "var(--nk-text-tertiary)", fontSize: 11 }}>
-                    Generated from anonymised counts only. Check it against the facts below; it does not replace them.
+                  <p
+                    style={{
+                      margin: 0,
+                      color: "var(--nk-text-tertiary)",
+                      fontSize: 11,
+                    }}
+                  >
+                    Generated from anonymised counts only. Check it against the
+                    facts below; it does not replace them.
                   </p>
                 </>
               )}
@@ -298,7 +432,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
             style={{
               background: "var(--nk-surface-raised)",
               border: "1px solid var(--nk-border-subtle)",
-              borderRadius: 8,
+              borderRadius: 12,
               padding: 20,
             }}
           >
@@ -312,10 +446,10 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                 marginBottom: 12,
               }}
             >
-              <h3 style={{ margin: 0, fontSize: "16px", color: "var(--nk-text-primary)" }}>
-                Consolidated Case Brief
-              </h3>
-              <span style={{ fontSize: "11px", color: "var(--nk-text-tertiary)" }}>
+              <h3 className="nk-dossier-h">Consolidated Case Brief</h3>
+              <span
+                style={{ fontSize: "11px", color: "var(--nk-text-tertiary)" }}
+              >
                 Factual Synthesis
               </span>
             </div>
@@ -352,7 +486,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
             style={{
               background: "var(--nk-surface-raised)",
               border: "1px solid var(--nk-border-subtle)",
-              borderRadius: 8,
+              borderRadius: 12,
               padding: 20,
             }}
           >
@@ -364,7 +498,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                 marginBottom: 12,
               }}
             >
-              <h3 style={{ margin: 0, fontSize: "16px", color: "var(--nk-text-primary)" }}>
+              <h3 className="nk-dossier-h">
                 Identified Accounts ({caseData.accounts.length})
               </h3>
               {!isLea && (
@@ -385,15 +519,27 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
 
             <table
               data-testid="accounts-table"
-              style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "12px",
+              }}
             >
               <thead>
-                <tr style={{ borderBottom: "1px solid var(--nk-border-strong)", color: "var(--nk-text-secondary)", textAlign: "left" }}>
+                <tr
+                  style={{
+                    borderBottom: "1px solid var(--nk-border-strong)",
+                    color: "var(--nk-text-secondary)",
+                    textAlign: "left",
+                  }}
+                >
                   <th style={{ padding: "8px 6px" }}>Account Identifier</th>
                   <th style={{ padding: "8px 6px" }}>Bank</th>
                   <th style={{ padding: "8px 6px" }}>Role</th>
                   <th style={{ padding: "8px 6px" }}>Linked Complaints</th>
-                  <th style={{ padding: "8px 6px", textAlign: "right" }}>Volume</th>
+                  <th style={{ padding: "8px 6px", textAlign: "right" }}>
+                    Volume
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -401,7 +547,10 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                   <tr
                     key={idx}
                     data-testid={`account-row-${idx}`}
-                    style={{ borderBottom: "1px solid var(--nk-border-subtle)", color: "var(--nk-text-primary)" }}
+                    style={{
+                      borderBottom: "1px solid var(--nk-border-subtle)",
+                      color: "var(--nk-text-primary)",
+                    }}
                   >
                     <td style={{ padding: "8px 6px" }}>
                       {isLea ? (
@@ -413,12 +562,17 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                       )}
                     </td>
                     <td style={{ padding: "8px 6px" }}>{acc.bank}</td>
-                    <td style={{ padding: "8px 6px", textTransform: "capitalize" }}>
+                    <td
+                      style={{
+                        padding: "8px 6px",
+                        textTransform: "capitalize",
+                      }}
+                    >
                       <span
                         style={{
                           padding: "2px 6px",
                           borderRadius: 3,
-                          background: "rgba(255,255,255,0.08)",
+                          background: "#1E2732",
                           color: "var(--nk-text-primary)",
                           fontSize: "10px",
                           fontWeight: 600,
@@ -427,7 +581,9 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                         {acc.role || "Node"}
                       </span>
                     </td>
-                    <td style={{ padding: "8px 6px" }}>{acc.complaint_count}</td>
+                    <td style={{ padding: "8px 6px" }}>
+                      {acc.complaint_count}
+                    </td>
                     <td style={{ padding: "8px 6px", textAlign: "right" }}>
                       {acc.volume_paise ? formatInr(acc.volume_paise) : "—"}
                     </td>
@@ -447,7 +603,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
               style={{
                 background: "var(--nk-surface-raised)",
                 border: "1px solid var(--nk-border-subtle)",
-                borderRadius: 8,
+                borderRadius: 12,
                 padding: 16,
               }}
             >
@@ -459,31 +615,34 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                   marginBottom: 10,
                 }}
               >
-                <h3 style={{ margin: 0, fontSize: "15px", color: "var(--nk-text-primary)" }}>
-                  Syndicate Graph Topology
-                </h3>
-                <span style={{ fontSize: "11px", color: "var(--nk-text-secondary)" }}>
+                <h3 className="nk-dossier-h">Syndicate Graph Topology</h3>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    color: "var(--nk-text-secondary)",
+                  }}
+                >
                   {graphData.nodes.length} nodes
                 </span>
               </div>
-              <div role="tablist" aria-label="Graph view" style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+              <div role="tablist" aria-label="Graph view" className="nk-seg">
                 <button
                   type="button"
                   role="tab"
                   aria-selected={graphTab === "network"}
-                  className={`nk-tab-btn${graphTab === "network" ? " nk-tab-btn--active" : ""}`}
+                  className={`nk-seg__btn${graphTab === "network" ? " nk-seg__btn--active" : ""}`}
                   onClick={() => setGraphTab("network")}
                 >
-                  Network
+                  <Icon name="network" size={16} /> Network
                 </button>
                 <button
                   type="button"
                   role="tab"
                   aria-selected={graphTab === "flow"}
-                  className={`nk-tab-btn${graphTab === "flow" ? " nk-tab-btn--active" : ""}`}
+                  className={`nk-seg__btn${graphTab === "flow" ? " nk-seg__btn--active" : ""}`}
                   onClick={() => setGraphTab("flow")}
                 >
-                  Fund flow
+                  <Icon name="flow" size={16} /> Fund flow
                 </button>
               </div>
               <div
@@ -513,11 +672,17 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
               style={{
                 background: "var(--nk-surface-raised)",
                 border: "1px solid var(--nk-border-subtle)",
-                borderRadius: 8,
+                borderRadius: 12,
                 padding: 16,
               }}
             >
-              <h3 style={{ margin: "0 0 12px 0", fontSize: "15px", color: "var(--nk-text-primary)" }}>
+              <h3
+                style={{
+                  margin: "0 0 12px 0",
+                  fontSize: "15px",
+                  color: "var(--nk-text-primary)",
+                }}
+              >
                 Top Disbursal Locations
               </h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -535,8 +700,15 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                     }}
                   >
                     <div>
-                      <strong style={{ color: "var(--nk-text-primary)" }}>{loc.name}</strong>
-                      <div style={{ color: "var(--nk-text-secondary)", fontSize: "11px" }}>
+                      <strong style={{ color: "var(--nk-text-primary)" }}>
+                        {loc.name}
+                      </strong>
+                      <div
+                        style={{
+                          color: "var(--nk-text-secondary)",
+                          fontSize: "11px",
+                        }}
+                      >
                         Last incident: {formatSimTime(loc.last_at)}
                       </div>
                     </div>
@@ -563,11 +735,17 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
             style={{
               background: "var(--nk-surface-raised)",
               border: "1px solid var(--nk-border-subtle)",
-              borderRadius: 8,
+              borderRadius: 12,
               padding: 16,
             }}
           >
-            <h3 style={{ margin: "0 0 12px 0", fontSize: "15px", color: "var(--nk-text-primary)" }}>
+            <h3
+              style={{
+                margin: "0 0 12px 0",
+                fontSize: "15px",
+                color: "var(--nk-text-primary)",
+              }}
+            >
               Case Telemetry Timeline
             </h3>
             <Timeline entries={caseData.timeline} />
