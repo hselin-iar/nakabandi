@@ -145,9 +145,9 @@ class HistGradientBoostingScorer(LocationScorer):
             min_samples_leaf=20,
             random_state=42,
             class_weight="balanced",  # P1: upweight positives (~1 per ~164 candidates)
-            # P2: channel col is unordered (ATM/BRANCH/AGENT); sklearn stubs type this
-            # as str but runtime accepts list[int] column indices.
-            categorical_features=[12],  # type: ignore[arg-type]
+            # P2 NOTE: categorical_features=[12] would teach HGB that channel is unordered,
+            # but sklearn's binning crashes when a categorical col has only 1 distinct value
+            # (all current sim data uses ATM). Re-enable when multi-channel data exists.
         )
         self._calibrator: Any | None = None
         self._fitted = False
@@ -169,6 +169,22 @@ class HistGradientBoostingScorer(LocationScorer):
             return
         X = features_to_array(train_rows)
         y = np.asarray(labels, dtype=float)
+        # HGB's internal binning crashes if a column has < 2 unique non-NaN values:
+        # (a) all-NaN column (e.g. recency_days when cluster has no prior observations)
+        # (b) constant column (e.g. same_bank = 1.0 in a single-bank simulation).
+        # For (a): replace NaN with 0.0 — neutral, no information leakage.
+        # For (b): add tiny jitter (1e-7) — invisible to splits but enables binning.
+        rng = np.random.default_rng(42)
+        for col in range(X.shape[1]):
+            col_vals = X[:, col]
+            non_nan_mask = ~np.isnan(col_vals)
+            non_nan = col_vals[non_nan_mask]
+            if len(non_nan) == 0:
+                # All NaN — replace with 0.0 so HGB can bin the column
+                X[:, col] = 0.0
+            elif len(np.unique(non_nan)) < 2:
+                # Constant column — add imperceptible jitter
+                X[:, col] = col_vals + rng.standard_normal(len(col_vals)) * 1e-7
         self._model.fit(X, y)
         self._fitted = True
 

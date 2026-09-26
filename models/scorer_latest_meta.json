@@ -1,9 +1,9 @@
 {
-  "version_id": "01M3DRYZ7Q16DSNGXM3YQJPCF9",
+  "version_id": "01M3E2G67DWWXDJY2NKJPWW7CX",
   "name": "hgb_v1",
-  "data_hash": "bf9f3058ac2c1799d6d741e944d911ad5779e36e22473a06f529ea9e43c80553",
-  "trained_as_of": "2026-01-18T05:30:01.726030+00:00",
-  "created_at": "2026-09-26T02:33:29.079935",
-  "brier_before": 0.0063457159014108045,
-  "brier_after": 0.006319719977376902
+  "data_hash": "f9018866ea87829a576413fa55eb10ff03c535673a54138e44f3b76fefc11b09",
+  "trained_as_of": "2026-01-23T23:27:34.965667+00:00",
+  "created_at": "2026-09-26T05:20:10.477898",
+  "brier_before": 0.19687453994626664,
+  "brier_after": 0.008203190741398138
 }
