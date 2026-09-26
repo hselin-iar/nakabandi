@@ -185,3 +185,41 @@ describe("cap, cycles, chains, stats, csv", () => {
     expect(row).toContain("12345");
   });
 });
+
+describe("aggregateEdges / computeDepths", () => {
+  const n = (id: string) => ({ id, kind: "account" as const });
+  const e = (from: string, to: string, layer: number, at: string, amount = 100) => ({
+    from,
+    to,
+    layer,
+    event_at: at,
+    amount_paise: amount,
+  });
+
+  it("merges parallel hops into one edge with a count and summed amount", async () => {
+    const { aggregateEdges } = await import("../graphModel");
+    const out = aggregateEdges([e("a", "b", 2, "2026-01-02"), e("a", "b", 1, "2026-01-01"), e("b", "a", 3, "2026-01-03")]);
+    expect(out).toHaveLength(2);
+    const ab = out.find((x) => x.from === "a" && x.to === "b")!;
+    expect(ab.hop_count).toBe(2);
+    expect(ab.amount_paise).toBe(200);
+    expect(ab.layer).toBe(1);
+    expect(ab.event_at).toBe("2026-01-01");
+  });
+
+  it("gives origins depth 0 and marks a return edge as not deeper", async () => {
+    const { computeDepths } = await import("../graphModel");
+    const d = computeDepths([n("a"), n("b"), n("c")], [e("a", "b", 1, "1"), e("b", "c", 2, "2"), e("c", "b", 3, "3")]);
+    expect(d.get("a")).toBe(0);
+    expect(d.get("b")).toBe(1);
+    expect(d.get("c")).toBe(2);
+    expect(d.get("b")! <= d.get("c")!).toBe(true);
+  });
+
+  it("starts a pure ring at the payer of the earliest hop", async () => {
+    const { computeDepths } = await import("../graphModel");
+    const d = computeDepths([n("a"), n("b")], [e("b", "a", 2, "2"), e("a", "b", 1, "1")]);
+    expect(d.get("a")).toBe(0);
+    expect(d.get("b")).toBe(1);
+  });
+});

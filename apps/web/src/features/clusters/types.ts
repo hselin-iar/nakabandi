@@ -29,6 +29,8 @@ export interface ClusterEdge {
   label?: string;
   /** Hop depth from the traced complaint's first credit (DOC 3 S1 FundHop.layer). */
   layer: number;
+  /** How many raw hops this drawn edge stands for (parallel hops between the same pair are merged). */
+  hop_count?: number;
   /** ISO sim-time the hop occurred — drives the fund-flow timeline's speed colouring (§7.4). */
   event_at: string;
 }

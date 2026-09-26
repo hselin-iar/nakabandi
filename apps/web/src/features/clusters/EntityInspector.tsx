@@ -106,7 +106,10 @@ export function EdgeInspector({ edge, onClose }: EdgeInspectorProps) {
         {edge.amount_paise !== undefined && (
           <div><dt>Amount</dt><dd className="data-digit">{formatInr(edge.amount_paise)}</dd></div>
         )}
-        <div><dt>Hop</dt><dd className="data-digit">{edge.layer}</dd></div>
+        {(edge.hop_count ?? 1) > 1 && (
+          <div><dt>Transfers</dt><dd className="data-digit">{edge.hop_count} (merged; total shown)</dd></div>
+        )}
+        <div><dt>{(edge.hop_count ?? 1) > 1 ? "First hop" : "Hop"}</dt><dd className="data-digit">{edge.layer}</dd></div>
         <div><dt>At</dt><dd className="data-digit">{formatSimTime(edge.event_at)}</dd></div>
       </dl>
     </div>

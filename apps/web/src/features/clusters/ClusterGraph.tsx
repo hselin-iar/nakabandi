@@ -11,9 +11,8 @@
  * - Anything hidden (hop / amount filters, the cap) is announced with its count and amount,
  *   never omitted silently: in a forensic view an unlabeled omission reads as absence of evidence.
  *
- * Layout: dagre, left to right (money flows in hop order); if the loaded graph contains a ring
- * (money returning to an earlier account) dagre would silently reverse an edge to break the
- * cycle, so those graphs use cose-bilkent instead.
+ * Layout: dagre, left to right, over the forward edges only; back edges (money returning to an
+ * earlier account) are drawn as dashed pink arcs. Parallel hops are merged into one edge (×N).
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -91,31 +90,41 @@ function canvasAvailable(): boolean {
 
 // Cytoscape cannot read CSS variables: these hexes mirror the design tokens
 // (--nk-surface-elevated, --nk-text-primary/secondary/tertiary, --nk-accent, --nk-canvas-bg).
+// Role colours (also used by the legend swatches in tokens.css): green = where the trace starts,
+// blue = money passing through, amber = accounts many others feed, red = money stops here.
+const ROLE_COLOR = { origin: "#34D399", pass: "#60A5FA", pool: "#F59E0B", term: "#F87171" };
+const EDGE_EARLY = "#F97316"; // earliest hops
+const EDGE_LATE = "#38BDF8"; // latest hops
+const BACK_EDGE = "#F472B6"; // money returning to an earlier account
+
 const STYLE: StylesheetJson = [
   {
     selector: "node",
     style: {
       "background-color": "#161F2E",
-      label: "data(label)",
+      label: "data(short)",
       color: "#E7EAEE",
-      "font-size": "11px",
+      "font-size": "10px",
       "font-family": "Inter Variable, system-ui, sans-serif",
       "text-valign": "bottom",
       "text-margin-y": 6,
-      width: 32,
-      height: 32,
-      "border-width": 2,
+      "text-background-opacity": 0.75,
+      "text-background-color": "#090D12",
+      "text-background-padding": "2px",
+      width: 30,
+      height: 30,
+      "border-width": 3,
       "border-color": "#5D6673",
       shape: "ellipse",
     },
   },
-  { selector: 'node[role = "origin"]', style: { shape: "ellipse", "border-color": "#E7EAEE", "border-width": 3 } },
-  { selector: 'node[role = "pass-through"]', style: { shape: "round-rectangle", "border-color": "#98A2B3" } },
+  { selector: 'node[role = "origin"]', style: { shape: "ellipse", "border-color": ROLE_COLOR.origin, "background-color": "#12362B" } },
+  { selector: 'node[role = "pass-through"]', style: { shape: "round-rectangle", "border-color": ROLE_COLOR.pass, "background-color": "#14294A" } },
   {
     selector: 'node[role = "pooling"]',
-    style: { shape: "diamond", "border-color": "#E7EAEE", "background-color": "#2A3548", width: 40, height: 40 },
+    style: { shape: "diamond", "border-color": ROLE_COLOR.pool, "background-color": "#3A2A0E", width: 42, height: 42 },
   },
-  { selector: 'node[role = "terminal"]', style: { shape: "hexagon", "border-color": "#98A2B3", width: 36, height: 36 } },
+  { selector: 'node[role = "terminal"]', style: { shape: "hexagon", "border-color": ROLE_COLOR.term, "background-color": "#3A1A1E", width: 36, height: 36 } },
   {
     selector: "node[?isSummary]",
     style: { "border-color": "#98A2B3", "border-style": "dashed", "border-width": 3, shape: "barrel", width: 44, height: 44, "font-weight": "bold" },
@@ -125,28 +134,43 @@ const STYLE: StylesheetJson = [
     selector: `node[id ^= "${BANK_GROUP_PREFIX}"]`,
     style: { "border-style": "double", "border-width": 5, width: 46, height: 46, "font-weight": "bold" },
   },
-  { selector: "node:selected", style: { "border-width": 4, "border-color": "#38BDF8" } },
+  { selector: "node:selected", style: { "border-width": 5, "border-color": "#FFFFFF" } },
   {
     selector: "edge",
     style: {
       "target-arrow-shape": "triangle",
       "curve-style": "bezier",
-      "arrow-scale": 1.2,
+      "arrow-scale": 1,
+      opacity: 0.85,
       label: "data(label)",
       "font-size": "9px",
-      color: "#98A2B3",
+      color: "#C7CDD6",
       "text-rotation": "autorotate",
-      "text-background-opacity": 0.8,
+      "text-background-opacity": 0.85,
       "text-background-color": "#090D12",
       "text-background-padding": "2px",
     },
   },
-  { selector: "edge:selected", style: { width: 4, "line-color": "#38BDF8", "target-arrow-color": "#38BDF8" } },
+  {
+    // return flow: money coming back to an earlier account. Dashed, pink, and drawn as an arc
+    selector: "edge[?back]",
+    style: {
+      "line-style": "dashed",
+      "line-color": BACK_EDGE,
+      "target-arrow-color": BACK_EDGE,
+      "curve-style": "unbundled-bezier",
+      "control-point-distances": [-60],
+      "control-point-weights": [0.5],
+      opacity: 0.7,
+    },
+  },
+  { selector: "edge[source = target]", style: { "curve-style": "bezier", "loop-direction": "-45deg", "loop-sweep": "30deg" } },
+  { selector: "edge:selected", style: { width: 4, "line-color": "#FFFFFF", "target-arrow-color": "#FFFFFF", opacity: 1 } },
   { selector: ".dim", style: { opacity: 0.15 } },
   { selector: ".future", style: { opacity: 0.08 } },
   {
     selector: ".chain",
-    style: { "line-color": "#38BDF8", "target-arrow-color": "#38BDF8", "border-color": "#38BDF8", "border-width": 4 },
+    style: { "line-color": "#FFFFFF", "target-arrow-color": "#FFFFFF", "border-color": "#FFFFFF", "border-width": 5, opacity: 1 },
   },
 ];
 
@@ -171,6 +195,8 @@ export function ClusterGraph({
   const [expandedBanks, setExpandedBanks] = useState<ReadonlySet<string>>(new Set());
   const [isolated, setIsolated] = useState(false);
   const [chainIds, setChainIds] = useState<string[] | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [showAllFlows, setShowAllFlows] = useState(false);
 
   const { principal } = usePrincipal();
   const isLea = isLeaRole(principal?.role);
@@ -184,8 +210,9 @@ export function ClusterGraph({
         minAmountPaise: minAmount,
         groupByBank: groupBanks,
         expandedBanks,
+        strongestOnly: !showAllFlows,
       }),
-    [data, hopLimit, minAmount, groupBanks, expandedBanks],
+    [data, hopLimit, minAmount, groupBanks, expandedBanks, showAllFlows],
   );
   const { nodes: cappedNodes, edges: cappedEdges, isCapped, cappedCount: hiddenCount } = view;
 
@@ -200,9 +227,9 @@ export function ClusterGraph({
       cyclic &&
       (!groupBanks ||
         hasCycle(
-          buildGraphView(data, { maxHops: hopLimit ?? Infinity, minAmountPaise: minAmount, groupByBank: false }).edges,
+          buildGraphView(data, { maxHops: hopLimit ?? Infinity, minAmountPaise: minAmount, groupByBank: false, strongestOnly: !showAllFlows }).edges,
         )),
-    [cyclic, groupBanks, data, hopLimit, minAmount],
+    [cyclic, groupBanks, data, hopLimit, minAmount, showAllFlows],
   );
 
   // Where each edge sits in the traced timeline (0 = earliest hop, 1 = latest)
@@ -238,37 +265,47 @@ export function ClusterGraph({
         selector: "edge",
         style: {
           width: view.maxAmount > 0 ? `mapData(amount, 0, ${view.maxAmount}, 1.5, 8)` : 2,
-          "line-color": "mapData(speedT, 0, 1, #E7EAEE, #5D6673)",
-          "target-arrow-color": "mapData(speedT, 0, 1, #E7EAEE, #5D6673)",
+          "line-color": `mapData(speedT, 0, 1, ${EDGE_EARLY}, ${EDGE_LATE})`,
+          "target-arrow-color": `mapData(speedT, 0, 1, ${EDGE_EARLY}, ${EDGE_LATE})`,
         },
       },
+      // back edges keep their own colour (declared after the tempo ramp so it wins)
+      { selector: "edge[?back]", style: { "line-color": BACK_EDGE, "target-arrow-color": BACK_EDGE } },
+      ...(view.maxFlow > 0
+        ? ([
+            {
+              selector: "node[role != 'pooling'][role != 'terminal'][!isSummary]",
+              style: { width: `mapData(flow, 0, ${view.maxFlow}, 26, 44)`, height: `mapData(flow, 0, ${view.maxFlow}, 26, 44)` },
+            },
+          ] as StylesheetJson)
+        : []),
     ],
-    [view.maxAmount],
+    [view.maxAmount, view.maxFlow],
   );
 
-  // Hop-depth seeds the layout: an edge that spans several hops asks dagre for that many ranks
-  const layout = useMemo(() => {
-    if (cyclic) {
-      return { name: "cose-bilkent", animate: false, fit: true, padding: 30, nodeRepulsion: 6500, idealEdgeLength: 90 };
-    }
-    const column = new Map<string, number>();
-    for (const e of cappedEdges) {
-      const existing = column.get(e.to);
-      if (existing === undefined || e.layer < existing) column.set(e.to, e.layer);
-      if (!column.has(e.from)) column.set(e.from, Math.max(0, e.layer - 1));
-    }
-    return {
-      name: "dagre",
-      rankDir: "LR",
-      nodeSep: 50,
-      rankSep: 100,
-      animate: false,
-      fit: true,
-      padding: 30,
-      minLen: (edge: { source: () => { id: () => string }; target: () => { id: () => string } }) =>
-        Math.max(1, (column.get(edge.target().id()) ?? 1) - (column.get(edge.source().id()) ?? 0)),
-    };
-  }, [cyclic, cappedEdges]);
+  // Layered left-to-right layout over the FORWARD edges only (see computeDepths): back edges are
+  // drawn on top as dashed arcs, so a ring never makes dagre reverse an edge behind our back.
+  const layoutKey = useMemo(() => elements.map((el) => el.data.id).join("|"), [elements]);
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || cy.destroyed()) return;
+    const timer = window.setTimeout(() => {
+      if (cy.destroyed()) return;
+      cy.nodes().union(cy.edges("[!back]")).layout({
+        name: "dagre",
+        rankDir: "LR",
+        nodeSep: 36,
+        rankSep: 110,
+        edgeSep: 20,
+        ranker: "network-simplex",
+        animate: false,
+        fit: true,
+        padding: 40,
+      } as never).run();
+      cy.fit(undefined, 40);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [layoutKey]);
 
   // Selected-node derived facts
   const selectedRole = (selectedNode ? roles.get(selectedNode.id) : undefined) ?? "isolated";
@@ -333,6 +370,31 @@ export function ClusterGraph({
   onNodeSelectRef.current = onNodeSelect;
   onEdgeSelectRef.current = onEdgeSelect;
   clearSelectionRef.current = clearSelection;
+
+  // Full screen: a fixed overlay (works everywhere, unlike the Fullscreen API on some embeds);
+  // Escape leaves it, and the canvas is resized and refitted whenever the size changes.
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [fullscreen]);
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || cy.destroyed()) return;
+    const t = window.setTimeout(() => {
+      cy.resize();
+      cy.fit(undefined, 40);
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [fullscreen]);
 
   // Isolate the trail: dim everything that is neither upstream nor downstream of the selection
   useEffect(() => {
@@ -438,7 +500,11 @@ export function ClusterGraph({
     <div
       className={`nk-cluster-graph ${className}`}
       data-testid="cluster-graph-container"
-      style={{ position: "relative", width: "100%", height }}
+      style={
+        fullscreen
+          ? { position: "fixed", inset: 0, zIndex: 1000, width: "100vw", height: "100vh", background: "var(--nk-canvas-bg)", padding: 12 }
+          : { position: "relative", width: "100%", height }
+      }
     >
       {isCapped && (
         <div className="nk-graph-notice" data-testid="node-capped-badge" role="status" style={{ top: 12, left: 12 }}>
@@ -498,8 +564,35 @@ export function ClusterGraph({
         </button>
         <button type="button" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 1.25)} title="Zoom In" aria-label="Zoom in" className="nk-btn nk-btn--secondary nk-btn--sm">+</button>
         <button type="button" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 0.8)} title="Zoom Out" aria-label="Zoom out" className="nk-btn nk-btn--secondary nk-btn--sm">-</button>
+        <button
+          type="button"
+          onClick={() => setFullscreen((f) => !f)}
+          aria-pressed={fullscreen}
+          title={fullscreen ? "Exit full screen (Esc)" : "Full screen"}
+          aria-label={fullscreen ? "Exit full screen" : "View graph full screen"}
+          className="nk-btn nk-btn--secondary nk-btn--sm"
+        >
+          {fullscreen ? "Exit full screen" : "Full screen"}
+        </button>
         <button type="button" onClick={() => cyRef.current?.fit(undefined, 30)} title="Fit to View" aria-label="Fit graph to view" className="nk-btn nk-btn--secondary nk-btn--sm">Fit</button>
       </div>
+
+      {view.thinned.edges > 0 && (
+        <button
+          type="button"
+          className="nk-graph-hidden"
+          data-testid="thinned-edges-notice"
+          style={anyHidden ? { top: 84 } : undefined}
+          onClick={() => setShowAllFlows(true)}
+        >
+          Showing the strongest flows · {view.thinned.edges} weaker {view.thinned.edges === 1 ? "flow" : "flows"} ({formatInr(view.thinned.paise, { compact: true })}) set aside · show all
+        </button>
+      )}
+      {showAllFlows && cappedEdges.length > 3 * Math.max(1, cappedNodes.length) && (
+        <button type="button" className="nk-graph-hidden" data-testid="thin-again" onClick={() => setShowAllFlows(false)}>
+          Showing every flow · thin to strongest
+        </button>
+      )}
 
       {anyHidden && (
         <button type="button" className="nk-graph-hidden" data-testid="hidden-edges-notice" onClick={resetFilters}>
@@ -512,10 +605,8 @@ export function ClusterGraph({
         <CanvasBoundary>
           {canvasAvailable() && (
           <CytoscapeComponent
-            key={cyclic ? "cose" : "dagre"}
             elements={elements}
             stylesheet={stylesheet}
-            layout={layout}
             cy={handleCy}
             style={{ width: "100%", height: "100%" }}
             minZoom={0.2}
@@ -549,14 +640,14 @@ export function ClusterGraph({
           <span><i className="nk-shape nk-shape--pool" />{ROLE_LABEL.pooling}</span>
           <span><i className="nk-shape nk-shape--term" />{ROLE_LABEL.terminal}</span>
           {isCapped && <span><i className="nk-shape nk-shape--cap" />+N More</span>}
-          {cyclic && realRing && <span>Ring detected: money returns to an earlier account · force layout, not left-to-right</span>}
-          {cyclic && !realRing && <span>Bank grouping folds accounts together, so arrows can loop back · force layout</span>}
+          {cyclic && realRing && <span><i className="nk-shape nk-shape--back" />Ring: money returns to an earlier account</span>}
+          {cyclic && !realRing && <span><i className="nk-shape nk-shape--back" />Bank grouping folds accounts together, so arrows can loop back</span>}
         </div>
         {timelineSpan > 0 && (
           <div className="nk-graph-legend">
             <span>Money flows →</span>
             <span className="nk-graph-legend__ramp" />
-            <span>earliest hop (bright) → latest (dim) · thickness = amount</span>
+            <span>earliest hop → latest · thickness = amount · ×N = merged transfers</span>
           </div>
         )}
       </div>
