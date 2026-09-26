@@ -56,6 +56,8 @@ def _fake_world():
     world = MagicMock()
     world.step.return_value = []
     world.cfg.seed = 42
+    world.registry.banks = [MagicMock(id="BNK-001")]
+    world.registry.locations_in.return_value = []
     world.cfg.load.complaints_per_day = 600.0
     world.cfg.timing = TimingConfig(
         mixture=[

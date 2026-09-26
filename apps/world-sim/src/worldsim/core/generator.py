@@ -147,8 +147,12 @@ class World:
 
             if not is_innocent:
                 # Assign to an active cluster
+                # A cluster with no accounts cannot launder anything: skip it (its hops would
+                # all be self-transfers of an innocent stand-in account).
                 active = [
-                    c for c in self.clusters if c.start_day <= ctime < c.start_day + c.lifetime_days
+                    c
+                    for c in self.clusters
+                    if c.accounts and c.start_day <= ctime < c.start_day + c.lifetime_days
                 ]
                 if active:
                     idx = int(step_rng.integers(len(active)))

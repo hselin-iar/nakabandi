@@ -9,6 +9,7 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1
 COPY pyproject.toml uv.lock ./
 COPY packages/contracts/ packages/contracts/
 COPY apps/world-sim/ apps/world-sim/
+COPY apps/api/ apps/api/
 RUN uv sync --frozen --no-dev --package nakabandi-world-sim
 
 COPY config/ config/

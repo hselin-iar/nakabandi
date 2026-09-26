@@ -195,3 +195,11 @@ Explicit user instruction ("proceed with implementation plan"), executed on feat
 
 ## Frontend overhaul — completion summary
 All five phases (1, 2, 3, 4a, 4b, 5) are committed on feat/track-a, one commit each, none pushed. Everything was verified with unit/component tests and Playwright screenshots against the Vite dev server with a MOCKED API; nothing was verified against the live backend/simulators. Open follow-ups: run `npm run test:e2e` and a manual demo click-through with `npm run dev:sim`; confirm the sound cue by ear; the map basemap is still an online tile source (offline Compose path); optional backend items in the plan §5 (5.3a hop/prune metadata, 5.5 evidence chip) are not started.
+
+## Live Local Stack — findings and corrections (Integration Owner review of an antigravity session)
+- Kept: Dockerfile.api `COPY models/`, Dockerfile.worldsim `COPY apps/api/` (workspace lock), `WORLDSIM_API_URL` ending `/api/v1` (the emitter appends `/ingest/...`), `../config` read-only bind mounts, api port 8001. Still to check: the bind mounts against the offline/hosted Compose path, and the duplicated 8001 mapping in docker-compose.override.yml.
+- Reverted: the policy.yaml (abstain minimums, min_confidence_for_action, floor_confidence, severity_bands) and sim.default.yaml (lag) edits. They made 7 tests fail (test_live_chain x5, test_recovery, test_severity_bands_spread_realistic_alerts_across_all_four_levels) and overrode the Appendix A lag assumption. A demo-specific calibration must be a deliberate policy decision with the tests updated, not a silent edit.
+- The earlier "44 clusters / 44 alerts verified" claim was an artefact of the bug below: every complaint on an injected cluster became its own one-account cluster.
+- Root cause of single-account self-looping clusters: `/control/inject-cluster` created clusters with no accounts; fixed under Track B changes (see docs/state/track-b.md, [A/inject-cluster]).
+- Schema drift: `create_all` does not migrate existing SQLite volumes; after pulling a schema change run the reset (`/control/reset` or drop the api-data volume).
+- Docker volumes created before the fix still hold self-loop data; reset the api DB and restart world-sim.

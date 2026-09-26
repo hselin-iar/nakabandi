@@ -5,4 +5,5 @@
 services:
   api:
     ports:
-      - "8000:8000"
+      # Port 8000 conflicts with local services; use 8001 (already mapped in docker-compose.yml)
+      - "8001:8000"

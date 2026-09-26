@@ -42,7 +42,9 @@ def inject_cluster(
     """Add a never-seen cluster to the running world (DOC 3 M1 B5).
 
     Constructs a minimal MuleCluster with:
-      - Empty accounts list (new accounts are created when the first complaint arrives).
+      - `size` mule accounts (at least 2), each with a random bank and a home location in the
+        district, built the same way as `build_clusters`. An empty list made every complaint's
+        layer-1 account an innocent stand-in whose hops all pointed back at itself.
       - Footprint centred at the district's location (fallback: 0,0 if unknown).
       - Timing mixture from the global config, perturbed by fast_weight.
       - Infinite lifetime (injected clusters run indefinitely).
@@ -51,6 +53,7 @@ def inject_cluster(
     complaints to it based on its district_id and cadence.
     """
     from worldsim.core.clusters import (
+        Account,
         ClusterFootprint,
         MuleCluster,
         _perturb_timing,  # noqa: PLC2701
@@ -103,10 +106,22 @@ def inject_cluster(
     total = sum(channel_mix.values()) or 1.0
     channel_mix = {k: v / total for k, v in channel_mix.items()}
 
+    district_locs = world.registry.locations_in(district_id)
+    accounts = [
+        Account(
+            id=f"ACC-{cluster_id}-{a_idx:04d}",
+            bank_id=world.registry.banks[int(rng.integers(len(world.registry.banks)))].id,
+            home_location_id=(
+                district_locs[int(rng.integers(len(district_locs)))].id if district_locs else None
+            ),
+        )
+        for a_idx in range(max(2, size))
+    ]
+
     cluster = MuleCluster(
         id=cluster_id,
         district_id=district_id,
-        accounts=[],
+        accounts=accounts,
         footprint=footprint,
         channel_mix=channel_mix,
         timing=cluster_timing,

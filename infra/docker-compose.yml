@@ -11,6 +11,7 @@ services:
       DATABASE_URL: sqlite:////data/nakabandi.db
     volumes:
       - api-data:/data
+      - ../config:/repo/config:ro
     ports:
       # 8001 avoids conflicts with other projects occupying :8000 on this dev machine.
       # The Vite dev proxy (vite.config.ts) points at localhost:8001.
@@ -36,8 +37,10 @@ services:
       # Internal Docker network address, not a secret. WORLDSIM_SERVICE_KEY reuses the same
       # machine-client secret api already authenticates world-sim with (DOC 4 §4.4) — no
       # separate value needed in infra/.env.
-      WORLDSIM_API_URL: http://api:8000
+      WORLDSIM_API_URL: http://api:8000/api/v1
       WORLDSIM_SERVICE_KEY: ${API_SERVICE_KEY}
+    volumes:
+      - ../config:/repo/config:ro
     depends_on:
       api:
         condition: service_healthy
