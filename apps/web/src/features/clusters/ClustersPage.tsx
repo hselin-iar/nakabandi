@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useClusters, useCluster } from "./api/useClusters";
 import { ClusterGraph } from "./ClusterGraph";
 import { formatInr, formatSimTime } from "../../shared/lib/format";
@@ -17,6 +17,9 @@ import { Icon } from "../../shared/ui/Icon";
 export default function ClustersPage() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Back to wherever the user came from (case dossier, alert, ...); a deep link with no history goes to the case list.
+  const goBack = () => (location.key !== "default" ? navigate(-1) : navigate("/cases"));
 
   const { data: clusters = [], isLoading: isLoadingList, isError: isListError } = useClusters();
 
@@ -68,9 +71,12 @@ export default function ClustersPage() {
     <div className="nk-clusters-page" data-testid="clusters-page" style={{ padding: "20px", height: "100%" }}>
       {/* Page Title */}
       <div style={{ marginBottom: 16 }}>
-        <h1 className="nk-console-title">
-          Cluster Topology Explorer
-        </h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button type="button" onClick={goBack} className="nk-btn nk-btn--secondary nk-btn--sm" data-testid="clusters-back">
+            ← Back
+          </button>
+          <h1 className="nk-console-title">Cluster Topology Explorer</h1>
+        </div>
         <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "var(--nk-text-secondary)" }}>
           {clusters.length} mule network{clusters.length !== 1 ? "s" : ""} identified — select one to inspect its transaction graph.
         </p>
@@ -86,7 +92,7 @@ export default function ClustersPage() {
                 key={c.cluster_ref}
                 type="button"
                 className={`nk-cluster-sidebar-item${isActive ? " nk-cluster-sidebar-item--active" : ""}`}
-                onClick={() => navigate(`/clusters/${c.cluster_ref}`)}
+                onClick={() => navigate(`/clusters/${c.cluster_ref}`, { replace: true })}
                 aria-current={isActive ? "true" : undefined}
               >
                 <div className="nk-cluster-sidebar-item__id">{c.cluster_ref}</div>
