@@ -8,22 +8,37 @@
  * - Non-LEA principals see only masked account references in node labels.
  * - Node shape encodes TOPOLOGICAL role (see graphModel.ts), because the backend gives every
  *   node kind="account"; colour is not used for it (colour is reserved for severity).
+ * - Anything hidden (hop / amount filters, the cap) is announced with its count and amount,
+ *   never omitted silently: in a forensic view an unlabeled omission reads as absence of evidence.
+ *
+ * Layout: dagre, left to right (money flows in hop order); if the loaded graph contains a ring
+ * (money returning to an earlier account) dagre would silently reverse an edge to break the
+ * cycle, so those graphs use cose-bilkent instead.
  */
 
-import React, { useEffect, useRef, useState, useMemo } from "react";
-import cytoscape from "cytoscape";
-import type { Core, EventObject, NodeSingular } from "cytoscape";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import CytoscapeComponent from "react-cytoscapejs";
+import type { Core, EventObject, StylesheetJson } from "cytoscape";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import { formatInr } from "../../shared/lib/format";
 import { selectionStore } from "../../shared/state/selectionStore";
-import type { ClusterGraphData, ClusterNode, ClusterEdge } from "./types";
+import { registerDossierActions } from "../../shared/state/dossierActions";
+import { ensureCytoscapeExtensions } from "./cytoscapeSetup";
+import { EdgeInspector, NodeInspector } from "./EntityInspector";
 import {
+  BANK_GROUP_PREFIX,
   ROLE_LABEL,
+  buildGraphView,
+  chainFromOrigin,
   classifyRoles,
-  maxAmountPaise,
+  edgeKey,
+  edgesToCsv,
+  hasCycle,
+  nodeStats,
   toCytoscapeElements,
   type NodeRole,
 } from "./graphModel";
+import type { ClusterGraphData, ClusterNode, ClusterEdge } from "./types";
 
 interface ClusterGraphProps {
   data: ClusterGraphData;
@@ -32,19 +47,108 @@ interface ClusterGraphProps {
   selectedNodeId?: string | null;
   className?: string;
   height?: string | number;
+  /** Cluster reference, used only to name exported files. */
+  clusterRef?: string;
+  /**
+   * Timeline playback: edges that happened after this instant (epoch ms) are faded out, so an
+   * investigator can scrub the money trail in time. null/undefined shows everything.
+   */
+  playbackUntilMs?: number | null;
 }
-
-const MAX_NODES = 200;
 
 export function isLeaRole(role?: string): boolean {
   if (!role) return false;
-  return [
-    "state_investigator",
-    "district_officer",
-    "i4c_analyst",
-    "admin",
-  ].includes(role);
+  return ["state_investigator", "district_officer", "i4c_analyst", "admin"].includes(role);
 }
+
+/** Cytoscape needs a canvas; if it cannot start (jsdom, blocked WebGL/canvas) the rest of the view still works. */
+class CanvasBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch() {
+    /* degrade to the accessible node list below */
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+let canvasOk: boolean | null = null;
+/** Feature-detect a 2D canvas once (absent in jsdom and some locked-down browsers). */
+function canvasAvailable(): boolean {
+  if (canvasOk === null) {
+    try {
+      const c = document.createElement("canvas");
+      canvasOk = Boolean(c.getContext && c.getContext("2d"));
+    } catch {
+      canvasOk = false;
+    }
+  }
+  return canvasOk;
+}
+
+// Cytoscape cannot read CSS variables: these hexes mirror the design tokens
+// (--nk-surface-elevated, --nk-text-primary/secondary/tertiary, --nk-accent, --nk-canvas-bg).
+const STYLE: StylesheetJson = [
+  {
+    selector: "node",
+    style: {
+      "background-color": "#161F2E",
+      label: "data(label)",
+      color: "#E7EAEE",
+      "font-size": "11px",
+      "font-family": "Inter Variable, system-ui, sans-serif",
+      "text-valign": "bottom",
+      "text-margin-y": 6,
+      width: 32,
+      height: 32,
+      "border-width": 2,
+      "border-color": "#5D6673",
+      shape: "ellipse",
+    },
+  },
+  { selector: 'node[role = "origin"]', style: { shape: "ellipse", "border-color": "#E7EAEE", "border-width": 3 } },
+  { selector: 'node[role = "pass-through"]', style: { shape: "round-rectangle", "border-color": "#98A2B3" } },
+  {
+    selector: 'node[role = "pooling"]',
+    style: { shape: "diamond", "border-color": "#E7EAEE", "background-color": "#2A3548", width: 40, height: 40 },
+  },
+  { selector: 'node[role = "terminal"]', style: { shape: "hexagon", "border-color": "#98A2B3", width: 36, height: 36 } },
+  {
+    selector: "node[?isSummary]",
+    style: { "border-color": "#98A2B3", "border-style": "dashed", "border-width": 3, shape: "barrel", width: 44, height: 44, "font-weight": "bold" },
+  },
+  {
+    // a bank group: click it to expand back into its accounts
+    selector: `node[id ^= "${BANK_GROUP_PREFIX}"]`,
+    style: { "border-style": "double", "border-width": 5, width: 46, height: 46, "font-weight": "bold" },
+  },
+  { selector: "node:selected", style: { "border-width": 4, "border-color": "#38BDF8" } },
+  {
+    selector: "edge",
+    style: {
+      "target-arrow-shape": "triangle",
+      "curve-style": "bezier",
+      "arrow-scale": 1.2,
+      label: "data(label)",
+      "font-size": "9px",
+      color: "#98A2B3",
+      "text-rotation": "autorotate",
+      "text-background-opacity": 0.8,
+      "text-background-color": "#090D12",
+      "text-background-padding": "2px",
+    },
+  },
+  { selector: "edge:selected", style: { width: 4, "line-color": "#38BDF8", "target-arrow-color": "#38BDF8" } },
+  { selector: ".dim", style: { opacity: 0.15 } },
+  { selector: ".future", style: { opacity: 0.08 } },
+  {
+    selector: ".chain",
+    style: { "line-color": "#38BDF8", "target-arrow-color": "#38BDF8", "border-color": "#38BDF8", "border-width": 4 },
+  },
+];
 
 export function ClusterGraph({
   data,
@@ -53,352 +157,282 @@ export function ClusterGraph({
   selectedNodeId,
   className = "",
   height = 500,
+  clusterRef,
+  playbackUntilMs,
 }: ClusterGraphProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const [selectedNode, setSelectedNode] = useState<ClusterNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<ClusterEdge | null>(null);
 
+  // Noise controls (all client-side, from fields already in the edges)
+  const [hopLimit, setHopLimit] = useState<number | null>(null); // null = all hops
+  const [minAmount, setMinAmount] = useState(0);
+  const [groupBanks, setGroupBanks] = useState(false);
+  const [expandedBanks, setExpandedBanks] = useState<ReadonlySet<string>>(new Set());
+  const [isolated, setIsolated] = useState(false);
+  const [chainIds, setChainIds] = useState<string[] | null>(null);
+
   const { principal } = usePrincipal();
   const isLea = isLeaRole(principal?.role);
 
-  // ---------------------------------------------------------------------------
-  // Node Capping Logic (DOC 4 §C6: cap at 200 nodes with a "+N more" node)
-  // ---------------------------------------------------------------------------
-  const { cappedNodes, cappedEdges, isCapped, hiddenCount } = useMemo(() => {
-    if (!data.nodes || data.nodes.length === 0) {
-      return { cappedNodes: [], cappedEdges: [], isCapped: false, hiddenCount: 0 };
-    }
+  ensureCytoscapeExtensions();
 
-    if (data.nodes.length <= MAX_NODES) {
-      return {
-        cappedNodes: data.nodes,
-        cappedEdges: data.edges || [],
-        isCapped: false,
-        hiddenCount: 0,
-      };
-    }
+  const view = useMemo(
+    () =>
+      buildGraphView(data, {
+        maxHops: hopLimit ?? Infinity,
+        minAmountPaise: minAmount,
+        groupByBank: groupBanks,
+        expandedBanks,
+      }),
+    [data, hopLimit, minAmount, groupBanks, expandedBanks],
+  );
+  const { nodes: cappedNodes, edges: cappedEdges, isCapped, cappedCount: hiddenCount } = view;
 
-    // Sort nodes to preserve most significant entities (aggregators, victims, high volume)
-    const priorityScore = (n: ClusterNode) => {
-      let score = n.amount_paise ?? 0;
-      if (n.kind === "aggregator") score += 10_000_000_00;
-      if (n.kind === "exit") score += 5_000_000_00;
-      if (n.kind === "victim") score += 2_000_000_00;
-      return score;
-    };
+  const nodeMap = useMemo(() => new Map(cappedNodes.map((n) => [n.id, n])), [cappedNodes]);
+  const edgeMap = useMemo(() => new Map(cappedEdges.map((e, i) => [edgeKey(e, i), e])), [cappedEdges]);
+  const roles = useMemo(() => classifyRoles(cappedNodes, cappedEdges), [cappedNodes, cappedEdges]);
+  const cyclic = useMemo(() => hasCycle(cappedEdges), [cappedEdges]);
+  // A ring in the REAL trail (money returning to an earlier account) is a finding worth naming;
+  // a loop that only appears because same-bank accounts were folded together is an artifact.
+  const realRing = useMemo(
+    () =>
+      cyclic &&
+      (!groupBanks ||
+        hasCycle(
+          buildGraphView(data, { maxHops: hopLimit ?? Infinity, minAmountPaise: minAmount, groupByBank: false }).edges,
+        )),
+    [cyclic, groupBanks, data, hopLimit, minAmount],
+  );
 
-    const sorted = [...data.nodes].sort((a, b) => priorityScore(b) - priorityScore(a));
-    const topNodes = sorted.slice(0, MAX_NODES);
-    const hidden = data.nodes.length - MAX_NODES;
-
-    const keptIds = new Set(topNodes.map((n) => n.id));
-
-    // Summary node representing capped accounts
-    const summaryNode: ClusterNode = {
-      id: "node-capped-summary",
-      kind: "summary",
-      label: `+${hidden} more accounts`,
-      masked_ref: `+${hidden} more accounts`,
-      account_ref: `+${hidden} more accounts`,
-      bank: "VARIOUS",
-      isSummary: true,
-    };
-
-    const resultNodes = [...topNodes, summaryNode];
-
-    // Filter and remap edges
-    const resultEdges: ClusterEdge[] = [];
-    const edgeIdSet = new Set<string>();
-
-    for (const edge of data.edges || []) {
-      const fromKept = keptIds.has(edge.from);
-      const toKept = keptIds.has(edge.to);
-
-      if (fromKept && toKept) {
-        resultEdges.push(edge);
-      } else if (fromKept && !toKept) {
-        const edgeKey = `${edge.from}->summary`;
-        if (!edgeIdSet.has(edgeKey)) {
-          edgeIdSet.add(edgeKey);
-          resultEdges.push({
-            id: `summary-edge-${edgeKey}`,
-            from: edge.from,
-            to: "node-capped-summary",
-            label: "Aggregated flow",
-            layer: edge.layer,
-            event_at: edge.event_at,
-          });
-        }
-      } else if (!fromKept && toKept) {
-        const edgeKey = `summary->${edge.to}`;
-        if (!edgeIdSet.has(edgeKey)) {
-          edgeIdSet.add(edgeKey);
-          resultEdges.push({
-            id: `summary-edge-${edgeKey}`,
-            from: "node-capped-summary",
-            to: edge.to,
-            label: "Aggregated flow",
-            layer: edge.layer,
-            event_at: edge.event_at,
-          });
-        }
+  // Where each edge sits in the traced timeline (0 = earliest hop, 1 = latest)
+  const { edgeSpeed, timelineSpan } = useMemo(() => {
+    let minAt = Infinity;
+    let maxAt = -Infinity;
+    for (const e of cappedEdges) {
+      const t = new Date(e.event_at).getTime();
+      if (!Number.isNaN(t)) {
+        minAt = Math.min(minAt, t);
+        maxAt = Math.max(maxAt, t);
       }
     }
-
-    return {
-      cappedNodes: resultNodes,
-      cappedEdges: resultEdges,
-      isCapped: true,
-      hiddenCount: hidden,
-    };
-  }, [data.nodes, data.edges]);
-
-  // Lookup map for fast lookup on click
-  const nodeMap = useMemo(() => {
-    const map = new Map<string, ClusterNode>();
-    for (const node of cappedNodes) {
-      map.set(node.id, node);
+    const span = maxAt > minAt ? maxAt - minAt : 0;
+    const speed = new Map<string, number>();
+    for (const e of cappedEdges) {
+      const t = new Date(e.event_at).getTime();
+      speed.set(e.id || `${e.from}-${e.to}`, span > 0 && !Number.isNaN(t) ? (t - minAt) / span : 0);
     }
-    return map;
-  }, [cappedNodes]);
-
-  const roles = useMemo(() => classifyRoles(cappedNodes, cappedEdges), [cappedNodes, cappedEdges]);
-  const maxAmount = useMemo(() => maxAmountPaise(cappedEdges), [cappedEdges]);
-
-  const edgeMap = useMemo(() => {
-    const map = new Map<string, ClusterEdge>();
-    for (const edge of cappedEdges) {
-      const id = edge.id || `${edge.from}-${edge.to}`;
-      map.set(id, edge);
-    }
-    return map;
+    return { edgeSpeed: speed, timelineSpan: span };
   }, [cappedEdges]);
 
-  // ---------------------------------------------------------------------------
-  // Fund-flow directed timeline (§4.4, §7.4): order nodes left-to-right by
-  // FundHop.layer instead of a force-directed blob, and colour/weight edges by
-  // how early they happened relative to the cluster's first traced hop — tempo,
-  // not just topology, is the actual differentiator (DOC1: layering is instant,
-  // cash-out is the physical bottleneck).
-  // ---------------------------------------------------------------------------
-  const { nodeColumn, edgeSpeed, timelineSpan } = useMemo(() => {
+  const elements = useMemo(
+    () => toCytoscapeElements({ nodes: cappedNodes, edges: cappedEdges, roles, edgeSpeed, isLea }),
+    [cappedNodes, cappedEdges, roles, edgeSpeed, isLea],
+  );
+
+  // Edge width by amount and brightness by tempo, in the same stylesheet as the static rules
+  const stylesheet = useMemo<StylesheetJson>(
+    () => [
+      ...STYLE,
+      {
+        selector: "edge",
+        style: {
+          width: view.maxAmount > 0 ? `mapData(amount, 0, ${view.maxAmount}, 1.5, 8)` : 2,
+          "line-color": "mapData(speedT, 0, 1, #E7EAEE, #5D6673)",
+          "target-arrow-color": "mapData(speedT, 0, 1, #E7EAEE, #5D6673)",
+        },
+      },
+    ],
+    [view.maxAmount],
+  );
+
+  // Hop-depth seeds the layout: an edge that spans several hops asks dagre for that many ranks
+  const layout = useMemo(() => {
+    if (cyclic) {
+      return { name: "cose-bilkent", animate: false, fit: true, padding: 30, nodeRepulsion: 6500, idealEdgeLength: 90 };
+    }
     const column = new Map<string, number>();
     for (const e of cappedEdges) {
       const existing = column.get(e.to);
       if (existing === undefined || e.layer < existing) column.set(e.to, e.layer);
       if (!column.has(e.from)) column.set(e.from, Math.max(0, e.layer - 1));
     }
+    return {
+      name: "dagre",
+      rankDir: "LR",
+      nodeSep: 50,
+      rankSep: 100,
+      animate: false,
+      fit: true,
+      padding: 30,
+      minLen: (edge: { source: () => { id: () => string }; target: () => { id: () => string } }) =>
+        Math.max(1, (column.get(edge.target().id()) ?? 1) - (column.get(edge.source().id()) ?? 0)),
+    };
+  }, [cyclic, cappedEdges]);
 
-    let minAt = Infinity;
-    let maxAt = -Infinity;
-    for (const e of cappedEdges) {
-      const t = new Date(e.event_at).getTime();
-      if (!Number.isNaN(t)) {
-        if (t < minAt) minAt = t;
-        if (t > maxAt) maxAt = t;
-      }
-    }
-    const span = maxAt > minAt ? maxAt - minAt : 0;
+  // Selected-node derived facts
+  const selectedRole = (selectedNode ? roles.get(selectedNode.id) : undefined) ?? "isolated";
+  const selectedStats = useMemo(
+    () => (selectedNode ? nodeStats(cappedEdges, selectedNode.id) : null),
+    [selectedNode, cappedEdges],
+  );
+  const selectedChain = useMemo(
+    () => (selectedNode ? chainFromOrigin(cappedEdges, roles, selectedNode.id) : null),
+    [selectedNode, cappedEdges, roles],
+  );
 
-    const speed = new Map<string, number>();
-    for (const e of cappedEdges) {
-      const id = e.id || `${e.from}-${e.to}`;
-      const t = new Date(e.event_at).getTime();
-      speed.set(id, span > 0 && !Number.isNaN(t) ? (t - minAt) / span : 0);
-    }
+  const clearSelection = useCallback(() => {
+    setSelectedNode(null);
+    setSelectedEdge(null);
+    setIsolated(false);
+    setChainIds(null);
+    onNodeSelect?.(null);
+    onEdgeSelect?.(null);
+  }, [onNodeSelect, onEdgeSelect]);
 
-    return { nodeColumn: column, edgeSpeed: speed, timelineSpan: span };
-  }, [cappedEdges]);
-
-  // Preset positions: column from nodeColumn (0 for anything untouched by an edge, e.g. a
-  // singleton account or the capped-summary node), row = index within that column.
-  const nodePositions = useMemo(() => {
-    const columnCounts = new Map<number, number>();
-    const positions = new Map<string, { x: number; y: number }>();
-    const COL_WIDTH = 160;
-    const ROW_HEIGHT = 70;
-
-    for (const n of cappedNodes) {
-      const col = n.isSummary
-        ? (Math.max(0, ...Array.from(nodeColumn.values())) + 1)
-        : (nodeColumn.get(n.id) ?? 0);
-      const row = columnCounts.get(col) ?? 0;
-      columnCounts.set(col, row + 1);
-      positions.set(n.id, { x: col * COL_WIDTH, y: row * ROW_HEIGHT });
-    }
-    return positions;
-  }, [cappedNodes, nodeColumn]);
-
-  // ---------------------------------------------------------------------------
-  // Cytoscape initialization and updates
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const elements = toCytoscapeElements({
-      nodes: cappedNodes,
-      edges: cappedEdges,
-      roles,
-      edgeSpeed,
-      isLea,
-    });
-
-    try {
-      if (cyRef.current) {
-        cyRef.current.destroy();
-      }
-
-      const cy = cytoscape({
-        container: containerRef.current,
-        elements: elements,
-        style: [
-          {
-            // Default: an isolated account (no traced hops): plain circle. Cytoscape cannot read
-            // CSS variables, so these hexes mirror the tokens (--nk-surface-elevated, --nk-text-*).
-            selector: "node",
-            style: {
-              "background-color": "#161F2E",
-              label: "data(label)",
-              color: "#E7EAEE",
-              "font-size": "11px",
-              "font-family": "Inter Variable, system-ui, sans-serif",
-              "text-valign": "bottom",
-              "text-margin-y": 6,
-              width: 32,
-              height: 32,
-              "border-width": 2,
-              "border-color": "#5D6673",
-              shape: "ellipse",
-            },
-          },
-          { selector: 'node[role = "origin"]', style: { shape: "ellipse", "border-color": "#E7EAEE", "border-width": 3 } },
-          { selector: 'node[role = "pass-through"]', style: { shape: "round-rectangle", "border-color": "#98A2B3" } },
-          {
-            selector: 'node[role = "pooling"]',
-            style: { shape: "diamond", "border-color": "#E7EAEE", "background-color": "#2A3548", width: 40, height: 40 },
-          },
-          { selector: 'node[role = "terminal"]', style: { shape: "hexagon", "border-color": "#98A2B3", width: 36, height: 36 } },
-          {
-            selector: "node[?isSummary]",
-            style: {
-              "border-color": "#98A2B3",
-              "border-style": "dashed",
-              "border-width": 3,
-              shape: "barrel",
-              width: 44,
-              height: 44,
-              "font-weight": "bold",
-            },
-          },
-          { selector: "node:selected", style: { "border-width": 4, "border-color": "#38BDF8" } },
-          {
-            // Width by amount moved (paise), colour by tempo: earlier hops bright, later hops dim.
-            selector: "edge",
-            style: {
-              width: maxAmount > 0 ? `mapData(amount, 0, ${maxAmount}, 1.5, 8)` : 2,
-              "line-color": "mapData(speedT, 0, 1, #E7EAEE, #5D6673)",
-              "target-arrow-color": "mapData(speedT, 0, 1, #E7EAEE, #5D6673)",
-              "target-arrow-shape": "triangle",
-              "curve-style": "bezier",
-              "arrow-scale": 1.2,
-              label: "data(label)",
-              "font-size": "9px",
-              color: "#98A2B3",
-              "text-rotation": "autorotate",
-              "text-background-opacity": 0.8,
-              "text-background-color": "#090D12",
-              "text-background-padding": "2px",
-            },
-          },
-          {
-            selector: "edge:selected",
-            style: { width: 4, "line-color": "#38BDF8", "target-arrow-color": "#38BDF8" },
-          },
-        ],
-        layout: {
-          // Ordered left-to-right by FundHop.layer (nodePositions), not a force-directed
-          // blob or a BFS-computed depth — the domain's own hop depth, directly (§4.4, §7.4).
-          name: "preset",
-          positions: (node: NodeSingular) =>
-            nodePositions.get(node.id()) ?? { x: 0, y: 0 },
-          fit: true,
-          padding: 30,
-        } as cytoscape.LayoutOptions,
-      });
-
+  // Wire events once per Cytoscape instance
+  const handleCy = useCallback(
+    (cy: Core) => {
+      if (cyRef.current === cy) return;
+      cyRef.current = cy;
       cy.on("tap", "node", (evt: EventObject) => {
-        const id = evt.target.id();
-        const node = nodeMap.get(id) || null;
+        const id = evt.target.id() as string;
+        if (id.startsWith(BANK_GROUP_PREFIX)) {
+          // expand this bank back into its individual accounts
+          setExpandedBanks((prev) => new Set(prev).add(id.slice(BANK_GROUP_PREFIX.length)));
+          return;
+        }
+        const node = nodeMapRef.current.get(id) || null;
         setSelectedNode(node);
         setSelectedEdge(null);
-        onNodeSelect?.(node);
+        setChainIds(null);
+        onNodeSelectRef.current?.(node);
         if (node && !node.isSummary) selectionStore.set({ kind: "account", id: node.id });
       });
-
       cy.on("tap", "edge", (evt: EventObject) => {
-        const id = evt.target.id();
-        const edge = edgeMap.get(id) || null;
+        const edge = edgeMapRef.current.get(evt.target.id() as string) || null;
         setSelectedEdge(edge);
         setSelectedNode(null);
-        onEdgeSelect?.(edge);
+        onEdgeSelectRef.current?.(edge);
       });
-
       cy.on("tap", (evt: EventObject) => {
-        if (evt.target === cy) {
-          setSelectedNode(null);
-          setSelectedEdge(null);
-          onNodeSelect?.(null);
-          onEdgeSelect?.(null);
-        }
+        if (evt.target === cy) clearSelectionRef.current();
       });
+    },
+    [],
+  );
 
-      cyRef.current = cy;
-    } catch {
-      // In headless or test environments where canvas is missing, Cytoscape degrades gracefully
-    }
+  // Latest callbacks/maps for the once-bound handlers (avoids stale closures)
+  const nodeMapRef = useRef(nodeMap);
+  const edgeMapRef = useRef(edgeMap);
+  const onNodeSelectRef = useRef(onNodeSelect);
+  const onEdgeSelectRef = useRef(onEdgeSelect);
+  const clearSelectionRef = useRef(clearSelection);
+  nodeMapRef.current = nodeMap;
+  edgeMapRef.current = edgeMap;
+  onNodeSelectRef.current = onNodeSelect;
+  onEdgeSelectRef.current = onEdgeSelect;
+  clearSelectionRef.current = clearSelection;
 
-    return () => {
-      if (cyRef.current) {
-        cyRef.current.destroy();
-        cyRef.current = null;
-      }
-    };
-  }, [
-    cappedNodes,
-    cappedEdges,
-    isLea,
-    nodeMap,
-    edgeMap,
-    edgeSpeed,
-    nodePositions,
-    roles,
-    maxAmount,
-    onNodeSelect,
-    onEdgeSelect,
-  ]);
-
-  // Update selection externally if selectedNodeId changes
+  // Isolate the trail: dim everything that is neither upstream nor downstream of the selection
   useEffect(() => {
-    if (!cyRef.current) return;
-    if (selectedNodeId) {
-      cyRef.current.$(`node#${selectedNodeId}`).select();
-    } else {
-      cyRef.current.nodes().unselect();
-    }
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.batch(() => {
+      cy.elements().removeClass("dim");
+      if (isolated && selectedNode) {
+        const n = cy.getElementById(selectedNode.id);
+        if (n.nonempty()) {
+          const keep = n.union(n.predecessors()).union(n.successors());
+          cy.elements().difference(keep).addClass("dim");
+        }
+      }
+    });
+  }, [isolated, selectedNode, elements]);
+
+  // Highlight the hop chain from an origin
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.batch(() => {
+      cy.elements().removeClass("chain");
+      if (chainIds && chainIds.length > 1) {
+        for (let i = 0; i < chainIds.length; i++) {
+          cy.getElementById(chainIds[i]!).addClass("chain");
+          if (i > 0) cy.edges(`[source = "${chainIds[i - 1]}"][target = "${chainIds[i]}"]`).addClass("chain");
+        }
+      }
+    });
+  }, [chainIds, elements]);
+
+  // Timeline playback: fade out what has not happened yet
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.batch(() => {
+      cy.elements().removeClass("future");
+      if (playbackUntilMs == null) return;
+      cy.edges().forEach((e) => {
+        const at = edgeMapRef.current.get(e.id())?.event_at;
+        if (at && new Date(at).getTime() > playbackUntilMs) e.addClass("future");
+      });
+      // a node is "not yet reached" when every edge touching it is still in the future
+      cy.nodes().forEach((n) => {
+        const touching = n.connectedEdges();
+        if (touching.nonempty() && touching.not(".future").empty()) n.addClass("future");
+      });
+    });
+  }, [playbackUntilMs, elements]);
+
+  // External selection
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    if (selectedNodeId) cy.getElementById(selectedNodeId).select();
+    else cy.nodes().unselect();
   }, [selectedNodeId]);
 
-  const handleZoomIn = () => {
-    cyRef.current?.zoom(cyRef.current.zoom() * 1.25);
+  // ---- export (a working copy, never the evidence pack) ----
+  const stamp = () => new Date().toISOString().replace(/[:.]/g, "-");
+  const download = (href: string, name: string) => {
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = name;
+    a.click();
   };
+  const exportPng = useCallback(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    download(cy.png({ full: true, bg: "#090D12", scale: 2 }), `working-copy-${clusterRef ?? "cluster"}-${stamp()}.png`);
+  }, [clusterRef]);
+  const exportCsv = useCallback(() => {
+    const url = URL.createObjectURL(new Blob([edgesToCsv(cappedNodes, cappedEdges, isLea)], { type: "text/csv" }));
+    download(url, `working-copy-${clusterRef ?? "cluster"}-${stamp()}.csv`);
+    URL.revokeObjectURL(url);
+  }, [cappedNodes, cappedEdges, isLea, clusterRef]);
 
-  const handleZoomOut = () => {
-    cyRef.current?.zoom(cyRef.current.zoom() * 0.8);
-  };
+  // Publish dossier commands for the command palette while this graph is mounted
+  const actionsRef = useRef({ exportPng, exportCsv, selected: selectedNode });
+  actionsRef.current = { exportPng, exportCsv, selected: selectedNode };
+  useEffect(
+    () =>
+      registerDossierActions({
+        maxHop: view.maxLayer,
+        showHopsUpTo: (hop) => setHopLimit(hop >= view.maxLayer ? null : Math.max(1, hop)),
+        isolateSelected: () => setIsolated((v) => !v),
+        hasSelection: () => actionsRef.current.selected !== null,
+        exportPng: () => actionsRef.current.exportPng(),
+        exportCsv: () => actionsRef.current.exportCsv(),
+      }),
+    [view.maxLayer],
+  );
 
-  const handleFit = () => {
-    cyRef.current?.fit(undefined, 30);
+  const resetFilters = () => {
+    setHopLimit(null);
+    setMinAmount(0);
   };
+  const anyHidden = view.hidden.edges > 0;
+  const amountStep = Math.max(1, Math.floor(view.maxAmount / 100));
 
   return (
     <div
@@ -406,103 +440,93 @@ export function ClusterGraph({
       data-testid="cluster-graph-container"
       style={{ position: "relative", width: "100%", height }}
     >
-      {/* Capping notice banner */}
       {isCapped && (
-        <div
-          className="nk-cluster-graph__cap-badge"
-          data-testid="node-capped-badge"
-          role="status"
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            zIndex: 10,
-            background: "rgba(9, 13, 18, 0.9)",
-            border: "1px solid var(--nk-border-strong)",
-            color: "var(--nk-text-primary)",
-            padding: "6px 12px",
-            borderRadius: 6,
-            fontSize: "12px",
-            fontWeight: 600,
-            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-                    <span>
-            Graph capped: Showing top 200 nodes (+{hiddenCount} more accounts summarized)
-          </span>
+        <div className="nk-graph-notice" data-testid="node-capped-badge" role="status" style={{ top: 12, left: 12 }}>
+          <span>Graph capped: Showing top 200 nodes (+{hiddenCount} more accounts summarized)</span>
         </div>
       )}
 
-      {/* Graph Toolbar Controls */}
-      <div
-        className="nk-cluster-graph__controls"
-        style={{
-          position: "absolute",
-          top: 12,
-          right: 12,
-          zIndex: 10,
-          display: "flex",
-          gap: 6,
-          background: "rgba(9, 13, 18, 0.88)",
-          padding: 4,
-          borderRadius: 6,
-          border: "1px solid var(--nk-border-strong)",
-        }}
-      >
+      {/* Noise controls: what is shown, and an explicit count of what is not */}
+      <div className="nk-graph-toolbar" role="toolbar" aria-label="Graph controls">
+        {view.maxLayer > 1 && (
+          <label className="nk-graph-toolbar__item">
+            <span>Hops ≤ <b className="data-digit">{hopLimit ?? view.maxLayer}</b></span>
+            <input
+              type="range"
+              min={1}
+              max={view.maxLayer}
+              value={hopLimit ?? view.maxLayer}
+              aria-label="Hop depth limit"
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                setHopLimit(n >= view.maxLayer ? null : n);
+              }}
+            />
+          </label>
+        )}
+        {view.maxAmount > 0 && (
+          <label className="nk-graph-toolbar__item">
+            <span>Min amount <b className="data-digit">{formatInr(minAmount, { compact: true })}</b></span>
+            <input
+              type="range"
+              min={0}
+              max={view.maxAmount}
+              step={amountStep}
+              value={minAmount}
+              aria-label="Minimum amount"
+              onChange={(e) => setMinAmount(Number(e.target.value))}
+            />
+          </label>
+        )}
         <button
           type="button"
-          onClick={handleZoomIn}
-          title="Zoom In"
-          aria-label="Zoom in"
-          className="nk-btn nk-btn--secondary nk-btn--sm"
-          style={{ minWidth: 32, padding: "4px 8px" }}
+          className="nk-btn nk-btn--ghost nk-btn--sm"
+          aria-pressed={groupBanks}
+          onClick={() => {
+            setGroupBanks((g) => !g);
+            setExpandedBanks(new Set());
+          }}
         >
-          +
+          Group by bank
         </button>
-        <button
-          type="button"
-          onClick={handleZoomOut}
-          title="Zoom Out"
-          aria-label="Zoom out"
-          className="nk-btn nk-btn--secondary nk-btn--sm"
-          style={{ minWidth: 32, padding: "4px 8px" }}
-        >
-          -
+        <span className="nk-graph-toolbar__sep" />
+        <button type="button" className="nk-btn nk-btn--ghost nk-btn--sm" onClick={exportPng} title="Working copy — not the evidence pack">
+          PNG
         </button>
-        <button
-          type="button"
-          onClick={handleFit}
-          title="Fit to View"
-          aria-label="Fit graph to view"
-          className="nk-btn nk-btn--secondary nk-btn--sm"
-          style={{ padding: "4px 10px", fontSize: "11px" }}
-        >
-          Fit
+        <button type="button" className="nk-btn nk-btn--ghost nk-btn--sm" onClick={exportCsv} title="Working copy — not the evidence pack">
+          CSV
         </button>
+        <button type="button" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 1.25)} title="Zoom In" aria-label="Zoom in" className="nk-btn nk-btn--secondary nk-btn--sm">+</button>
+        <button type="button" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 0.8)} title="Zoom Out" aria-label="Zoom out" className="nk-btn nk-btn--secondary nk-btn--sm">-</button>
+        <button type="button" onClick={() => cyRef.current?.fit(undefined, 30)} title="Fit to View" aria-label="Fit graph to view" className="nk-btn nk-btn--secondary nk-btn--sm">Fit</button>
       </div>
 
-      {/* Main Cytoscape canvas container */}
-      <div
-        ref={containerRef}
-        data-testid="cytoscape-canvas"
-        style={{
-          width: "100%",
-          height: "100%",
-          background: "var(--nk-canvas-bg)",
-          borderRadius: 8,
-          overflow: "hidden",
-        }}
-      />
+      {anyHidden && (
+        <button type="button" className="nk-graph-hidden" data-testid="hidden-edges-notice" onClick={resetFilters}>
+          {view.hidden.edges} {view.hidden.edges === 1 ? "edge" : "edges"} hidden ({formatInr(view.hidden.paise, { compact: true })}) in loaded data · show all
+        </button>
+      )}
+
+      {/* Main Cytoscape canvas */}
+      <div data-testid="cytoscape-canvas" style={{ width: "100%", height: "100%", background: "var(--nk-canvas-bg)", borderRadius: 8, overflow: "hidden" }}>
+        <CanvasBoundary>
+          {canvasAvailable() && (
+          <CytoscapeComponent
+            key={cyclic ? "cose" : "dagre"}
+            elements={elements}
+            stylesheet={stylesheet}
+            layout={layout}
+            cy={handleCy}
+            style={{ width: "100%", height: "100%" }}
+            minZoom={0.2}
+            maxZoom={3}
+          />
+          )}
+        </CanvasBoundary>
+      </div>
 
       {/* Hidden semantic representation for accessibility & testing in JSDOM environments */}
-      <div
-        className="sr-only"
-        data-testid="graph-nodes-list"
-        aria-label="Graph nodes listing"
-      >
+      <div className="sr-only" data-testid="graph-nodes-list" aria-label="Graph nodes listing">
         {cappedNodes.map((n) => (
           <div
             key={n.id}
@@ -512,207 +536,46 @@ export function ClusterGraph({
             data-is-summary={n.isSummary ? "true" : "false"}
             data-ref={isLea ? (n.account_ref || n.masked_ref) : n.masked_ref}
           >
-            {n.isSummary
-              ? n.label
-              : isLea
-                ? (n.label || n.account_ref || n.masked_ref)
-                : (n.label || n.masked_ref)}
+            {n.isSummary ? n.label : isLea ? (n.label || n.account_ref || n.masked_ref) : (n.label || n.masked_ref)}
           </div>
         ))}
       </div>
 
       {/* Legends stack bottom-left in one container so they can never overlap */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 12,
-          left: 12,
-          zIndex: 10,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          gap: 6,
-          maxWidth: "calc(100% - 24px)",
-        }}
-      >
-      {/* Legend: shape = topological role (colour is reserved for severity). Labels state what
-          the topology shows, not what an account "is". */}
-      <div
-        className="nk-cluster-graph__legend"
-        style={{
-          background: "rgba(9, 13, 18, 0.88)",
-          padding: "6px 12px",
-          borderRadius: 6,
-          border: "1px solid var(--nk-border-strong)",
-          fontSize: "11px",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 12,
-          color: "var(--nk-text-secondary)",
-        }}
-      >
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ width: 10, height: 10, borderRadius: "50%", border: "2px solid var(--nk-text-primary)" }} />
-          {ROLE_LABEL.origin}
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, border: "2px solid var(--nk-text-secondary)" }} />
-          {ROLE_LABEL["pass-through"]}
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ width: 9, height: 9, transform: "rotate(45deg)", border: "2px solid var(--nk-text-primary)" }} />
-          {ROLE_LABEL.pooling}
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ width: 10, height: 10, clipPath: "polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)", background: "var(--nk-text-secondary)" }} />
-          {ROLE_LABEL.terminal}
-        </span>
-        {isCapped && (
-          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ width: 10, height: 10, border: "1px dashed var(--nk-text-secondary)" }} />
-            +N More
-          </span>
+      <div className="nk-graph-legends">
+        <div className="nk-graph-legend">
+          <span><i className="nk-shape nk-shape--origin" />{ROLE_LABEL.origin}</span>
+          <span><i className="nk-shape nk-shape--pass" />{ROLE_LABEL["pass-through"]}</span>
+          <span><i className="nk-shape nk-shape--pool" />{ROLE_LABEL.pooling}</span>
+          <span><i className="nk-shape nk-shape--term" />{ROLE_LABEL.terminal}</span>
+          {isCapped && <span><i className="nk-shape nk-shape--cap" />+N More</span>}
+          {cyclic && realRing && <span>Ring detected: money returns to an earlier account · force layout, not left-to-right</span>}
+          {cyclic && !realRing && <span>Bank grouping folds accounts together, so arrows can loop back · force layout</span>}
+        </div>
+        {timelineSpan > 0 && (
+          <div className="nk-graph-legend">
+            <span>Money flows →</span>
+            <span className="nk-graph-legend__ramp" />
+            <span>earliest hop (bright) → latest (dim) · thickness = amount</span>
+          </div>
         )}
       </div>
 
-      {/* Fund-flow tempo legend — money flows left to right by hop layer; edge colour is
-          when that hop happened relative to the cluster's traced timeline, not distance. */}
-      {timelineSpan > 0 && (
-        <div
-          className="nk-cluster-graph__tempo-legend"
-          style={{
-            background: "rgba(9, 13, 18, 0.88)",
-            padding: "6px 12px",
-            borderRadius: 6,
-            border: "1px solid var(--nk-border-strong)",
-            fontSize: "11px",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            color: "var(--nk-text-secondary)",
-          }}
-        >
-          <span>Money flows →</span>
-          <span
-            style={{
-              width: 60,
-              height: 4,
-              borderRadius: 2,
-              background: "linear-gradient(90deg, #E7EAEE, #5D6673)",
-            }}
-          />
-          <span>earliest hop (bright) → latest (dim) · thickness = amount</span>
-        </div>
+      {selectedNode && selectedStats && (
+        <NodeInspector
+          node={selectedNode}
+          role={selectedRole as NodeRole}
+          stats={selectedStats}
+          chain={selectedChain}
+          isLea={isLea}
+          hiddenCount={hiddenCount}
+          isolated={isolated}
+          onIsolate={() => setIsolated((v) => !v)}
+          onHighlightChain={() => setChainIds((c) => (c ? null : selectedChain))}
+          onClose={clearSelection}
+        />
       )}
-      </div>
-
-      {/* Selected Node Details Drawer/Card */}
-      {selectedNode && (
-        <div
-          className="nk-cluster-graph__inspector"
-          data-testid="node-inspector"
-          style={{
-            position: "absolute",
-            bottom: 12,
-            right: 12,
-            zIndex: 10,
-            background: "var(--nk-surface-raised)",
-            border: "1px solid var(--nk-accent)",
-            borderRadius: 8,
-            padding: 12,
-            width: 260,
-            boxShadow: "0 10px 15px -3px rgba(0,0,0,0.5)",
-            fontSize: "12px",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-            <strong style={{ color: "var(--nk-text-primary)" }}>Node Details</strong>
-            <button
-              type="button"
-              onClick={() => setSelectedNode(null)}
-              style={{ background: "none", border: "none", color: "var(--nk-text-secondary)", cursor: "pointer" }}
-            >
-              ✕
-            </button>
-          </div>
-          <div style={{ color: "var(--nk-text-primary)" }}>
-            <div>
-              <strong>Role:</strong> {ROLE_LABEL[(roles.get(selectedNode.id) ?? "isolated") as NodeRole]}
-            </div>
-            <div>
-              <strong>Bank:</strong> {selectedNode.bank || "N/A"}
-            </div>
-            <div>
-              <strong>Account:</strong>{" "}
-              <code>
-                {isLea
-                  ? selectedNode.account_ref || selectedNode.masked_ref
-                  : selectedNode.masked_ref}
-              </code>
-            </div>
-            {selectedNode.amount_paise !== undefined && (
-              <div>
-                <strong>Amount:</strong> {formatInr(selectedNode.amount_paise)}
-              </div>
-            )}
-            {selectedNode.isSummary && (
-              <div style={{ marginTop: 4, color: "var(--nk-text-secondary)", fontStyle: "italic" }}>
-                Represents {hiddenCount} truncated accounts.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Selected Edge Details Card */}
-      {selectedEdge && (
-        <div
-          className="nk-cluster-graph__inspector"
-          data-testid="edge-inspector"
-          style={{
-            position: "absolute",
-            bottom: 12,
-            right: 12,
-            zIndex: 10,
-            background: "var(--nk-surface-raised)",
-            border: "1px solid var(--nk-accent)",
-            borderRadius: 8,
-            padding: 12,
-            width: 260,
-            boxShadow: "0 10px 15px -3px rgba(0,0,0,0.5)",
-            fontSize: "12px",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-            <strong style={{ color: "var(--nk-text-primary)" }}>Transaction Flow</strong>
-            <button
-              type="button"
-              onClick={() => setSelectedEdge(null)}
-              style={{ background: "none", border: "none", color: "var(--nk-text-secondary)", cursor: "pointer" }}
-            >
-              ✕
-            </button>
-          </div>
-          <div style={{ color: "var(--nk-text-primary)" }}>
-            <div>
-              <strong>From:</strong> <code>{selectedEdge.from}</code>
-            </div>
-            <div>
-              <strong>To:</strong> <code>{selectedEdge.to}</code>
-            </div>
-            {selectedEdge.label && (
-              <div>
-                <strong>Label:</strong> {selectedEdge.label}
-              </div>
-            )}
-            {selectedEdge.amount_paise !== undefined && (
-              <div>
-                <strong>Amount:</strong> {formatInr(selectedEdge.amount_paise)}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {selectedEdge && <EdgeInspector edge={selectedEdge} onClose={() => setSelectedEdge(null)} />}
     </div>
   );
 }

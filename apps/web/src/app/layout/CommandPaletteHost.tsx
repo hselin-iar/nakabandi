@@ -15,6 +15,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { CommandPalette, type PaletteGroup } from "../../shared/ui";
 import { setShortcutSheetOpen } from "../../shared/ui/shortcutRegistry";
 import { selectionStore, useSelection } from "../../shared/state/selectionStore";
+import { useDossierActions } from "../../shared/state/dossierActions";
 import { isSoundEnabled, setSoundEnabled } from "../../shared/audio/soundPreference";
 import { useAlerts } from "../../features/alerts/api/useAlerts";
 import { useCases } from "../../features/cases/api/useCases";
@@ -52,6 +53,7 @@ export function CommandPaletteHost({
   const { pathname } = useLocation();
   const { principal, can } = usePrincipal();
   const selection = useSelection();
+  const dossier = useDossierActions();
 
   const { data: alerts = [] } = useAlerts({ view: "all" });
   const { data: cases = [] } = useCases();
@@ -111,6 +113,28 @@ export function CommandPaletteHost({
       }
     }
     out.push(context);
+
+    // ---- Open case dossier: graph commands (registered by the mounted graph) ----
+    if (dossier) {
+      const items: PaletteGroup["items"] = [];
+      for (let hop = 1; hop <= dossier.maxHop; hop++) {
+        items.push({
+          id: `dossier-hop-${hop}`,
+          label: hop === dossier.maxHop ? `Show all hops (1–${hop})` : `Show hops 1–${hop} only`,
+          hint: "graph",
+          keywords: ["jump", "hop", `hop ${hop}`],
+          onSelect: () => dossier.showHopsUpTo(hop),
+        });
+      }
+      if (dossier.hasSelection()) {
+        items.push({ id: "dossier-isolate", label: "Isolate the trail around the selected account", hint: "graph", onSelect: dossier.isolateSelected });
+      }
+      items.push(
+        { id: "dossier-export-png", label: "Export graph view as PNG (working copy)", hint: "not the evidence pack", onSelect: dossier.exportPng },
+        { id: "dossier-export-csv", label: "Export visible hops as CSV (working copy)", hint: "not the evidence pack", onSelect: dossier.exportCsv },
+      );
+      out.push({ heading: "Case dossier", items });
+    }
 
     // ---- Go to ----
     out.push({
@@ -197,7 +221,7 @@ export function CommandPaletteHost({
     });
 
     return out;
-  }, [alerts, cases, selection, pathname, principal, can, navigate]);
+  }, [alerts, cases, selection, dossier, pathname, principal, can, navigate]);
 
   return <CommandPalette open={open} onOpenChange={onOpenChange} groups={groups} />;
 }

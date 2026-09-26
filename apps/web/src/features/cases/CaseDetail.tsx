@@ -8,7 +8,7 @@
  * - Cytoscape ClusterGraph is imported from ../clusters/ClusterGraph (never duplicated).
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import { isLeaRole, ClusterGraph } from "../clusters/ClusterGraph";
@@ -16,6 +16,8 @@ import { useCluster } from "../clusters/api/useClusters";
 import { formatInr, formatSimTime, humanizeStatus } from "../../shared/lib/format";
 import { Timeline } from "../../shared/ui/Timeline";
 import { MaskedRef } from "../../shared/ui/MaskedRef";
+import { CaseFundFlowSankey } from "./CaseFundFlowSankey";
+import { CaseTimelineScrubber } from "./CaseTimelineScrubber";
 import { REQUIRED_FIR_DISCLAIMER } from "./api/useCases";
 import type { Case } from "./types";
 
@@ -91,6 +93,8 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
   // The cluster topology lives behind its own endpoint (DOC 3 S1); compose it in here rather
   // than embedding it in the Case response.
   const { data: cluster } = useCluster(caseData.cluster_ref);
+  const [graphTab, setGraphTab] = useState<"network" | "flow">("network");
+  const [playbackMs, setPlaybackMs] = useState<number | null>(null);
   const graphData = caseData.graph_data ?? (cluster ? { nodes: cluster.nodes, edges: cluster.edges } : undefined);
 
   // Guarantee that the disclaimer is always present at the end
@@ -420,6 +424,29 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                   {graphData.nodes.length} nodes
                 </span>
               </div>
+              <div role="tablist" aria-label="Graph view" style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={graphTab === "network"}
+                  className={`nk-tab-btn${graphTab === "network" ? " nk-tab-btn--active" : ""}`}
+                  onClick={() => setGraphTab("network")}
+                >
+                  Network
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={graphTab === "flow"}
+                  className={`nk-tab-btn${graphTab === "flow" ? " nk-tab-btn--active" : ""}`}
+                  onClick={() => setGraphTab("flow")}
+                >
+                  Fund flow
+                </button>
+              </div>
+              {graphTab === "network" && (
+                <CaseTimelineScrubber edges={graphData.edges} value={playbackMs} onChange={setPlaybackMs} />
+              )}
               <div
                 style={{
                   border: "1px solid var(--nk-border-strong)",
@@ -427,7 +454,16 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                   overflow: "hidden",
                 }}
               >
-                <ClusterGraph data={graphData} height={480} />
+                {graphTab === "network" ? (
+                  <ClusterGraph
+                    data={graphData}
+                    height={480}
+                    clusterRef={caseData.cluster_ref}
+                    playbackUntilMs={playbackMs}
+                  />
+                ) : (
+                  <CaseFundFlowSankey data={graphData} height={480} />
+                )}
               </div>
             </div>
           )}

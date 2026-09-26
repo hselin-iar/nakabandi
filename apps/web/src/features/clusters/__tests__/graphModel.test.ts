@@ -80,3 +80,108 @@ describe("toCytoscapeElements", () => {
     expect(maxAmountPaise([])).toBe(0);
   });
 });
+
+import {
+  BANK_GROUP_PREFIX,
+  MAX_NODES,
+  buildGraphView,
+  chainFromOrigin,
+  edgesToCsv,
+  groupByBank,
+  hasCycle,
+  nodeStats,
+} from "../graphModel";
+
+const bn = (id: string, bank: string): ClusterNode => ({ id, kind: "account", masked_ref: `XXXX-${id}`, bank });
+const NONE = { maxHops: Infinity, minAmountPaise: 0, groupByBank: false } as const;
+
+describe("buildGraphView filters", () => {
+  const nodes = [bn("a", "SBIN"), bn("b", "SBIN"), bn("c", "HDFC"), bn("d", "HDFC"), bn("solo", "AXIS")];
+  const edges = [edge("a", "b", 1, 900_000), edge("b", "c", 2, 50), edge("c", "d", 3, 40)];
+
+  it("hides deep hops and reports exactly how many edges and how many rupees were hidden", () => {
+    const v = buildGraphView({ nodes, edges }, { ...NONE, maxHops: 1 });
+    expect(v.edges).toHaveLength(1);
+    expect(v.hidden).toEqual({ edges: 2, paise: 90 });
+    expect(v.maxLayer).toBe(3);
+  });
+
+  it("hides micro-dust edges, drops nodes that only lost their edges, keeps genuinely untraced ones", () => {
+    const v = buildGraphView({ nodes, edges }, { ...NONE, minAmountPaise: 100 });
+    expect(v.edges.map((e) => `${e.from}>${e.to}`)).toEqual(["a>b"]);
+    const ids = v.nodes.map((n) => n.id);
+    expect(ids).toContain("solo"); // never had an edge: stays as an isolated account
+    expect(ids).not.toContain("d"); // only lost its edge to the filter: goes with it
+    expect(v.hidden.edges).toBe(2);
+  });
+
+  it("with no filters nothing is hidden", () => {
+    const v = buildGraphView({ nodes, edges }, NONE);
+    expect(v.hidden).toEqual({ edges: 0, paise: 0 });
+    expect(v.nodes).toHaveLength(5);
+  });
+});
+
+describe("groupByBank", () => {
+  const nodes = [bn("a", "SBIN"), bn("b", "SBIN"), bn("c", "SBIN"), bn("h", "HDFC")];
+  const edges = [edge("a", "h", 1, 100), edge("b", "h", 1, 250), edge("c", "h", 1, 50)];
+
+  it("collapses same-bank accounts into one node and SUMS the edge amounts (no edge dropped)", () => {
+    const g = groupByBank(nodes, edges);
+    expect(g.nodes.map((n) => n.id).sort()).toEqual([`${BANK_GROUP_PREFIX}SBIN`, "h"].sort());
+    expect(g.nodes.find((n) => n.id === `${BANK_GROUP_PREFIX}SBIN`)!.label).toBe("SBIN — 3 accounts");
+    expect(g.edges).toHaveLength(1);
+    expect(g.edges[0]!.amount_paise).toBe(400);
+    const total = edges.reduce((s, e) => s + (e.amount_paise ?? 0), 0);
+    expect(g.edges.reduce((s, e) => s + (e.amount_paise ?? 0), 0)).toBe(total);
+  });
+
+  it("leaves single-account banks and expanded banks alone", () => {
+    expect(groupByBank(nodes, edges, new Set(["SBIN"])).nodes).toHaveLength(4);
+    expect(groupByBank(nodes, edges).nodes.some((n) => n.id === "h")).toBe(true);
+  });
+});
+
+describe("cap, cycles, chains, stats, csv", () => {
+  it("caps at MAX_NODES with a summary node and keeps every kept-to-kept edge", () => {
+    const many = Array.from({ length: MAX_NODES + 25 }, (_, i) => bn(`n${i}`, "AXIS"));
+    const v = buildGraphView({ nodes: many, edges: [edge("n0", "n1"), edge("n0", `n${MAX_NODES + 5}`)] }, NONE);
+    expect(v.isCapped).toBe(true);
+    expect(v.cappedCount).toBe(25);
+    expect(v.nodes).toHaveLength(MAX_NODES + 1);
+    expect(v.nodes.at(-1)!.isSummary).toBe(true);
+  });
+
+  it("detects a money ring but not a clean cascade", () => {
+    expect(hasCycle([edge("a", "b"), edge("b", "c"), edge("c", "a")])).toBe(true);
+    expect(hasCycle([edge("a", "b"), edge("b", "c"), edge("a", "c")])).toBe(false);
+  });
+
+  it("finds the shortest chain from an origin to a node", () => {
+    const nodes = ["v", "m1", "m2", "atm"].map((id) => bn(id, "SBIN"));
+    const edges = [edge("v", "m1"), edge("m1", "m2"), edge("v", "m2"), edge("m2", "atm")];
+    const roles = classifyRoles(nodes, edges);
+    expect(chainFromOrigin(edges, roles, "atm")).toEqual(["v", "m2", "atm"]);
+    expect(chainFromOrigin(edges, roles, "nope")).toBeNull();
+  });
+
+  it("nodeStats totals are exactly the sum of that node's edges", () => {
+    const edges = [edge("a", "m", 1, 300), edge("b", "m", 1, 200), edge("m", "z", 2, 450)];
+    edges[0]!.event_at = "2026-01-15T10:05:00Z";
+    edges[2]!.event_at = "2026-01-15T11:00:00Z";
+    const s = nodeStats(edges, "m");
+    expect(s).toMatchObject({ inDegree: 2, outDegree: 1, inPaise: 500, outPaise: 450 });
+    expect(s.firstAt).toBe("2026-01-15T10:00:00Z");
+    expect(s.lastAt).toBe("2026-01-15T11:00:00Z");
+  });
+
+  it("csv escapes commas/quotes and neutralises spreadsheet formulas", () => {
+    const nodes = [bn("a", "S,BIN"), { ...bn("b", "HDFC"), masked_ref: "=HYPERLINK(1)" }];
+    const csv = edgesToCsv(nodes, [edge("a", "b", 1, 12345)], false);
+    const [head, row] = csv.split("\n");
+    expect(head).toBe("from,from_bank,to,to_bank,amount_paise,hop_layer,event_at");
+    expect(row).toContain('"S,BIN"');
+    expect(row).toContain("'=HYPERLINK(1)");
+    expect(row).toContain("12345");
+  });
+});

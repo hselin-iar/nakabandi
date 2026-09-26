@@ -4581,3 +4581,126 @@ body {
 .nk-link:hover { text-decoration: underline; }
 .nk-link--muted { color: var(--nk-text-secondary); }
 .nk-cases-header { margin-bottom: var(--nk-space-4); }
+
+/* -------------------------------------------------------------------------
+   Phase 4b — graph toolbar, notices, legends, entity inspector, scrubber, Sankey
+   ------------------------------------------------------------------------- */
+
+.nk-graph-notice {
+  position: absolute;
+  z-index: 10;
+  padding: 6px 12px;
+  font-size: var(--nk-size-12);
+  font-weight: var(--nk-weight-strong);
+  color: var(--nk-text-primary);
+  background: rgba(9, 13, 18, 0.9);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-md);
+}
+.nk-graph-toolbar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  padding: 4px 6px;
+  background: rgba(9, 13, 18, 0.88);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-md);
+}
+.nk-graph-toolbar__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--nk-space-2);
+  font-size: var(--nk-size-11);
+  color: var(--nk-text-secondary);
+}
+.nk-graph-toolbar__item input[type="range"] { width: 6rem; accent-color: var(--nk-accent); }
+.nk-graph-toolbar__sep { width: 1px; align-self: stretch; background: var(--nk-border-strong); }
+.nk-graph-hidden {
+  position: absolute;
+  top: 56px;
+  right: 12px;
+  z-index: 10;
+  padding: 4px 10px;
+  font-family: var(--nk-font-sans);
+  font-size: var(--nk-size-11);
+  font-weight: var(--nk-weight-strong);
+  color: var(--nk-text-primary);
+  background: rgba(9, 13, 18, 0.92);
+  border: 1px dashed var(--nk-border-strong);
+  border-radius: var(--nk-radius-md);
+  cursor: pointer;
+}
+.nk-graph-legends {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+}
+.nk-graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  font-size: var(--nk-size-11);
+  color: var(--nk-text-secondary);
+  background: rgba(9, 13, 18, 0.88);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-md);
+}
+.nk-graph-legend > span { display: inline-flex; align-items: center; gap: 4px; }
+.nk-graph-legend__ramp { width: 60px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, #E7EAEE, #5D6673); }
+.nk-shape { display: inline-block; width: 10px; height: 10px; }
+.nk-shape--origin { border-radius: 50%; border: 2px solid var(--nk-text-primary); }
+.nk-shape--pass { border-radius: 2px; border: 2px solid var(--nk-text-secondary); }
+.nk-shape--pool { width: 9px; height: 9px; transform: rotate(45deg); border: 2px solid var(--nk-text-primary); }
+.nk-shape--term { background: var(--nk-text-secondary); clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
+.nk-shape--cap { border: 1px dashed var(--nk-text-secondary); }
+
+.nk-graph-inspector {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10;
+  width: 17rem;
+  padding: var(--nk-space-3);
+  font-size: var(--nk-size-12);
+  color: var(--nk-text-primary);
+  background: var(--nk-surface-elevated);
+  border: 1px solid var(--nk-accent);
+  border-radius: var(--nk-radius-lg);
+  box-shadow: var(--nk-shadow-md);
+}
+.nk-graph-inspector__head { display: flex; justify-content: space-between; margin-bottom: var(--nk-space-2); }
+.nk-graph-inspector__close { background: none; border: 0; color: var(--nk-text-secondary); cursor: pointer; }
+.nk-graph-inspector__list > div { display: flex; justify-content: space-between; gap: var(--nk-space-3); padding: 2px 0; }
+.nk-graph-inspector__list dt { color: var(--nk-text-secondary); }
+.nk-graph-inspector__list dd { text-align: right; }
+.nk-graph-inspector__actions { display: flex; gap: var(--nk-space-2); margin-top: var(--nk-space-3); }
+
+.nk-scrubber {
+  display: flex;
+  align-items: center;
+  gap: var(--nk-space-3);
+  padding: var(--nk-space-2) var(--nk-space-3);
+  margin-bottom: var(--nk-space-3);
+  font-size: var(--nk-size-12);
+  color: var(--nk-text-secondary);
+  background: var(--nk-surface-subtle);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-lg);
+}
+.nk-scrubber input[type="range"] { flex: 1; accent-color: var(--nk-accent); }
+.nk-scrubber__time { min-width: 10rem; text-align: right; color: var(--nk-text-primary); }
