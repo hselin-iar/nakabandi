@@ -80,12 +80,14 @@ def generate_candidates(
     widen_factor = policy.forecast.candidates.widen_factor
 
     seen_ids: set[Id] = set()
-    pool: list[tuple[LocationInfo, float, float]] = []  # (loc, dist_home, dist_centroid)
+    # (loc, dist_home, dist_centroid, priority)  — lower priority = higher importance
+    # 0 = home-radius  1 = centroid-radius  2 = cluster-history  3 = bank-footprint
+    pool: list[tuple[LocationInfo, float, float, int]] = []
 
-    def _add(loc: LocationInfo, dist_home: float, dist_centroid: float) -> None:
+    def _add(loc: LocationInfo, dist_home: float, dist_centroid: float, priority: int) -> None:
         if loc.id not in seen_ids:
             seen_ids.add(loc.id)
-            pool.append((loc, dist_home, dist_centroid))
+            pool.append((loc, dist_home, dist_centroid, priority))
 
     def _collect(radius_km: float) -> None:
         home_lat = ctx.layer1_home_lat
@@ -101,7 +103,7 @@ def generate_candidates(
                     if c_lat is not None and c_lon is not None
                     else 0.0
                 )
-                _add(loc, d, dist_centroid)
+                _add(loc, d, dist_centroid, 0)
 
         # 2. Near centroid
         if c_lat is not None and c_lon is not None:
@@ -111,7 +113,7 @@ def generate_candidates(
                     if home_lat is not None and home_lon is not None
                     else 0.0
                 )
-                _add(loc, dist_home, d)
+                _add(loc, dist_home, d, 1)
 
         # 3. Top cells by cluster history
         top_cells = sorted(ctx.cashout_cell_counts.items(), key=lambda x: x[1], reverse=True)[:10]
@@ -128,7 +130,7 @@ def generate_candidates(
                     if c_lat is not None and c_lon is not None
                     else 0.0
                 )
-                _add(loc, d_home, d_centroid)
+                _add(loc, d_home, d_centroid, 2)
 
         # 4. Same-bank locations in the home district
         layer1_bank = ctx.layer1_bank_id
@@ -144,7 +146,7 @@ def generate_candidates(
                     if c_lat is not None and c_lon is not None
                     else 0.0
                 )
-                _add(loc, d_home, d_centroid)
+                _add(loc, d_home, d_centroid, 3)
 
     _collect(radius)
 
@@ -152,8 +154,9 @@ def generate_candidates(
     if not pool:
         _collect(radius * widen_factor)
 
-    # Sort by dist_home ascending (primary key), then distance to centroid
-    pool.sort(key=lambda t: (t[1], t[2]))
+    # Sort by (priority_tier, dist_home) so cluster-history and bank-footprint candidates
+    # survive the max-cap even when the proximity passes already fill it.
+    pool.sort(key=lambda t: (t[3], t[1]))
 
     # Cap
     capped = pool[:max_cands]
@@ -169,6 +172,7 @@ def generate_candidates(
             distance_to_centroid_km=d_centroid,
             channel=loc.channel,
             activity_index=loc.activity_index,
+            bank_id=loc.bank_id,
         )
-        for loc, d_home, d_centroid in capped
+        for loc, d_home, d_centroid, _priority in capped
     ]

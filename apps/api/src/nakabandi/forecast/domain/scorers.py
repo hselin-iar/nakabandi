@@ -103,13 +103,16 @@ class HeuristicScorer(LocationScorer):
     def raw_scores(self, rows: list[FeatureRow]) -> np.ndarray:
         scores = np.zeros(len(rows), dtype=float)
         for i, row in enumerate(rows):
+            # recency_days is NaN for locations never visited by this cluster
+            # (see features.py P4). Use 0.0 in the heuristic to avoid NaN propagation.
+            recency = row.recency_days if not (row.recency_days != row.recency_days) else 0.0
             s = (
                 self._w.get("same_bank", 0.0) * row.same_bank
                 + self._w.get("dist_home_km", 0.0) * row.dist_home_km
                 + self._w.get("dist_centroid_km", 0.0) * row.dist_centroid_km
                 + self._w.get("cluster_loc_count", 0.0) * row.cluster_loc_count
                 + self._w.get("cluster_cell_count", 0.0) * row.cluster_cell_count
-                + self._w.get("recency_days", 0.0) * row.recency_days
+                + self._w.get("recency_days", 0.0) * recency
                 + self._w.get("hour_sin", 0.0) * row.hour_sin
                 + self._w.get("hour_cos", 0.0) * row.hour_cos
                 + self._w.get("amount_log", 0.0) * row.amount_log
@@ -141,6 +144,10 @@ class HistGradientBoostingScorer(LocationScorer):
             max_depth=4,
             min_samples_leaf=20,
             random_state=42,
+            class_weight="balanced",  # P1: upweight positives (~1 per ~164 candidates)
+            # P2: channel col is unordered (ATM/BRANCH/AGENT); sklearn stubs type this
+            # as str but runtime accepts list[int] column indices.
+            categorical_features=[12],  # type: ignore[arg-type]
         )
         self._calibrator: Any | None = None
         self._fitted = False

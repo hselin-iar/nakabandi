@@ -19,12 +19,13 @@ import argparse
 import json
 import sys
 from dataclasses import asdict
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from nakabandi.evaluation.metrics import brier_score, hit_rate_at_k, precision_at_k
 from nakabandi.forecast import ModelStore
 from nakabandi.forecast.domain.scorers import HeuristicScorer, score_candidates
+from nakabandi.forecast.domain.timing import MixtureTimingModel
 from nakabandi.forecast.infrastructure.training_data import SqlTrainingDataPort
 from nakabandi.geo import GeoService
 from nakabandi.graph import ClusterService
@@ -67,6 +68,7 @@ def main(argv: list[str]) -> int:
         model_store = ModelStore(args.model_dir)
         scorer = model_store.load_scorer() or HeuristicScorer()
         scorer_name = scorer.info().name
+        timing_model: MixtureTimingModel | None = model_store.load_timing()
 
         records = data_port.complaint_records(as_of_end)
         if not records:
@@ -79,7 +81,18 @@ def main(argv: list[str]) -> int:
         outcomes: list[int] = []
 
         for ctx, candidates, actual_location_id in records:
-            _rows, scores = score_candidates(ctx, candidates, scorer)
+            # P3: derive expected cash-out hour from the timing model's weighted-median
+            # delay so hour_sin/hour_cos carry real information for each complaint.
+            # Falls back to noon (12.0) when no timing model has been trained yet.
+            if timing_model is not None:
+                timing = timing_model.horizon_probs(ctx, list(policy.forecast.horizons_min))
+                median_min = sum(
+                    w * m for w, m in zip(timing.weights, timing.medians_min, strict=False)
+                )
+                expected_hour = (ctx.reported_at + timedelta(minutes=median_min)).hour
+            else:
+                expected_hour = 12.0
+            _rows, scores = score_candidates(ctx, candidates, scorer, expected_hour=expected_hour)
             ranked = [
                 cand.location_id
                 for cand, _score in sorted(

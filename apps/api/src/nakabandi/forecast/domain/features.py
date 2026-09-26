@@ -93,16 +93,20 @@ def build_features(
         Defaults to noon; the use case passes the value from the timing model or a prior.
     """
     # same_bank: 1 if candidate bank matches the layer-1 victim's issuing bank
-    # (We infer from channel — for now we use ctx.layer1_bank_id matching cand.channel
-    # as a heuristic; the proper bank_id is available via the registry in the use case.)
-    same_bank = 0.0  # default; enriched by the use case when bank info is available
+    same_bank = 1.0 if cand.bank_id == ctx.layer1_bank_id else 0.0
 
     dist_home = cand.distance_to_home_km
     dist_centroid = cand.distance_to_centroid_km
 
     loc_count = float(ctx.cashout_location_counts.get(cand.location_id, 0))
     cell_count = float(ctx.cashout_cell_counts.get(cand.cell_id, 0))
-    recency = float(ctx.cashout_location_recency.get(cand.location_id, 365.0))
+
+    # recency_days: days since the most recent cash-out at this location.
+    # NaN for locations the cluster has never visited — HGB handles NaN as a distinct
+    # "missing" category and learns the optimal split direction from data (strictly
+    # better than the previous 365-day sentinel which was far outside real support).
+    _raw_recency = ctx.cashout_location_recency.get(cand.location_id)
+    recency = float(_raw_recency) if _raw_recency is not None else float("nan")
 
     # Cyclical hour encoding
     hour_rad = 2 * math.pi * expected_hour / 24.0

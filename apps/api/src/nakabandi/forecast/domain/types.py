@@ -26,6 +26,7 @@ class Candidate:
     distance_to_centroid_km: float
     channel: str  # expected cash-out channel
     activity_index: float  # from registry
+    bank_id: str = ""  # issuing bank of the candidate location (for same_bank feature)
 
 
 @dataclass(frozen=True)
