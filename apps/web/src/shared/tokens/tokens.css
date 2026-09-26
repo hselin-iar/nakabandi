@@ -2128,7 +2128,7 @@ body {
 .nk-map-stage {
   position: relative;
   flex: 1;
-  min-height: 520px;
+  min-height: max(520px, calc(100dvh - 21rem));
   background: var(--nk-surface-sunken);
   border: 1px solid var(--nk-border-subtle);
   border-radius: var(--nk-radius-lg);
@@ -2210,13 +2210,13 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 520px;
+  min-height: max(520px, calc(100dvh - 21rem));
 }
 
 .nk-map-canvas {
   width: 100%;
   height: 100%;
-  min-height: 520px;
+  min-height: max(520px, calc(100dvh - 21rem));
 }
 
 /* Time Slider — always on dark map canvas; explicit light-on-dark colors */
@@ -4921,3 +4921,77 @@ body {
 @media (max-width: 640px) {
   .nk-sidenav__link { padding: 0 var(--nk-space-3); gap: var(--nk-space-2); font-size: var(--nk-size-12); }
 }
+
+/* -------------------------------------------------------------------------
+   Map intelligence dossier (features/map/IntelPopup.tsx)
+   ------------------------------------------------------------------------- */
+.nk-intel {
+  --nk-intel-accent: #38bdf8;
+  position: absolute;
+  z-index: 30;
+  top: 84px;
+  left: 16px;
+  width: min(26rem, calc(100% - 32px));
+  max-height: calc(100% - 100px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(5, 8, 12, 0.94);
+  border: 1px solid color-mix(in srgb, var(--nk-intel-accent) 55%, transparent);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 28px color-mix(in srgb, var(--nk-intel-accent) 22%, transparent), 0 18px 48px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  font-family: var(--nk-font-mono);
+  color: var(--nk-text-primary);
+  animation: nk-intel-in 160ms ease-out;
+}
+@keyframes nk-intel-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.nk-intel--elevated { --nk-intel-accent: #f59e0b; }
+.nk-intel--high { --nk-intel-accent: #f97316; }
+.nk-intel--severe { --nk-intel-accent: #ef4444; }
+.nk-intel__corner { position: absolute; width: 10px; height: 10px; border: 2px solid var(--nk-intel-accent); pointer-events: none; }
+.nk-intel__corner--tl { top: -3px; left: -3px; border-right: 0; border-bottom: 0; }
+.nk-intel__corner--tr { top: -3px; right: -3px; border-left: 0; border-bottom: 0; }
+.nk-intel__corner--bl { bottom: -3px; left: -3px; border-right: 0; border-top: 0; }
+.nk-intel__corner--br { bottom: -3px; right: -3px; border-left: 0; border-top: 0; }
+.nk-intel__banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nk-space-3);
+  padding: 4px 10px;
+  background: color-mix(in srgb, var(--nk-intel-accent) 20%, #05080c);
+  border-bottom: 1px solid color-mix(in srgb, var(--nk-intel-accent) 55%, transparent);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--nk-intel-accent);
+}
+.nk-intel__close { background: none; border: 0; color: inherit; cursor: pointer; font-size: 13px; padding: 0 2px; }
+.nk-intel__scroll { overflow-y: auto; padding: var(--nk-space-3) var(--nk-space-4); display: flex; flex-direction: column; gap: var(--nk-space-4); }
+.nk-intel__head { display: flex; flex-direction: column; gap: 2px; }
+.nk-intel__kind { font-size: 10px; letter-spacing: 0.16em; color: var(--nk-intel-accent); }
+.nk-intel__title { margin: 0; font-size: 16px; line-height: 1.25; letter-spacing: 0.02em; text-transform: uppercase; }
+.nk-intel__id { font-size: 11px; color: var(--nk-text-tertiary); }
+.nk-intel__section h4 { margin: 0 0 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--nk-text-tertiary); border-bottom: 1px dashed rgba(255, 255, 255, 0.12); padding-bottom: 3px; }
+.nk-intel__grid { margin: 0; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+.nk-intel__row { display: grid; grid-template-columns: 8.5rem 1fr; gap: var(--nk-space-2); }
+.nk-intel__row dt { color: var(--nk-text-tertiary); text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; padding-top: 2px; }
+.nk-intel__row dd { margin: 0; color: var(--nk-text-primary); min-width: 0; overflow-wrap: anywhere; }
+.nk-intel__threat { display: flex; align-items: center; gap: var(--nk-space-3); margin-bottom: var(--nk-space-2); }
+.nk-intel__level { padding: 2px 8px; border: 1px solid currentColor; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--nk-intel-accent); }
+.nk-intel__meter { flex: 1; height: 8px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); }
+.nk-intel__meter span { display: block; height: 100%; background: linear-gradient(90deg, #7f1d1d, var(--nk-intel-accent)); }
+.nk-intel__score { font-size: 14px; font-weight: 700; color: var(--nk-intel-accent); }
+.nk-intel__none { margin: 0; font-size: 12px; color: var(--nk-text-tertiary); font-style: italic; }
+.nk-intel__alerts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--nk-space-2); }
+.nk-intel__alerts li { padding: 6px 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03); display: flex; flex-direction: column; gap: 4px; }
+.nk-intel__alerts li.is-focus { border-color: var(--nk-intel-accent); background: color-mix(in srgb, var(--nk-intel-accent) 10%, transparent); }
+.nk-intel__alert-top { display: flex; flex-wrap: wrap; gap: 4px; }
+.nk-intel__alert-mid { display: flex; align-items: center; justify-content: space-between; gap: var(--nk-space-3); font-size: 11px; }
+.nk-intel__alert-foot { display: flex; align-items: center; justify-content: space-between; font-size: 10px; letter-spacing: 0.06em; color: var(--nk-text-tertiary); }
+.nk-intel__alert-actions { display: inline-flex; gap: var(--nk-space-3); }
+.nk-intel__alert-actions button, .nk-intel__alert-actions a { background: none; border: 0; padding: 0; color: var(--nk-intel-accent); font: inherit; cursor: pointer; text-decoration: none; }
+.nk-intel__verdict--interceptable { color: #34d399; }
+.nk-intel__verdict--marginal { color: #f59e0b; }
+.nk-intel__verdict--not_interceptable { color: #f87171; }
+.nk-intel__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--nk-space-3); padding: 8px 12px; border-top: 1px solid color-mix(in srgb, var(--nk-intel-accent) 40%, transparent); }
+.nk-intel__foot button, .nk-intel__foot a { font: inherit; font-size: 11px; letter-spacing: 0.06em; color: var(--nk-text-secondary); background: none; border: 1px solid rgba(255, 255, 255, 0.18); padding: 4px 10px; cursor: pointer; text-decoration: none; }
+.nk-intel__foot .nk-intel__primary { color: #05080c; background: var(--nk-intel-accent); border-color: var(--nk-intel-accent); font-weight: 700; }

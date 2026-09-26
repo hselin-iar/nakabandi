@@ -23,6 +23,7 @@ import { FilterPanel } from "./FilterPanel";
 import { TimeSlider } from "./TimeSlider";
 import { Legend } from "./Legend";
 import { HotspotDrawer } from "./HotspotDrawer";
+import { IntelPopup } from "./IntelPopup";
 import { LayerPanel, type LayerKey, type LayerRowSpec } from "./LayerPanel";
 import { MapHud, type MapHudHandle } from "./MapHud";
 import {
@@ -190,6 +191,8 @@ export default function MapPage() {
   const [selectedHotspot, setSelectedHotspot] = useState<HotspotDetail | null>(
     null,
   );
+  // Set when the click was on an alert marker: the dossier opens on that alert.
+  const [focusAlertId, setFocusAlertId] = useState<string | null>(null);
 
   // Interception Radar (§7.1) — the alert currently tracked on the map, if any.
   const [radarAlertId, setRadarAlertId] = useState<string | null>(null);
@@ -294,6 +297,47 @@ export default function MapPage() {
     [alerts],
   );
 
+  // Map clicks are wired once at init, so they call through refs to see the latest data.
+  const openHotspotRef = useRef(handleOpenHotspot);
+  openHotspotRef.current = handleOpenHotspot;
+  const mapClickRef = useRef<
+    (click: { source: "location" | "alert"; id: string }) => void
+  >(() => undefined);
+  mapClickRef.current = ({ source, id }) => {
+    if (source === "alert") {
+      const a = (alerts ?? []).find((x) => x.id === id);
+      if (!a) return;
+      const targetId = String(a.target.id ?? "");
+      const coords = targetCoords[targetId];
+      const loc = (locations ?? []).find((l) => l.id === targetId);
+      const cell = (heatmapData?.cells ?? []).find((c) => c.id === targetId);
+      setFocusAlertId(id);
+      handleOpenHotspot({
+        id: targetId,
+        kind: String(a.target.kind ?? "location"),
+        name: loc?.display_name ?? String(a.target.name ?? targetId),
+        lat: coords?.[1] ?? 0,
+        lon: coords?.[0] ?? 0,
+        value: cell?.value ?? 0,
+        alert_count: cell?.alert_count ?? 0,
+      });
+      return;
+    }
+    const loc = (locations ?? []).find((l) => l.id === id);
+    if (!loc) return;
+    const cell = (heatmapData?.cells ?? []).find((c) => c.id === id);
+    setFocusAlertId(null);
+    handleOpenHotspot({
+      id: loc.id,
+      kind: loc.kind,
+      name: loc.display_name,
+      lat: loc.lat,
+      lon: loc.lon,
+      value: cell?.value ?? 0,
+      alert_count: cell?.alert_count ?? 0,
+    });
+  };
+
   // Initialize MapAdapter
   useEffect(() => {
     // If WebGL is not supported in this browser/environment (e.g. test or headless), fall back to table
@@ -339,7 +383,8 @@ export default function MapPage() {
           const props = (feature as { properties?: Record<string, unknown> })
             .properties;
           if (!props) return;
-          handleOpenHotspot({
+          setFocusAlertId(null);
+          openHotspotRef.current({
             id: String(props.id),
             kind: String(props.kind ?? "cell"),
             name: String(props.name ?? props.id),
@@ -367,13 +412,18 @@ export default function MapPage() {
         adapter.onFeatureClick(ALERTS_POINT_LAYER_ID, (feature) => {
           const id = (feature as { properties?: { id?: unknown } } | null)
             ?.properties?.id;
-          if (typeof id === "string") selectionStore.set({ kind: "alert", id });
+          if (typeof id === "string") {
+            selectionStore.set({ kind: "alert", id });
+            mapClickRef.current({ source: "alert", id });
+          }
         });
         adapter.onFeatureClick(LOCATIONS_CIRCLE_LAYER_ID, (feature) => {
           const id = (feature as { properties?: { id?: unknown } } | null)
             ?.properties?.id;
-          if (typeof id === "string")
+          if (typeof id === "string") {
             selectionStore.set({ kind: "location", id });
+            mapClickRef.current({ source: "location", id });
+          }
         });
 
         // Signal that the map is ready — this re-triggers all data-push effects
@@ -757,6 +807,22 @@ export default function MapPage() {
               aria-label="MapLibre GIS Canvas"
             />
             <LayerPanel rows={layerRows} on={layersOn} onToggle={toggleLayer} />
+            {selectedHotspot && (
+              <IntelPopup
+                hotspot={selectedHotspot}
+                focusAlertId={focusAlertId}
+                locations={locations ?? []}
+                alerts={allAlerts ?? []}
+                regions={regions}
+                heatCells={heatmapData?.cells ?? []}
+                simNow={currentSimTime}
+                onClose={() => {
+                  setSelectedHotspot(null);
+                  setFocusAlertId(null);
+                }}
+                onTrackAlert={handleTrackAlert}
+              />
+            )}
             <MapHud
               ref={hudRef}
               layersOn={layersOnCount}
@@ -834,7 +900,7 @@ export default function MapPage() {
 
       {/* Hotspot Inspection Drawer */}
       <HotspotDrawer
-        hotspot={selectedHotspot}
+        hotspot={viewMode === "table" || webGlFailed ? selectedHotspot : null}
         onClose={() => setSelectedHotspot(null)}
         onTrackAlert={handleTrackAlert}
       />
