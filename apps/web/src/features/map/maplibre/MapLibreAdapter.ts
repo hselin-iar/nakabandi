@@ -44,11 +44,13 @@ export const BOUNDARIES_LINE_LAYER_ID = "nk-boundaries-line";
 export { HEATMAP_LAYER_ID };
 
 /**
- * Basemap: OpenFreeMap Positron
- * Clean light map with full streets, city names, POIs — no API key required.
- * Style URL: https://tiles.openfreemap.org/styles/positron
+ * Basemap: OpenFreeMap Dark
+ * Near-black vector basemap matching the tactical theme — no API key required.
+ * Style URL: https://tiles.openfreemap.org/styles/dark
+ * (Was Positron, a light style, before the overhaul reskin. Still an online tile source:
+ * the offline Compose path relies on the bundled boundary GeoJSON when tiles are unreachable.)
  */
-const POSITRON_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
+const BASEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
 
 export class MapLibreAdapter implements MapAdapter {
   private map: MapLibreMap | null = null;
@@ -96,7 +98,7 @@ export class MapLibreAdapter implements MapAdapter {
 
         const mapInstance = new maplibregl.Map({
           container,
-          style: POSITRON_STYLE_URL,
+          style: BASEMAP_STYLE_URL,
           center,
           zoom,
           interactive: options.interactive ?? true,

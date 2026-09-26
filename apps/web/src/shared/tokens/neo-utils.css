@@ -99,7 +99,7 @@
 /** Progress bar -- thin 4px pill track (design.md section 5.3) */
 .nk-progress {
   height: 4px;
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: var(--nk-radius-pill);
   overflow: hidden;
 }

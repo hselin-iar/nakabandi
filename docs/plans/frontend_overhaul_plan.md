@@ -1,8 +1,9 @@
 # NAKABANDI Frontend Overhaul — Implementation Plan
 
 **Status:** Draft for review
-**Scope:** `apps/web` only. No backend contract changes (LC-1..LC-10 untouched). One additive, optional backend suggestion is flagged in §5 but is not required to execute Phases 1–5.
-**Inputs synthesized:** `docs/research/{chatgpt,claude,gemini,grok}_frontend_operational_command_patterns.md`, `apps/web/src/shared/api/schema.d.ts` (2,723 lines, cross-checked against the Python routers), and a full read of the current `apps/web` implementation.
+**Scope:** `apps/web` only. No backend contract changes (LC-1..LC-10 untouched). Optional, additive backend suggestions are flagged in §5 but none is required to execute Phases 1–5.
+**Inputs synthesized:** `docs/research/{chatgpt,claude,gemini,grok}_frontend_operational_command_patterns.md`, `apps/web/src/shared/api/schema.d.ts` (2,723 lines, cross-checked against the Python routers), a full read of the current `apps/web` implementation, and a second pass over Claude's report plus its OSIRIS follow-up (`simplifaisoul/osiris`, MIT; supplied as a pasted note, not yet saved under `docs/research/`).
+**Sequencing principle:** phases are ordered by **demo visibility**, not by architectural tidiness (§3.0). Anything an audience sees in the first minutes of a demo lands before anything they would only see if they dug for it.
 
 ---
 
@@ -13,14 +14,16 @@ The four research reports and the original task brief both contain a few claims 
 | Claim | Reality | Impact |
 |---|---|---|
 | "Command palette fuzzy search across alerts, cases, **IFSC codes**, and account numbers" | There is **no `ifsc` field anywhere** in the backend contracts (`schema.d.ts`, `ClusterNodeModel`, `CaseModel`, `AccountRefModel`). Identity is only `bank` (a bank code string) + `masked_ref`/`account_ref`. | Command palette (§2.5) indexes **bank codes + masked account refs**, not IFSC. Do not build an `ifsc` field into any component. |
-| "`EvaluationPage.tsx` is an unadorned HTML `<table>`" | False. It already has an animated SVG ring gauge, uses shared `nk-table` classes (styled, not bare), and tokens.css has several *orphaned* classes (`.nk-eval-run-pill`, `.nk-cold-start-chart`, `.nk-feedback-plot`) suggesting a half-built comparison/chart feature that was cut. | Phase 3/4 work here is "finish and richen an existing page," not "build a table from scratch." |
-| Task assumes a live `/evaluation` REST API backs "interactive Brier score curves, hit-rate@k rings, latency sparklines" | **There is no evaluation router mounted in the FastAPI app at all.** `Permission.VIEW_EVALUATION` exists in the enum with zero call sites. The only producer is the offline `scripts/evaluate.py`, which writes `apps/web/public/eval-results.json` containing scalar `hit_rate_at_{1,3,5}`, `precision_at_{1,3,5}`, `brier_score` — no calibration curve, no lead-time distribution, no time series. **The script also emits bare, non-JSON-spec `NaN` tokens** (Python's `json.dumps(..., allow_nan=True)`) whenever a metric's sample size is below `_MIN_N = 30`. A plain `res.json()` / `JSON.parse` will throw `SyntaxError` on that file the first time any metric is under-sampled. | System HUD (§2.4) is scoped to what this file + the real `/system/metrics`, `/audit/verify`, `/analytics/live-metrics` endpoints actually provide. "Brier score curve" (a reliability/calibration diagram) is **not buildable today** — see §5 for the one optional, additive backend change that would unlock it. The NaN-parsing landmine must be fixed client-side regardless (§2.4, §3 Phase 3). |
+| "`EvaluationPage.tsx` is an unadorned HTML `<table>`" | False. It already has an animated SVG ring gauge, uses shared `nk-table` classes (styled, not bare), and tokens.css has several *orphaned* classes (`.nk-eval-run-pill`, `.nk-cold-start-chart`, `.nk-feedback-plot`) suggesting a half-built comparison/chart feature that was cut. | Phase 5 work here is "finish and richen an existing page," not "build a table from scratch." |
+| Task assumes a live `/evaluation` REST API backs "interactive Brier score curves, hit-rate@k rings, latency sparklines" | **There is no evaluation router mounted in the FastAPI app at all.** `Permission.VIEW_EVALUATION` exists in the enum with zero call sites. The only producer is the offline `scripts/evaluate.py`, which writes `apps/web/public/eval-results.json` containing scalar `hit_rate_at_{1,3,5}`, `precision_at_{1,3,5}`, `brier_score` — no calibration curve, no lead-time distribution, no time series. **The script also emits bare, non-JSON-spec `NaN` tokens** (Python's `json.dumps(..., allow_nan=True)`) whenever a metric's sample size is below `_MIN_N = 30`. A plain `res.json()` / `JSON.parse` will throw `SyntaxError` on that file the first time any metric is under-sampled. | System HUD (§2.4) is scoped to what this file + the real `/system/metrics`, `/audit/verify`, `/analytics/live-metrics` endpoints actually provide. "Brier score curve" (a reliability/calibration diagram) is **not buildable today** — see §5 for the one optional, additive backend change that would unlock it. The NaN-parsing landmine must be fixed client-side regardless (§2.4, §3 Phase 5). |
 | Task's permitted-stack list omits Framer Motion / Tremor / Turf.js, but the research reports lean on them | Followed literally: **no Motion, no Tremor, no Turf.js are added.** Rolling counters, hold-to-actuate fill, and the map's pulsating radar are all built with plain CSS transitions/keyframes + `requestAnimationFrame` + Canvas2D, which the research itself shows is sufficient (Gemini's own code samples for the timer ring and radar marker use no animation library). | Dependency list in §3 stays exactly to what the task body names explicitly, plus two small, justified additions (`postcss`, `autoprefixer` — required to make Tailwind function at all, see below). |
 | Countdown timers can be driven by `performance.now()` per the research's `TimeProvider` pattern | This app's timers are **not wall-clock**. Every countdown (`Countdown.tsx`, `LadderDecisionPath.tsx`, `TimeSlider.tsx`) is deliberately driven off `useSimTime()`, which reads the `sim.time` SSE event — a documented, enforced convention ("no `Date.now()` for sim purposes"). | The single-RAF `TimeProvider` (§2.1) must interpolate forward from the last known `sim.time` tick using `requestAnimationFrame`, not from `performance.now()` in isolation. This preserves the existing sim-clock invariant while still fixing the N-independent-`setInterval` problem the research identifies. |
-| Cytoscape graph work starts from a blank slate | `ClusterGraph.tsx` already renders the mule graph with raw `cytoscape` (no React wrapper), a hand-computed `preset` layout ordered by `ClusterEdgeModel.layer` (left→right hop order), a 200-node cap with a synthetic "+N more" summary node, and kind-based styling (victim/mule/aggregator/exit/summary). This is a **real, working, well-engineered component**, not a stub. | Phase 3 (§3) is a migration (raw Cytoscape → `react-cytoscapejs`, hand-rolled `preset` positions → `cytoscape-dagre`) plus additive features (`cytoscape-expand-collapse`, Sankey), not a rewrite from zero. Its 200-node cap logic should be preserved/ported, not discarded. |
-| `ClusterGraph.tsx`'s node styling differentiates victim/mule/aggregator/exit accounts (this is why the graph currently looks like it renders "one shape for everything") | **Root cause traced and confirmed**: `apps/api/src/nakabandi/casework/__init__.py`, `cluster_graph()` (lines 106–131), builds every single `ClusterNode` with `kind="account"` **hardcoded literally** — there is no victim/mule/aggregator/exit classification anywhere in the backend data model. `ClusterNode`/`AccountFact` (`casework/domain/case.py`) carry no role field at all. The raw signal exists *upstream* (`ComplaintFact.touched_account_ids` names the victim's account but is only consumed by `bundle.py` for headcounts; `CashOutFact.account_id` in `graph/application/apply_cashouts.py` records a cash-out but is written only into aggregate `cluster_location_stats`, never persisted per-account) but neither is threaded through to the graph endpoint. So every real node's `kind` is the literal string `"account"`, which matches none of `ClusterGraph.tsx`'s four kind-specific Cytoscape selectors (`node[kind="victim"]` etc.) — every node silently falls through to the generic default style (`#475569` gray circle, no shape). The frontend code isn't buggy in isolation; it was built against a classification the backend never actually populates. | This is a distinct, verified defect from the raw-Cytoscape→`react-cytoscapejs` migration above and is fixed as its own item in Phase 3 (§2.2, §3) — a frontend-only topology-inferred fix now, with an optional backend follow-up for real ground-truth classification listed alongside the evaluation NaN fix in §5. |
+| Cytoscape graph work starts from a blank slate | `ClusterGraph.tsx` already renders the mule graph with raw `cytoscape` (no React wrapper), a hand-computed `preset` layout ordered by `ClusterEdgeModel.layer` (left→right hop order), a 200-node cap with a synthetic "+N more" summary node, and kind-based styling (victim/mule/aggregator/exit/summary). This is a **real, working, well-engineered component**, not a stub. | Phase 4b (§3) is a migration (raw Cytoscape → `react-cytoscapejs`, hand-rolled `preset` positions → `cytoscape-dagre`) plus additive features (`cytoscape-expand-collapse`, Sankey), not a rewrite from zero. Its 200-node cap logic should be preserved/ported, not discarded. |
+| `ClusterGraph.tsx`'s node styling differentiates victim/mule/aggregator/exit accounts (this is why the graph currently looks like it renders "one shape for everything") | **Root cause traced and confirmed**: `apps/api/src/nakabandi/casework/__init__.py`, `cluster_graph()` (lines 106–131), builds every single `ClusterNode` with `kind="account"` **hardcoded literally** — there is no victim/mule/aggregator/exit classification anywhere in the backend data model. `ClusterNode`/`AccountFact` (`casework/domain/case.py`) carry no role field at all. The raw signal exists *upstream* (`ComplaintFact.touched_account_ids` names the victim's account but is only consumed by `bundle.py` for headcounts; `CashOutFact.account_id` in `graph/application/apply_cashouts.py` records a cash-out but is written only into aggregate `cluster_location_stats`, never persisted per-account) but neither is threaded through to the graph endpoint. So every real node's `kind` is the literal string `"account"`, which matches none of `ClusterGraph.tsx`'s four kind-specific Cytoscape selectors (`node[kind="victim"]` etc.) — every node silently falls through to the generic default style (`#475569` gray circle, no shape). The frontend code isn't buggy in isolation; it was built against a classification the backend never actually populates. | This is a distinct, verified defect from the raw-Cytoscape→`react-cytoscapejs` migration above and is fixed as its own item, ahead of the migration, in Phase 4a (§2.2, §3) — a frontend-only topology-inferred fix now, with an optional backend follow-up for real ground-truth classification listed alongside the evaluation NaN fix in §5. |
 | Tailwind CSS is part of the stack | Tailwind is a `devDependency` (`tailwindcss@^3.4.19`) but **is not wired into the build at all**: no `tailwind.config.*`, no `postcss.config.*`, no `@tailwind` directive anywhere, no `autoprefixer`. `tailwind.preset.ts` exists but nothing consumes it. Every current screen is styled via bespoke `nk-*` BEM classes and inline `style={{}}`. | Phase 1 (§3) must first **stand up Tailwind from zero** (config + PostCSS + directives) before any Tailwind utility class named in this plan (e.g. `border-white/[0.08]`) will actually apply. This is called out explicitly because it's easy to assume "Tailwind's already there" and skip it, and every later screen depends on it working. |
 | `react-hot-toast` is in active use | It is mounted (`<Toaster />` in `app/providers.tsx`) but **zero components call `toast.*()` anywhere in the codebase.** | Swapping to `sonner` (task-mandated, and the research's 3-of-4 convergence pick over `react-toastify`) is a one-file change with no call-site migration risk. |
+| OSIRIS's always-visible "ZULU" (UTC) clock is a cheap HUD element to copy | A wall-clock UTC readout would contradict this app's sim-clock convention (§0 timers row) and confuse a demo where sim time and wall time differ. | The HUD clock reads `useSimTime()` and is labelled **"SIM ⟨time⟩Z"**, never `new Date()`. |
+| OSIRIS's "viewport-aware fetching" and "lazy-load a layer on first toggle" are worth copying | The map's data hooks (`useHeatmap`, `useLocations`, alerts) pass filters, not a bounding box, and the whole dataset is four demo states. Viewport-scoped fetching would need a new backend query param for no measurable gain at this data size. `MapAdapter.setLayerVisibility()` **already exists**, so layer toggling is a UI job, not an adapter job. | Adopt the *toggle + live count* pattern (§2.3). Do **not** build viewport-scoped fetching. Optionally gate each layer's query with `enabled: layerOn`; skip if it complicates the existing debounced-invalidate flow. |
 | `DataTable`'s column sort is functional | `sortKey`/`sortDir` state toggles in the UI, but the `visible` memo that feeds the table **never applies the sort** — it is currently cosmetic/non-functional. | Fixed opportunistically in Phase 2 while `DataTable` is already being extended for virtualization (§3 Phase 2) — small, in-scope fix, not a new work item. |
 
 ---
@@ -80,7 +83,7 @@ Rationale for the accent choice: the research (Claude's report, §1) explicitly 
 
 Color is reserved exclusively for **(a)** severity (`LOW`/`MEDIUM`/`HIGH`/`CRITICAL` → emerald/amber/orange/crimson) and **(b)** live telemetry state (streaming=emerald glow, polling=amber, disconnected=neutral/red text — reusing severity red only for "disconnected," which is itself a severity-adjacent signal, not a competing channel).
 
-Enforcement mechanism (not just a style-guide sentence): extend `shared/ui/Badge.tsx`'s existing pattern — it already never renders color-only (icon + label + color together, per its own doc comment, confirmed in the audit). Codify this as a lint-time-checkable rule of thumb during Phase 1: any new `Verdict`/`AlertStatus`/`LadderLevel`/`ActionType`/`Role` badge must render on the neutral surface tiers (`--nk-surface`/`--nk-surface-elevated`) with a glyph + font-weight distinction, and is **not permitted** to introduce a new named color token. `VerdictBadge`, `StatusBadge`, `LadderBadge`, `DeliveryStatusBadge` (all already exist) are audited in Phase 1 to confirm none of them currently borrow a severity hue for non-severity meaning — the audit found `CasesPage.tsx`'s hand-rolled status pills doing exactly this violation (`#7f1d1d`/`#fca5a5` for `fir_recommended`, i.e. a red very close to `--nk-severity-critical`) and Phase 3 fixes it by routing status through `StatusBadge` instead.
+Enforcement mechanism (not just a style-guide sentence): extend `shared/ui/Badge.tsx`'s existing pattern — it already never renders color-only (icon + label + color together, per its own doc comment, confirmed in the audit). Codify this as a lint-time-checkable rule of thumb during Phase 1: any new `Verdict`/`AlertStatus`/`LadderLevel`/`ActionType`/`Role` badge must render on the neutral surface tiers (`--nk-surface`/`--nk-surface-elevated`) with a glyph + font-weight distinction, and is **not permitted** to introduce a new named color token. `VerdictBadge`, `StatusBadge`, `LadderBadge`, `DeliveryStatusBadge` (all already exist) are audited in Phase 1 to confirm none of them currently borrow a severity hue for non-severity meaning — the audit found `CasesPage.tsx`'s hand-rolled status pills doing exactly this violation (`#7f1d1d`/`#fca5a5` for `fir_recommended`, i.e. a red very close to `--nk-severity-critical`) and Phase 4a fixes it by routing status through `StatusBadge` instead.
 
 ### 1.4 Offline Typography
 
@@ -89,6 +92,16 @@ Enforcement mechanism (not just a style-guide sentence): extend `shared/ui/Badge
 - Tailwind preset adds `fontFamily.mono = ['"JetBrains Mono Variable"', 'ui-monospace', 'monospace']` and keeps `fontFamily.sans` as the existing system-UI stack for chrome/labels — **sans for UI text, mono for data**, per the research's converged recommendation (§ research digest, "Typography" contradiction resolution: 3 of 4 reports land here once ChatGPT's self-contradicting citation is discounted).
 - New utility class `.data-digit` (or Tailwind's built-in `tabular-nums` + a custom `slashed-zero` utility, since Tailwind core doesn't ship `slashed-zero` — add via `theme.extend` plugin or a two-line CSS rule `font-variant-numeric: tabular-nums slashed-zero;`) applied to **every** rendering of: timestamps (`formatSimTime`), rupee amounts (`formatInr` — already exists and is reused as-is, only the CSS treatment is new), countdown digits, alert/case/account IDs, and evaluation metric values.
 - The System Integrity HUD (§2.4) gets the most aggressive application of this treatment, per the research's own framing (it's the one screen where every research report that touched typography singled this out).
+
+### 1.4a Weight scale, density and HUD chrome (Linear + OSIRIS, second-pass additions)
+
+- **Three-tier weight scale as tokens** (Claude's report §3.1, Linear): `--nk-weight-read: 400`, `--nk-weight-ui: 510`, `--nk-weight-strong: 590`; no heavier weights anywhere. The system-UI sans stack cannot render 510/590 reliably, so either bundle a variable sans via `@fontsource-variable/inter` (OFL-1.1, offline) for chrome text, or fall back to 400/500/600 on the system stack. **Decide at Phase 1 start** by looking at both on the real shell; default to the bundled Inter if there is any doubt (a wrong weight ladder is visible on every screen).
+- **Density, not decoration:** secondary chrome (tab strips, panel headers, table column headers) is dimmed (`--nk-text-tertiary`) and compacted so working content carries the visual weight (Linear's own stated principle). Add a **comfortable / compact density toggle** for the triage queue (row height 64px / 48px; the virtualizer reads one constant, §2.1), remembered in `localStorage`.
+- **Persistent HUD chrome** (OSIRIS's deployed UI; no new dependency), pinned in `Shell.tsx`'s topbar/footer:
+  - **`SIM ⟨time⟩Z` clock** driven by `useSimTime()` (not wall-clock, §0).
+  - Live **stream status** pill (streaming / polling / disconnected) reading the existing `useStream` state, styled with `--nk-glow-live` when streaming.
+  - A small **"Press ? for shortcuts"** hint bottom-corner, opening a keyboard cheat-sheet overlay (`shared/ui/ShortcutSheet.tsx`) that lists the active scope's bindings. Because bindings are scoped (§2.1, §2.3), the sheet reads whichever `react-hotkeys-hook` scope is active instead of a hand-maintained list that would drift.
+  - Map-only readouts (cursor lat/lon, zoom, layer/entity counters) are specified in §2.3.
 
 ### 1.5 shadcn/ui — scoping the decision
 
@@ -207,6 +220,16 @@ Triggered from `useStream.tsx`'s existing `alert.created` handler, gated to `sev
 - `override` gets its own non-dismissible variant per the bullet above, not the plain `toast.promise()` treatment.
 - On error (any action): roll back the optimistic cache patch to the snapshot; `toast.promise()`'s own error branch surfaces this without a separate manual call.
 
+**Consequence tally (second-pass addition, Claude report §5.2/5.4 — "stat counters increment immediately and roll back on failure"):** a compact **"Held ₹X · N actions"** readout in the Triage header (`shared/ui/ConsequenceTally.tsx`, rendered with `RollingCounter`, §3 Phase 2, moved up from the original Phase 5).
+- On `request_hold` reaching 100%, the tally ticks up immediately by the alert's `proposed_paise` (optimistic), `N` by 1.
+- When the bank callback lands, the amount reconciles to the real `applied_amount_paise` (the number may go *down* if the bank applied less — show it truthfully, never round back up); on mutation error it rolls back with the snapshot.
+- It is session-scoped derived state fed by the mutation lifecycle, not a new endpoint. It is the piece that makes a freeze feel "immediate and tangible" in a demo, so it lives next to the action, not on a distant dashboard.
+
+**Additional queue interactions (all frontend-only):**
+- `1`–`9` jump-select the Nth visible row (Claude report §1.1), in the same `triage-inbox` scope as `j`/`k`. `Escape` closes the in-place detail panel and returns focus to the row.
+- **Row exit transition:** when an alert becomes `actioned`/`expired`/`closed` and leaves the visible filter, fade the row out over ~150ms (CSS opacity/`grid-template-rows`, or `view-transition-name` where supported) before the virtualizer drops it, so the list doesn't jump. Arrivals are already handled by the "▲ N new" pill; this covers departures. Low priority within Phase 2 — cut first if time is short.
+- **Hotkey hints on the controls:** each hotkey-bound button renders a small `<kbd>` chip (`F`, `D`, `X`) so the shortcut is visible in the demo without opening the cheat-sheet.
+
 ### 2.2 Screen 2 — Forensic Dossier & Mule Cascade (`/cases`)
 
 **Backend contract:**
@@ -234,7 +257,7 @@ EvidencePackModel: { ..., sha256, audit_head_hash, download_url }  // download_u
 
 **Fix the node-kind classification bug (§0 — the "every node is the same gray circle" defect):** `ClusterGraph.tsx`'s existing kind-based Cytoscape selectors (victim=sky ellipse, mule=amber rounded-rect, aggregator=red diamond, exit=purple hexagon) never fire today because the backend hardcodes `kind="account"` for every node — verified at `apps/api/src/nakabandi/casework/__init__.py:106-131`. There is no real per-account role data anywhere in the backend to classify against (confirmed: `AccountFact`/`ClusterNode` domain entities carry no role field; the closest raw signals — `ComplaintFact.touched_account_ids` and `CashOutFact.account_id` — are each consumed for a different purpose upstream and never persisted per-account or exposed on this endpoint). Two-tier fix, mirroring the evaluation-metrics gap in §5 (ship an honest frontend fix now, flag an optional backend enhancement for later):
 
-- **Frontend now, no backend dependency (required in Phase 3):** replace the dead `kind`-based selectors with a `role` computed client-side from the *topology already being fetched* — the same edge list already walked once per render for `nodeColumn`/`edgeSpeed` (§2.2 above), so this is one more cheap pass over `cappedEdges`, not a new data dependency:
+- **Frontend now, no backend dependency (required, Phase 4a):** replace the dead `kind`-based selectors with a `role` computed client-side from the *topology already being fetched* — the same edge list already walked once per render for `nodeColumn`/`edgeSpeed` (§2.2 above), so this is one more cheap pass over `cappedEdges`, not a new data dependency:
   - in-degree 0, out-degree > 0 → **`origin`** (the node money is first traced flowing out of — reuses the existing sky-blue ellipse style)
   - out-degree 0, in-degree > 0 → **`terminal`** (the last traced hop before the trail ends — reuses the existing purple hexagon style)
   - in-degree ≥ 3 (configurable threshold, tune against real seeded cluster sizes during implementation) → **`pooling`** (a funnel point many accounts feed into — reuses the existing red diamond style)
@@ -242,11 +265,26 @@ EvidencePackModel: { ..., sha256, audit_head_hash, download_url }  // download_u
   - in-degree 0 AND out-degree 0 (an isolated singleton account with no traced hops to/from it — an edge case the current code doesn't explicitly style at all) → falls to the plain default gray circle, which is now the *correct*, honest rendering for "no relational data," not a bug
   - The legend (already present at the bottom-left of the canvas) is relabeled to match: "Origin (no inbound hops)" / "Pass-through" / "Pooling point (≥3 inbound)" / "Terminal (no outbound hops)" — deliberately **not** relabeled "Victim"/"Mule"/"Aggregator"/"Exit ATM," because those are semantic claims this data cannot actually support (a topological origin node is not necessarily the fraud victim — it is only the earliest point the trace happens to start from within the currently-fetched, possibly-200-node-capped subgraph). Overclaiming certainty here in a forensic tool is worse than an honest topological label.
   - This computation piggybacks on the same `nodeColumn`/`edgeSpeed` `useMemo` (or a sibling one keyed the same way) so it doesn't add a second full pass over `cappedEdges`.
-- **Optional backend follow-up (not required to ship Phase 3, tracked alongside §5):** if genuine ground-truth roles are wanted instead of a topological proxy, `casework/__init__.py`'s `cluster_graph()` would need to (a) mark the account(s) named in the originating `ComplaintFact.touched_account_ids` as `kind="victim"`, and (b) persist `CashOutFact.account_id` observations in a queryable per-account form (today `apply_cashouts.py` writes only into aggregate `cluster_location_stats`, confirmed by reading the use case) so they can be joined and emitted as `kind="cashout"`. This is a larger lift than the eval-metrics fix in §5 — it needs a new persisted fact, not just wiring an already-existing pure function — so it's flagged as a genuine enhancement ticket, not a blocking prerequisite.
+- **Optional backend follow-up (not required to ship Phase 4a, tracked alongside §5):** if genuine ground-truth roles are wanted instead of a topological proxy, `casework/__init__.py`'s `cluster_graph()` would need to (a) mark the account(s) named in the originating `ComplaintFact.touched_account_ids` as `kind="victim"`, and (b) persist `CashOutFact.account_id` observations in a queryable per-account form (today `apply_cashouts.py` writes only into aggregate `cluster_location_stats`, confirmed by reading the use case) so they can be joined and emitted as `kind="cashout"`. This is a larger lift than the eval-metrics fix in §5 — it needs a new persisted fact, not just wiring an already-existing pure function — so it's flagged as a genuine enhancement ticket, not a blocking prerequisite.
 
 **Paired Sankey view:** new `CaseFundFlowSankey.tsx` using **Recharts' `<Sankey>`** (already in the permitted stack and already a project dependency — no new package). Data is derived client-side from the same `ClusterModel.edges`/`nodes` already fetched for the graph (aggregate `amount_paise` by destination `bank`) — no new backend endpoint needed. Rendered as a tab alongside the Cytoscape view, not a replacement for it.
 
 **Temporal playback:** a slider scrubbing `ClusterEdgeModel.event_at` timestamps, filtering which edges are drawn/highlighted at a given point in the case timeline, driven by the same `useTactileTime`-style RAF discipline (though here it's investigator-scrubbed time, not sim time — a local `useState` position is fine, no `TimeProvider` dependency). No OSS reference exists for this (confirmed by 3 of 4 research reports) — implemented via Cytoscape's own `cy.style().selector(...).update()` API against edge opacity, not a new library.
+
+**Graph noise controls (second-pass addition, Claude report §2.4 `crypto-tracer` pattern):** the fixed 200-node cap plus "+N more" node gives the investigator no control. Add a small toolbar, all computed client-side from fields already in `ClusterEdgeModel`:
+- **Hop-depth limiter** — a 1…max slider over `layer`; edges/nodes deeper than N are hidden.
+- **Minimum-amount slider** — hides edges under a threshold of `amount_paise` (the "micro-dust" edges laundering networks inject to bloat visual tools); its default is the smallest value that still keeps the graph connected, not a magic constant.
+- **"N edges hidden · show all"** affordance whenever either filter (or the 200-node cap) is hiding something, with the hidden count and hidden `₹` sum. Never hide silently: in a forensic view an unlabeled omission reads as absence of evidence.
+- These are the client-side version of what §5.3's `max_hops`/`hidden_*` additions would compute exactly server-side at scale.
+
+**Entity inspector panel (second-pass addition, Claude report §2.4 `fraud-graph` pattern):** replace the bare node/edge inspector with a panel on node select, all derived from the edges already fetched:
+- masked ref, bank, and the topological role badge from the classification fix above (with the honest label, not "victim"/"mule");
+- in-degree / out-degree, total inbound and outbound `₹` (`formatInr`), first and last edge `event_at`;
+- **connection chain:** the shortest hop path from an origin node to this node, click-to-highlight on the canvas;
+- "Isolate ring" button (the dim/focus mode above) lives here as well as in the toolbar.
+- No risk *score* is shown, because no per-account score exists in the data (§0 policy on overclaiming); a dossier-level `novelty` value from `ClusterModel` may be shown as context only.
+
+**Working-copy export (second-pass addition, lowest priority in this screen):** "Export view" for the current filtered graph as PNG (`cy.png()`) and its visible edges as CSV. Both are labelled **"Working copy — not the evidence pack"** in the file name and UI, because the server-generated `EvidencePackModel` PDF is the only sha256/audit-anchored artifact (DOC1 §1.5 wording rules apply to any caption). Node annotations are deliberately **not** in this plan (they need a persisted, audited, `Principal`-gated backend feature; see §5.4).
 
 ### 2.3 Screen 3 — Tactical GIS Map (`/map`)
 
@@ -265,6 +303,23 @@ SSE `heat.version` (already consumed, debounced 1s invalidation of the heatmap q
 **Open scope question, not resolved by this plan (Claude's finding 4.4):** the pulsating radar in this phase visualizes *where* a heat cell is, not *how far a mule could physically have travelled by cash-out time* — a true drive-time isochrone ring is a materially different (and more accurate) shape than a simple radius circle, but no client-only isochrone library exists; it would require a self-hosted routing engine (OSRM/Valhalla) against an offline OSM extract, which is an infrastructure decision, not a frontend library choice. This plan does not build either a radius circle or an isochrone for "how far could they have gone" — it only ships the radar *marker* (§ above). Note `InterceptAssessmentModel.best_unit.eta_min` already gives a real, backend-computed ETA for one specific responding unit, which may make a general-purpose isochrone overlay redundant for the interception-feasibility use case specifically — worth a product decision before anyone builds either a Turf.js radius circle or an OSRM isochrone, rather than defaulting to one silently.
 
 **Linked selection:** a small shared selection store (`shared/state/selectionStore.ts`, a plain Zustand-free `useSyncExternalStore`-based module — no new state library needed for one shared "selected entity" value) that `MapPage`, `CaseDetail`'s graph, and `AlertsInbox` all read/write. Clicking a cluster node or an alert row sets `{ kind: "location" | "alert" | "account", id }`; `MapPage` observes it and calls `map.flyTo()`/highlights the matching layer feature. This is the concrete mechanism behind the task's "linked selection" requirement — implemented as a shared primitive under `shared/` (satisfying the `eslint-plugin-boundaries` rule that cross-feature reuse must go through `shared/*`), not a direct `features/map` → `features/cases` import.
+
+**Toggleable layers with live counts (OSIRIS pattern, second-pass addition):** a compact layer panel (`features/map/LayerPanel.tsx`) over the map, one row per existing layer, each with an on/off switch, a hotkey `<kbd>` chip and a live count badge:
+
+| Layer | Hotkey | Count shown | Backing layer id(s) |
+|---|---|---|---|
+| Risk heat (density + points) | `H` | visible `cells.length` (plus `suppressed_count` as a muted "+N suppressed") | `HEATMAP_LAYER_ID` and its point layer |
+| Locations | `L` | `locations.length` | `LOCATIONS_CIRCLE_LAYER_ID` |
+| Active alerts | `A` | `alerts.length` | `ALERTS_POINT_LAYER_ID` |
+| Interception route | `I` | 1 / 0 (a route is shown or not) | `RADAR_LINE_LAYER_ID` |
+| Boundaries | `B` | — | `BOUNDARIES_FILL_LAYER_ID` |
+
+- Toggling calls the existing `MapAdapter.setLayerVisibility(layerId, visible)`; no adapter work beyond confirming a multi-id layer (heat density + points) toggles as one unit. Counts come from data the page already holds, so there is no new fetch.
+- The **top-1–3 animated radar markers** (above) are governed by the Alerts/Heat toggles, not a separate switch, so turning a layer off also stops its `triggerRepaint()` loop.
+- Persist toggle state in `localStorage` (per-viewer convenience, wrapped in try/catch).
+- **Map hotkeys** are a separate `"map"` scope in `react-hotkeys-hook` (single letters above; `Escape` closes `HotspotDrawer`). `MapPage` is only mounted on `/map`, so these can never collide with the `triage-inbox` bindings that mean something else by `f`/`d`.
+
+**Map HUD readouts (OSIRIS pattern, second-pass addition; no dependency):** a bottom strip over the canvas showing **cursor lat/lon** (updates on `mousemove`), **zoom level** as a number, and **"N layers · N entities"** totals. Implementation note: write cursor coordinates straight into a ref'd DOM node from the map's `mousemove` handler, not into React state, or every mouse move re-renders `MapPage`. This needs one small addition to the `MapAdapter` interface (`onPointerMove(cb)`, `onViewChange(cb)`) alongside its MapLibre implementation; it is an internal front-end interface, not an API contract.
 
 ### 2.4 Screen 4 — System Trust & Integrity HUD (`/system`)
 
@@ -300,6 +355,11 @@ Indexes, in-memory, fuzzy-matched via `cmdk`'s built-in `command-score`:
 - **Bank codes and masked account references** (corrected scope per §0 — not IFSC, which doesn't exist in this data model)
 - Static navigation targets (Triage, Deployment, Investigate, System Integrity, Demo)
 
+**Context-aware commands (second-pass addition, Claude report §1, kbar scoped-action model + "jump to evidence item N"):** the palette also shows a **contextual group** that depends on the current route and `selectionStore` value, so it is more than a search box:
+- With an alert selected: *Freeze selected alert*, *Dispatch*, *Open its cluster*, *Show on map* — each listed **only if** the alert's `allowed_actions` includes it (server permission stays authoritative, §4). Destructive ones (freeze/dispatch) route through the same `HoldToActuateButton` confirmation, never a one-keystroke fire from the palette.
+- In a case dossier: *Jump to hop N*, *Jump to evidence item N*, *Isolate ring around selected node*, *Export view (working copy)*.
+- Anywhere: *Toggle sound*, *Toggle compact density*, *Show shortcuts*.
+
 `react-hotkeys-hook` binds the global `Cmd+K`/`Ctrl+K` open shortcut at the `Shell` level (outside any feature scope, so it's always available), separate from the `triage-inbox`-scoped bindings in §2.1 — exactly the two-library division of labor (`cmdk` for palette UI/filtering, `react-hotkeys-hook` for the shortcut key itself and all row-level bindings) that the research's two most detailed reports both converge on.
 
 ---
@@ -308,100 +368,146 @@ Indexes, in-memory, fuzzy-matched via `cmdk`'s built-in `command-score`:
 
 Every phase's verification baseline is `npm run ci:web` (root `package.json`: lint + typecheck + test + build for `apps/web`), run from the repo root. Phase-specific additional checks are listed per phase.
 
-### Phase 1 — Foundation & Design Token Modernization
+### 3.0 Ordering by demo visibility
+
+Phases are ordered by how much of a live demo they change, subject to hard dependencies. Each phase ends in a **demo-ready state**: if time runs out after any phase, everything up to it is coherent and presentable, and nothing later is half-wired.
+
+| Order | Phase | What the audience sees | Why here |
+|---|---|---|---|
+| 1 | **Foundation & Reskin** | The whole app flips to the near-black tactical look, with a live `SIM …Z` clock, stream status and monospaced tabular numbers on every screen | Every later screen is styled against these tokens, and it is the only phase that changes *every* screen at once. Also unblocks Tailwind, which is currently not wired at all (§0) |
+| 2 | **Triage Cockpit + live KPIs** | Countdown rings ticking, a CRITICAL ping, hold-to-freeze with a fill, a "Held ₹X" tally that jumps the instant you act, Dashboard numbers that roll instead of snap | The demo's core story ("alert arrives → officer acts in seconds") and the most animated screen |
+| 3 | **Command Palette + Tactical Map** | `Cmd+K` jumps to anything; the map gains toggleable layers with live counts, single-key hotkeys, cursor/zoom HUD and a pulsing radar on the hottest cell | Palette is cheap, flashy and cross-screen; the map is the second thing any audience looks at. Mostly additive to a strong existing map, so low risk |
+| 4a | **Case Dossier quick wins** | The mule graph stops rendering as uniform gray circles (real role shapes and legend), and Cases/CaseDetail match the new theme | The single most visibly *broken* thing today (§0 node-kind defect), fixable in the existing component in about a day, without waiting for the library migration |
+| 4b | **Case Dossier forensic depth** | Left-to-right dagre cascade, bank grouping, hop/amount filters with "N hidden", entity inspector, isolate-ring, Sankey, timeline playback | The largest and riskiest work (three new graph packages, layout swap), so it goes after everything cheaper has landed |
+| 5 | **System Integrity HUD + consistency pass** | Live audit-chain verification, latency sparklines, eval gauges; every mutation on every screen behaves consistently | Real value, but the least "wow per hour" and the most data plumbing (NaN landmine, rolling buffers). Runs last, so a slip here costs the demo the least |
+
+**Cut order if time is short** (cut from the tail, never from the middle of a screen; this is the frontend-overhaul cut order only and does not replace DOC4 §4.1c, which still governs any descope of the main build): Phase 5's sparklines → 4b's Sankey and export → 4b's timeline playback → 2's row-exit transition → 3's HUD readouts. Never cut Phase 1, the Phase 2 hold-to-actuate + tally, or the 4a role fix.
+
+### Phase 1 — Foundation, Reskin & HUD Chrome
 
 **Target files:**
 - New: `apps/web/tailwind.config.ts` (content globs `["./index.html", "./src/**/*.{ts,tsx}"]`, `presets: [nkPreset]`)
 - New: `apps/web/postcss.config.js` (`tailwindcss`, `autoprefixer`)
-- Modify: `apps/web/src/shared/tokens/tailwind.preset.ts` — expand to the full token set in §1.2 (colors, glows, `fontFamily.mono`)
+- Modify: `apps/web/src/shared/tokens/tailwind.preset.ts` — expand to the full token set in §1.2 (colors, glows, `fontFamily.mono`, weight tokens from §1.4a)
 - Modify: `apps/web/src/shared/tokens/tokens.css` — cut down to `:root` variables only (§1.2 values); everything else either deleted (confirmed orphaned classes, §0) or migrated in later phases
 - New: a root stylesheet with `@tailwind base; @tailwind components; @tailwind utilities;` (e.g. `apps/web/src/shared/tokens/tailwind.css`), imported in `main.tsx` alongside the existing `tokens.css`/`neo-utils.css` imports
-- Modify: `apps/web/src/main.tsx` — add `@fontsource-variable/jetbrains-mono` import, add the new Tailwind stylesheet import
-- Modify: `apps/web/src/app/layout/Shell.tsx` — restyle onto new tokens (sidebar/topbar), remove the decorative search input (replaced by Command Palette trigger in Phase 4, but the visual cleanup happens now)
-- Modify: `apps/web/src/shared/ui/*.tsx` — restyle `Button`, `Badge`, `Panel`, `DataTable`, `Drawer`, `ConfidenceBar`, `Timeline`, `Countdown` onto new tokens (no behavior changes in this phase)
-- Audit pass: remove confirmed-orphaned CSS (`.nk-eval-run-pill`, `.nk-cold-start-chart`, `.nk-feedback-plot` if still unused after Phase 3/4 confirm they stay unused — otherwise wire them up when their owning screen is touched)
+- Modify: `apps/web/src/main.tsx` — add `@fontsource-variable/jetbrains-mono` (and, if chosen per §1.4a, `@fontsource-variable/inter`) import, add the new Tailwind stylesheet import
+- Modify: `apps/web/src/app/layout/Shell.tsx` — restyle onto new tokens; remove the decorative search input (the Command Palette trigger arrives in Phase 3); **add HUD chrome (§1.4a): `SIM ⟨time⟩Z` clock, stream-status pill, "Press ? for shortcuts" hint**
+- New: `apps/web/src/shared/ui/ShortcutSheet.tsx` — renders empty-but-wired now (`?` opens it), filled by each later phase's scope
+- Modify: `apps/web/src/shared/ui/*.tsx` — restyle `Button`, `Badge`, `Panel`, `DataTable`, `Drawer`, `ConfidenceBar`, `Timeline`, `Countdown` onto new tokens (no behavior changes in this phase); apply `.data-digit` (tabular-nums slashed-zero) to every numeric render
+- Audit pass: remove confirmed-orphaned CSS (`.nk-eval-run-pill`, `.nk-cold-start-chart`, `.nk-feedback-plot` if still unused after Phase 5 confirms they stay unused — otherwise wire them up when their owning screen is touched)
 
-**New packages:** `postcss` (MIT), `autoprefixer` (MIT), `@fontsource-variable/jetbrains-mono` (OFL-1.1) — all license-compatible, all offline/self-hosted.
+**New packages:** `postcss` (MIT), `autoprefixer` (MIT), `@fontsource-variable/jetbrains-mono` (OFL-1.1), optionally `@fontsource-variable/inter` (OFL-1.1) — all license-compatible, all offline/self-hosted.
+
+**Demo-ready when:** every existing screen renders on the new palette with no console errors, and the HUD clock ticks with the simulator.
 
 **Verification:**
 ```
 npm run ci:web
 ```
-Manual/visual: `npm run dev`, confirm the shell renders on the new near-black palette with no console errors, confirm a Tailwind arbitrary-value class (e.g. `border-white/[0.08]` on a test element) actually applies — this is the concrete proof the previously-dormant Tailwind pipeline (§0) now works.
+Manual/visual: `npm run dev`, confirm a Tailwind arbitrary-value class (e.g. `border-white/[0.08]` on a test element) actually applies — the concrete proof the previously-dormant Tailwind pipeline (§0) now works; confirm the clock advances only when `sim.time` events arrive (pause the simulator: it must stop).
 
-### Phase 2 — Triage Inbox Cockpit
+### Phase 2 — Triage Cockpit & Live KPIs
 
 **Target files:**
 - New: `apps/web/src/shared/time/TimeProvider.tsx` (§2.1)
 - New: `apps/web/src/shared/ui/CountdownRing.tsx`
 - New: `apps/web/src/shared/audio/tacticalPing.ts`
 - New: `apps/web/src/shared/ui/HoldToActuateButton.tsx`
-- Modify: `apps/web/src/shared/ui/DataTable.tsx` — add `virtualized?: boolean` (via `@tanstack/react-virtual`), fix the dormant sort bug (§0)
-- Modify: `apps/web/src/features/alerts/AlertsInbox.tsx` — wire virtualization, `CountdownRing`, keyboard scope, sticky new-alerts pill
-- Modify: `apps/web/src/features/alerts/AlertDetail.tsx` — swap `request_hold`/`dispatch` action buttons to `HoldToActuateButton`; keep `acknowledge`/`notify_station`/`OutcomeButtons` as plain buttons with `toast.promise()`; give `override` its own non-dismissible-toast treatment (§2.1)
-- Modify: `apps/web/src/shared/stream/useStream.tsx` — call `playTacticalPing("CRITICAL")` on `alert.created` when `severity === "CRITICAL"`, gated by a `localStorage` sound-preference flag
+- New: `apps/web/src/shared/ui/RollingCounter.tsx` (plain CSS `transition` on a `<span>`; no Motion dependency, §0) — **moved up from the old Phase 5** because the tally and Dashboard KPIs are among the first things a demo shows
+- New: `apps/web/src/shared/ui/ConsequenceTally.tsx` (§2.1 "Held ₹X · N actions")
+- New: `apps/web/src/shared/state/selectionStore.ts` (linked-selection primitive, §2.3) — created here because the Phase 3 palette needs it; map/graph wiring follows in Phases 3 and 4
+- Modify: `apps/web/src/shared/ui/DataTable.tsx` — add `virtualized?: boolean` (via `@tanstack/react-virtual`), row height read from one constant (64px / 48px for the density toggle), fix the dormant sort bug (§0)
+- Modify: `apps/web/src/features/alerts/AlertsInbox.tsx` — virtualization, `CountdownRing`, `triage-inbox` hotkey scope (`j`/`k`/`1`–`9`/`f`/`d`/`x`/`Space`/`Escape`), `<kbd>` hints, sticky "▲ N new" pill, `ConsequenceTally` in the header, row-exit fade (cut first if short on time)
+- Modify: `apps/web/src/features/alerts/AlertDetail.tsx` — `request_hold`/`dispatch` → `HoldToActuateButton`; `acknowledge`/`notify_station`/`OutcomeButtons` stay plain buttons with `toast.promise()`; `override` gets the non-dismissible-toast treatment (§2.1)
+- Modify: `apps/web/src/shared/stream/useStream.tsx` — `playTacticalPing("CRITICAL")` on `alert.created` when `severity === "CRITICAL"`, gated by a `localStorage` sound-preference flag
 - Modify: `apps/web/src/app/providers.tsx` — replace `react-hot-toast`'s `<Toaster/>` with `sonner`'s `<Toaster/>`
-- Modify: `apps/web/src/app/App` root (wrap in `TimeProvider`, above `AlertsInbox` but below `StreamProvider` since it depends on `useSimTime()`)
-- New tests: `apps/web/src/shared/ui/__tests__/CountdownRing.test.tsx`, `apps/web/src/features/alerts/__tests__/HoldToActuate.test.tsx` (verify: release-before-600ms cancels, hold-to-completion fires the mutation exactly once, `enableOnFormTags:false` doesn't fire while a filter input has focus)
+- Modify: `apps/web/src/app/App` root — wrap in `TimeProvider` (above `AlertsInbox`, below `StreamProvider` since it depends on `useSimTime()`)
+- Modify: `apps/web/src/features/dashboard/DashboardPage.tsx` — KPI strip uses `RollingCounter`; replace hardcoded-hex accent props (`#ef4444`, `#38bdf8`, `#f59e0b`, `#a78bfa`) with token references, checking each against the Golden Color Rule (§1.3): only the "critical alert" tile may use `--nk-severity-critical`, the others go to neutral + glyph or the single `--nk-accent`
+- Modify: `apps/web/src/shared/ui/ShortcutSheet.tsx` — list the `triage-inbox` scope
+- New tests: `apps/web/src/shared/ui/__tests__/CountdownRing.test.tsx`, `apps/web/src/features/alerts/__tests__/HoldToActuate.test.tsx` (release-before-600ms cancels; hold-to-completion fires the mutation exactly once; `enableOnFormTags:false` doesn't fire while a filter input has focus), `apps/web/src/shared/ui/__tests__/ConsequenceTally.test.tsx` (optimistic tick, reconcile to a *lower* `applied_amount_paise`, rollback on error)
 
 **New packages:** `react-hotkeys-hook` (MIT), `@tanstack/react-virtual` (MIT), `sonner` (MIT). Remove `react-hot-toast` from `dependencies` (zero call sites to migrate, per §0).
 
-**Verification:**
-```
-npx vitest run src/shared/ui/__tests__/CountdownRing.test.tsx src/features/alerts/__tests__/HoldToActuate.test.tsx
-npm run ci:web
-```
-Manual: open `/alerts` with the demo simulator running, confirm `j`/`k` traversal, confirm a CRITICAL alert plays the ping once (not per-render), confirm holding `f` for <600ms on a `request_hold`-eligible alert cancels with no mutation fired (check Network tab).
-
-### Phase 3 — Case Dossier Forensic Network
-
-**Target files:**
-- Rewrite: `apps/web/src/features/cases/CasesPage.tsx` — onto `Panel`/`DataTable`/`StatusBadge` (§2.2)
-- Rewrite: `apps/web/src/features/cases/CaseDetail.tsx` — same, `SafeBriefRenderer` logic preserved, styling re-themed
-- Modify: `apps/web/src/features/clusters/ClusterGraph.tsx` — migrate raw `cytoscape` → `react-cytoscapejs`; `preset` layout → `cytoscape-dagre` seeded from `ClusterEdgeModel.layer`, with a cycle-detection pass falling back to `cytoscape-cose-bilkent` for cyclic mule rings (§2.2); add `cytoscape-expand-collapse` bank/sub-community grouping and the click-to-isolate-ring dim/focus toggle (§2.2); extract the existing `cyNodes`/`cyEdges` element-building logic into an isolated `toCytoscapeElements()` pure function (§2.2's response to Claude's pre-shaped-graph-JSON recommendation); preserve the 200-node cap logic; **and fix the node-kind classification defect** (§0, §2.2): replace the dead `kind="victim"|"mule"|"aggregator"|"exit"` Cytoscape selectors (which never match real data — every node arrives as `kind="account"`) with selectors keyed on a new client-computed `role` field (`origin`/`pass-through`/`pooling`/`terminal`, derived from in-degree/out-degree over `cappedEdges`), and relabel the existing bottom-left legend to match
-- Modify: `apps/web/src/features/clusters/ClustersPage.tsx` — restyle onto tokens (already mostly token-classed per audit, smaller diff than `ClusterGraph.tsx`)
-- New: `apps/web/src/features/cases/CaseFundFlowSankey.tsx` (Recharts `<Sankey>`, client-aggregated from existing `ClusterModel` data — no new API call)
-- New: `apps/web/src/features/cases/CaseTimelineScrubber.tsx` (edge-timeline playback, §2.2)
-- Also: apply the `eval-results.json` NaN-sanitizing fetch helper here if `EvaluationPage`/System HUD work is sequenced before this phase completes, or defer the helper to Phase 4 with System HUD — whichever lands first owns `shared/api/fetchEvalResults.ts`
-
-**New packages:** `react-cytoscapejs` (MIT), `cytoscape-dagre` (MIT) + `dagre` (MIT, peer dep), `cytoscape-expand-collapse` (MIT), `cytoscape-cose-bilkent` (i-Vis/Bilkent, MIT — the cyclic-graph fallback for dagre, §2.2). Add a local `apps/web/src/shared/types/cytoscape-plugins.d.ts` declaring module types for any of these four lacking maintained `@types/*` packages (verify at install time — most of the Cytoscape layout/plugin ecosystem is JS-only with community or absent type definitions).
+**Demo-ready when:** an alert can be seen arriving, pinged, acted on by hold, reflected in the tally, and undone within 5s — end to end, with the Dashboard KPIs rolling.
 
 **Verification:**
 ```
-npx vitest run src/features/clusters/__tests__ src/features/cases/__tests__
+npx vitest run src/shared/ui/__tests__/CountdownRing.test.tsx src/features/alerts/__tests__/HoldToActuate.test.tsx src/shared/ui/__tests__/ConsequenceTally.test.tsx
 npm run ci:web
 ```
-Manual: open a case with a real multi-hop cluster from the seeded demo data, confirm dagre renders left-to-right in hop order matching the previous hand-computed layout's visual ordering, confirm bank-grouping collapse/expand doesn't drop edges (aggregate edge weight sums correctly), confirm the 200-node cap still triggers on a large seeded cluster, and — the specific regression test for the node-kind fix — confirm the graph now visibly renders **more than one node shape/color** against real seeded data (origin ellipses, pooling diamonds, terminal hexagons, pass-through rounded-rects), not the uniform gray circles it renders today.
+Manual: open `/alerts` with the demo simulator running, confirm `j`/`k` traversal, confirm a CRITICAL alert plays the ping once (not per-render), confirm holding `f` for <600ms on a `request_hold`-eligible alert cancels with no mutation fired (Network tab), and confirm the freeze → undo path lands a compensating `override` in `/audit` (§2.1 correction: undo is a real backend action, not a cache rollback).
 
-### Phase 4 — Tactical Map & Global Command Palette
+### Phase 3 — Command Palette & Tactical Map
 
 **Target files:**
+- New: `apps/web/src/shared/ui/CommandPalette.tsx` (`cmdk`, §2.5), including the context-aware group
+- Modify: `apps/web/src/app/layout/Shell.tsx` — mount `CommandPalette`, bind global `Cmd/Ctrl+K` via `react-hotkeys-hook` (already a dependency from Phase 2), show the palette trigger in the topbar
+- New: `apps/web/src/features/map/LayerPanel.tsx` — toggle switches with `<kbd>` hints and live count badges (§2.3); persists to `localStorage`
+- New: `apps/web/src/features/map/MapHud.tsx` — cursor lat/lon, zoom, "N layers · N entities" strip (§2.3); coordinates written via ref, not state
+- Modify: `apps/web/src/features/map/MapAdapter.ts` and `maplibre/MapLibreAdapter.ts` — add `onPointerMove(cb)` / `onViewChange(cb)` (internal interface); confirm `setLayerVisibility` toggles the heat density + point layers as one unit
 - New: `apps/web/src/features/map/layers/radarIconLayer.ts` (`StyleImageInterface`, §2.3)
-- Modify: `apps/web/src/features/map/maplibre/MapLibreAdapter.ts` — register the new radar icon layer, cap to top 1–3 hottest cells, downgrade the rest to static `circle-radius`-transition cells
-- New: `apps/web/src/shared/state/selectionStore.ts` (linked-selection primitive, §2.3)
-- Modify: `apps/web/src/features/map/MapPage.tsx`, `apps/web/src/features/cases/CaseDetail.tsx` (graph node click), `apps/web/src/features/alerts/AlertsInbox.tsx` (row click) — wire to `selectionStore`
-- New: `apps/web/src/shared/ui/CommandPalette.tsx` (`cmdk`, §2.5)
-- Modify: `apps/web/src/app/layout/Shell.tsx` — mount `CommandPalette`, bind global `Cmd/Ctrl+K` via `react-hotkeys-hook` (already a dependency from Phase 2)
-- New: `apps/web/src/shared/api/fetchEvalResults.ts` (NaN-sanitizing fetch helper, §2.4) if not already added in Phase 3
-- Rewrite: `apps/web/src/features/evaluation/EvaluationPage.tsx` (or a new `features/system/SystemIntegrityPage.tsx` composition, matching the existing `feature:system → feature:[evaluation, ops, audit]` boundaries rule) — wire `/system/metrics`, `/audit/verify`, `/analytics/live-metrics`, sanitized `eval-results.json` per §2.4
+- Modify: `apps/web/src/features/map/maplibre/MapLibreAdapter.ts` — register the radar icon layer, cap to top 1–3 hottest cells, downgrade the rest to static `circle-radius`-transition cells; stop the repaint loop when the owning layer is toggled off
+- Modify: `apps/web/src/features/map/MapPage.tsx` — `"map"` hotkey scope (`H`/`L`/`A`/`I`/`B`/`Escape`); wire `selectionStore` (`flyTo` + highlight)
+- Modify: `apps/web/src/features/alerts/AlertsInbox.tsx` (row click) — write to `selectionStore`; `apps/web/src/shared/ui/ShortcutSheet.tsx` — list the `map` scope
 
 **New packages:** `cmdk` (MIT). No new map dependency (`maplibre-gl` already present; `StyleImageInterface` is native MapLibre API).
+
+**Demo-ready when:** `Cmd+K` → an alert → *Show on map* flies to the location with the radar pulsing, and toggling layers with the keyboard visibly changes the counts.
 
 **Verification:**
 ```
 npx vitest run src/shared/ui/__tests__/CommandPalette.test.tsx src/features/map/__tests__
 npm run ci:web
 ```
-Manual: `Cmd+K` opens from any screen, fuzzy-search a masked account ref and a bank code both resolve; click a cluster node in Case Dossier and confirm the map (`/map`, opened in a second check) flies to and highlights the matching location; confirm only the top 1–3 heat cells show the animated radar (DevTools performance panel — frame time should stay stable with many static cells present).
+Manual: `Cmd+K` opens from any screen; fuzzy-search a masked account ref and a bank code both resolve; with an alert selected the palette offers only actions present in its `allowed_actions`; layer hotkeys don't fire while a filter input has focus; only the top 1–3 heat cells show the animated radar (DevTools performance panel — frame time stays stable with many static cells present); cursor readout doesn't re-render `MapPage` (React DevTools profiler).
 
-### Phase 5 — Kinetic Feedback & Micro-interactions
+### Phase 4a — Case Dossier Quick Wins
 
-This phase is mostly already delivered incrementally in Phases 2–4 (hold-to-actuate, optimistic cache + undo toast were built as part of the Triage Inbox in Phase 2, since they're inseparable from that screen's core interaction). Phase 5 is the **cross-screen consistency pass**:
+Goal: the most visible defect fixed cheaply, before any library migration.
 
 **Target files:**
-- Audit all mutations across `alerts`, `casework`-adjacent actions (`EvidencePackPanel`'s generate action, `OutcomeButtons`), and `ops`/`audit` pages for consistent optimistic-update + `sonner` toast treatment (some, like evidence-pack generation, are naturally not "undo-able" — those get plain success/error toasts, not the undo-window pattern, matching the tiered model from §2.1 rather than applying hold-to-actuate/undo everywhere indiscriminately).
-- `shared/ui/RollingCounter.tsx` (new, plain CSS `transition` on a `<span>` re-rendering the target number — no Motion dependency per §0) applied to the Dashboard's KPI strip and the System HUD's exposure tiles, so numbers visibly animate on SSE-driven updates instead of snapping.
-- Final pass on `DashboardPage.tsx`'s hardcoded-hex KPI accent colors (`#ef4444`, `#38bdf8`, `#f59e0b`, `#a78bfa` passed as props, per audit) — replace with token references, checking each against the Golden Color Rule (§1.3): only the "critical alert" tile may use `--nk-severity-critical`; the others should move to neutral+glyph treatment or the single `--nk-accent`.
+- Modify: `apps/web/src/features/clusters/ClusterGraph.tsx` — **on the existing raw-Cytoscape component**, replace the dead `kind`-based selectors with the client-computed `role` (`origin`/`pass-through`/`pooling`/`terminal`, derived from in/out-degree over `cappedEdges`, §2.2) and relabel the legend; extract the `cyNodes`/`cyEdges` mapping into an exported, unit-tested `toCytoscapeElements()` pure function (also becomes the seam for the 4b migration); edge width mapped to `amount_paise`
+- Rewrite: `apps/web/src/features/cases/CasesPage.tsx` and `CaseDetail.tsx` onto `Panel`/`DataTable`/`StatusBadge` (§2.2), `SafeBriefRenderer` logic preserved and re-themed; statuses stop borrowing severity red (§1.3)
+- Modify: `apps/web/src/features/clusters/ClustersPage.tsx` — restyle onto tokens
+- Modify: `apps/web/src/features/cases/CaseDetail.tsx` — graph node click writes to `selectionStore` (map already listens, from Phase 3)
+
+**New packages:** none.
+
+**Demo-ready when:** a seeded cluster visibly renders more than one node shape/colour with an honest legend, and the Cases screens no longer look like a different product.
+
+**Verification:**
+```
+npx vitest run src/features/clusters/__tests__ src/features/cases/__tests__
+npm run ci:web
+```
+Manual: the specific regression test for the node-kind fix — open a real multi-hop seeded cluster and confirm origin ellipses, pooling diamonds, terminal hexagons and pass-through rounded-rects all appear (not the uniform gray circles rendered today); confirm the 200-node cap still triggers on a large seeded cluster; unit-test `toCytoscapeElements()` and the role classifier including the singleton (in=0, out=0) and pooling (in≥3) cases.
+
+### Phase 4b — Case Dossier Forensic Depth
+
+**Target files:**
+- Modify: `apps/web/src/features/clusters/ClusterGraph.tsx` — migrate raw `cytoscape` → `react-cytoscapejs`; `preset` layout → `cytoscape-dagre` seeded from `ClusterEdgeModel.layer`, with a cycle-detection pass falling back to `cytoscape-cose-bilkent` for cyclic mule rings (§2.2); add `cytoscape-expand-collapse` bank/sub-community grouping; add the click-to-isolate-ring dim/focus toggle; add **graph noise controls** (hop-depth limiter, minimum-amount slider, "N edges hidden · show all", §2.2) and the **entity inspector panel** (§2.2); preserve the 200-node cap logic
+- New: `apps/web/src/features/cases/CaseFundFlowSankey.tsx` (Recharts `<Sankey>`, client-aggregated from existing `ClusterModel` data — no new API call)
+- New: `apps/web/src/features/cases/CaseTimelineScrubber.tsx` (edge-timeline playback, §2.2)
+- New: `apps/web/src/features/cases/exportGraphView.ts` — PNG + visible-edges CSV, labelled "Working copy — not the evidence pack" (§2.2); lowest priority in this phase
+- Modify: `apps/web/src/shared/ui/CommandPalette.tsx` — register the dossier context commands (jump to hop N / evidence item N, isolate ring, export view)
+
+**New packages:** `react-cytoscapejs` (MIT), `cytoscape-dagre` (MIT) + `dagre` (MIT, peer dep), `cytoscape-expand-collapse` (MIT), `cytoscape-cose-bilkent` (i-Vis/Bilkent, MIT — the cyclic-graph fallback for dagre, §2.2). Add a local `apps/web/src/shared/types/cytoscape-plugins.d.ts` declaring module types for any of these lacking maintained `@types/*` packages (verify at install time).
+
+**Verification:**
+```
+npx vitest run src/features/clusters/__tests__ src/features/cases/__tests__
+npm run ci:web
+```
+Manual: dagre renders left-to-right in hop order matching the previous hand-computed layout's ordering; a seeded cyclic ring falls back to `cose-bilkent` instead of laying out with a reversed edge; bank-grouping collapse/expand doesn't drop edges (aggregate weight sums correctly); the min-amount slider changes the "N hidden" count and the hidden `₹` sum consistently with the edge list; the connection-chain highlight follows real edges; the entity inspector's totals equal the sum of that node's edges.
+
+### Phase 5 — System Integrity HUD & Consistency Pass
+
+**Target files:**
+- New: `apps/web/src/shared/api/fetchEvalResults.ts` — NaN-sanitizing fetch helper (§2.4): fetch as text, sanitize bare `NaN` tokens, `{ value: number | null, n: number }` per metric
+- Rewrite: `apps/web/src/features/evaluation/EvaluationPage.tsx` (or a new `features/system/SystemIntegrityPage.tsx` composition, matching the existing `feature:system → feature:[evaluation, ops, audit]` boundaries rule) — wire `/system/metrics`, `/audit/verify`, `/analytics/live-metrics`, sanitized `eval-results.json` per §2.4; `RollingCounter` on the exposure tiles; latency sparklines from a 10s client-side rolling buffer
+- Audit pass: every mutation across `alerts`, `casework`-adjacent actions (`EvidencePackPanel`'s generate action, `OutcomeButtons`), and `ops`/`audit` pages gets the consistent optimistic-update + `sonner` treatment of the tiered model in §2.1 (evidence-pack generation is naturally not undo-able: plain success/error toasts, not the undo-window pattern)
+- Modify: `apps/web/src/shared/ui/ShortcutSheet.tsx` — final pass so every scope is listed and matches the real bindings
 
 **New packages:** none.
 
@@ -410,7 +516,7 @@ This phase is mostly already delivered incrementally in Phases 2–4 (hold-to-ac
 npm run ci:web
 npm run test:e2e --workspace apps/web   # if Playwright specs exist/are extended for the triage + case flows touched across phases
 ```
-Manual: full click-through of the demo flow (`npm run dev:sim` + `npm run dev`) — freeze an account via hold-to-actuate, undo it within 5s, confirm the compensating `override` action actually lands server-side (check `/audit`, not just the client toast disappearing) — this closes the loop on the §2.1 correction that "undo" must be a real backend action, not just a client cache rollback.
+Manual: full click-through of the demo flow (`npm run dev:sim` + `npm run dev`) — Dashboard → alert → hold-to-freeze → undo → `Cmd+K` to map → case dossier → System HUD; confirm the audit-chain indicator shows `ok`, and that an `eval-results.json` containing bare `NaN` renders "insufficient sample (n<30)" instead of throwing.
 
 ---
 
@@ -419,14 +525,14 @@ Manual: full click-through of the demo flow (`npm run dev:sim` + `npm run dev`) 
 - **Paise, always:** every amount field from the backend is integer paise (`amount_paise`, `total_paise`, `disputed_paise`, `proposed_paise`, `applied_amount_paise`). The existing `formatInr()`/`paiseToInr()` in `shared/lib/format.ts` already handles this correctly (Indian digit grouping, compact ₹L/₹Cr notation) — reuse as-is; only the CSS treatment (`tabular-nums slashed-zero`, §1.4) is new. Do not introduce a second formatting path.
 - **`severity`/`verdict`/`ladder_level`/`status` are typed `string` in `schema.d.ts`**, not literal-union enums (the Pydantic models type them as `str`, so `openapi-typescript` can't narrow them) — widen these to the actual enum unions manually in a shared `shared/api/enums.ts` addition (the file already exists; extend it) rather than trusting the generated types to constrain them.
 - **`ForecastModel.levels` and `MetricsResponse.stages`/`.outbox` are dynamic-key maps**, not fixed-shape objects — index by key defensively (`Object.entries`), don't destructure assuming `district`/`cell`/`location` or any specific stage name will always be present.
-- **`eslint-plugin-boundaries` compliance:** any new shared primitive (`TimeProvider`, `CountdownRing`, `HoldToActuateButton`, `CommandPalette`, `selectionStore`, `tacticalPing`) must live under `shared/*` — confirmed importable from every feature by the existing boundaries config. The only two feature→feature import exceptions (`cases→clusters`, `system→{evaluation,ops,audit}`) already cover this plan's cross-feature needs (Case Dossier reusing the Cluster graph, System HUD composing Evaluation/Ops/Audit); no new boundary exception should be needed.
+- **`eslint-plugin-boundaries` compliance:** any new shared primitive (`TimeProvider`, `CountdownRing`, `HoldToActuateButton`, `RollingCounter`, `ConsequenceTally`, `ShortcutSheet`, `CommandPalette`, `selectionStore`, `tacticalPing`); map-only pieces (`LayerPanel`, `MapHud`) stay inside `features/map` must live under `shared/*` — confirmed importable from every feature by the existing boundaries config. The only two feature→feature import exceptions (`cases→clusters`, `system→{evaluation,ops,audit}`) already cover this plan's cross-feature needs (Case Dossier reusing the Cluster graph, System HUD composing Evaluation/Ops/Audit); no new boundary exception should be needed.
 - **Role/permission gating stays server-driven:** every action button's visibility is already gated by `allowed_actions` (alerts) or route-level `RoleGuard`/`can()` (System `/metrics` requiring `SIM_CONTROL`) — new components (hold-to-actuate, command palette action items) must check these same existing gates rather than re-deriving permission logic from `Role` client-side.
 
 ---
 
 ## 5. Open decisions requiring a (small, additive, non-breaking) backend follow-up
 
-Three independent gaps were found during verification. None blocks Phases 1–5 — both are scoped around in the frontend plan above (§2.2, §2.4) — but both are worth a backend ticket since the honest, currently-shippable frontend behavior is a deliberate downgrade from what real data would enable.
+Five items are listed below (5.1–5.5). None blocks Phases 1–5 — each is scoped around in the frontend plan above — but each is worth a backend ticket where the honest, currently-shippable frontend behavior is a deliberate downgrade from what real data would enable. If only one is picked up, pick **5.3**: it is the smallest, and it makes the Phase 4b "N hidden" figures exact at scale.
 
 **5.1 — Evaluation calibration data.** The System Trust HUD's "Brier score curve"/calibration diagram cannot be built today because `evaluation/metrics.py`'s `reliability_curve()` (→ `BinStat[]`) and `lead_time_minutes()` (→ `LeadTimeStats`) exist as pure functions but are never invoked by anything that writes output the frontend can read (`scripts/evaluate.py` only calls the scalar metrics). This is **not** a contract break — it would be a new, additive field in the same JSON artifact (or a new tiny script), touching no locked contract (LC-1..LC-10) and no existing endpoint shape.
 
@@ -434,9 +540,15 @@ Recommendation: extend `scripts/evaluate.py` to also call `reliability_curve()`/
 
 **5.2 — Mule-graph node role classification.** `casework/__init__.py`'s `cluster_graph()` hardcodes `kind="account"` for every node (verified, §0/§2.2) — there is currently no way for the backend to tell the frontend which account is the victim's, which is a cash-out point, or which is a pooling/aggregator account. The raw signal exists upstream but isn't persisted per-account: `ComplaintFact.touched_account_ids` is consumed once for headcounts (`bundle.py`) and discarded; `CashOutFact.account_id` (`graph/application/apply_cashouts.py`) is folded into aggregate `cluster_location_stats` and never retained as a per-account fact.
 
-Recommendation: (a) thread the account(s) in `ComplaintFact.touched_account_ids` through to `cluster_graph()` and emit `kind="victim"` for them instead of `"account"`; (b) persist `CashOutFact.account_id` observations in a queryable per-account table (a genuinely new, small table — this is the bigger half of the two asks here) so `cluster_graph()` can join against it and emit `kind="cashout"`. Both are additive changes to a field that is already a free-form `str` — no shape change, no locked-contract risk. Until this lands, §2.2's Phase 3 fix (topology-inferred `origin`/`pass-through`/`pooling`/`terminal` roles, computed entirely client-side from the edge list already being fetched) is what ships, and is an honest, defensible interim state precisely because it never claims more certainty than the data supports.
+Recommendation: (a) thread the account(s) in `ComplaintFact.touched_account_ids` through to `cluster_graph()` and emit `kind="victim"` for them instead of `"account"`; (b) persist `CashOutFact.account_id` observations in a queryable per-account table (a genuinely new, small table — this is the bigger half of the two asks here) so `cluster_graph()` can join against it and emit `kind="cashout"`. Both are additive changes to a field that is already a free-form `str` — no shape change, no locked-contract risk. Until this lands, §2.2's Phase 4a fix (topology-inferred `origin`/`pass-through`/`pooling`/`terminal` roles, computed entirely client-side from the edge list already being fetched) is what ships, and is an honest, defensible interim state precisely because it never claims more certainty than the data supports.
 
 **5.3 — Server-side graph shaping and pruning (Claude's report, executive-summary point 4 and its #3 recommended reference project).** Claude's report's own headline recommendation — the backend's graph endpoint should return pre-shaped Cytoscape.js elements with hop-limiting/edge-pruning already applied server-side, rather than the frontend fetching raw rows and both transforming and capping them itself — is only partially reflected in this plan (§2.2) because doing it exactly as described would change `/clusters/{cluster_id}`'s response shape (`ClusterNodeModel[]`/`ClusterEdgeModel[]` → literal `{group, data}` Cytoscape element JSON), which the task's "no contract-shape changes" constraint forbids. Two genuinely additive alternatives that don't touch the existing shape:
 
 - Add an optional `max_nodes` (default matching the frontend's current 200) query parameter to `GET /clusters/{cluster_id}` that applies the same priority-scored cap `ClusterGraph.tsx` currently computes client-side, and return a `truncated_count` alongside the existing `nodes`/`edges` fields — this is additive (new optional field, new optional query param, old callers unaffected) and fixes the real inefficiency noted in §2.2 (fetching a possibly-much-larger-than-200-node payload just to discard most of it client-side).
 - A separate, net-new `GET /clusters/{cluster_id}/graph-elements` endpoint that wraps the existing data in literal Cytoscape element shape would satisfy Claude's recommendation exactly, without touching `/clusters/{cluster_id}` at all — but given the frontend-side thin-adapter mitigation already described in §2.2 achieves most of the same benefit (an isolated, testable transform function) at no backend cost, this is the lower-priority of the two asks here and is listed mainly for completeness.
+
+**5.3a — Hop limiting and pruning metadata (second-pass extension of 5.3, small and additive).** On the same `GET /clusters/{cluster_id}`, add an optional `max_hops` query parameter alongside `max_nodes`, and return `hidden_edge_count` and `hidden_amount_paise` next to `truncated_count`. Old callers are unaffected (new optional param, new optional fields). This lets Phase 4b's "N edges hidden · show all" and hop-depth limiter report exact figures for clusters far larger than the payload the client would otherwise download, which is the pattern Claude's report cites from `crypto-tracer` (hop limit with pruning metadata returned alongside nodes/edges). Until it lands, the client computes the same numbers over whatever payload it received and labels them as "in loaded data".
+
+**5.4 — Graph annotations (not small; recommend deferring).** Claude's report describes Chainalysis Reactor's workflow as graph-centric with annotation and export. Export is covered client-side (§2.2, "working copy"). Annotation is not: it needs a persisted, audited note attached to a cluster node, gated by an authenticated `Principal`, with wording rules from DOC1 §1.5 applied to free-text notes (no guilt assertions, no real names). That is a new table, endpoint and audit action, i.e. a feature, not a tweak. Listed so the option is on record; not needed for the demo.
+
+**5.5 — "Why flagged" chip on queue rows (unverified, likely tiny).** `ForecastModel.evidence[]` (`code`, `params`, `text_en`) already exists and `AlertDetail` already renders it. If `AlertSummaryModel` (the list-row shape) does not carry it, adding the top evidence `code` there would be one additive field and would let the queue show a short "why" chip without opening the detail panel. **Not checked against the summary model in this pass**; verify before scoping.

@@ -31,3 +31,7 @@ export { Panel } from "./Panel";
 export { EmptyState } from "./EmptyState";
 
 export { ErrorState } from "./ErrorState";
+
+export { ShortcutSheet } from "./ShortcutSheet";
+export { registerShortcuts, useRegisterShortcuts } from "./shortcutRegistry";
+export type { ShortcutEntry, ShortcutScope } from "./shortcutRegistry";

@@ -3,6 +3,7 @@
  * DOC 3 Web App Shell: shared/tokens/tokens.css
  * Designer-owned: Track D Step D1 will replace placeholder values with real ones (Sync 6).
  * Names are the contract (frozen); values are free for D1 to change.
+ * Overhaul Phase 1 replaced the value layer with the tactical dark theme (see :root below).
  *
  * Token namespaces (DOC 3 Interfaces & Contracts):
  *   color: surface.{base,raised,sunken}, text.{primary,secondary,inverse},
@@ -12,79 +13,95 @@
  *   type:  font.{sans,mono}, size scale 12/14/16/20/24/32, weight 400/500/600
  *   space: 4-point scale; radius.{sm,md,lg}; shadow.{sm,md}; both light and dark themes
  *
- * DESIGN SYSTEM: Neomorphic Hybrid Fintech — design.md
+ * DESIGN SYSTEM: Tactical command — docs/plans/frontend_overhaul_plan.md §1
  */
 
 /* -------------------------------------------------------------------------
-   NEOMORPHIC HYBRID DESIGN — Light canvas + dark sidebar aesthetic
+   TACTICAL COMMAND THEME — near-black canvas, hairline borders, one accent.
+   Frontend overhaul plan §1.2 / §1.3. Token NAMES are the frozen contract
+   (unchanged); only values were replaced, plus the additive tokens noted.
+   Colour carries exactly two meanings: severity, and live-telemetry state.
    ------------------------------------------------------------------------- */
 
 :root {
-  /* ---- Canvas & Card Surfaces ---- */
-  --nk-canvas-bg: #F0F2F6;             /* Soft-tinted main viewport canvas */
-  --nk-surface-base: #F0F2F6;          /* Aliases for canvas (semantic compat) */
-  --nk-surface-raised: #FFFFFF;        /* Primary cards, panels, elevated tables */
-  --nk-surface-subtle: #F7F9FC;        /* Secondary surfaces, input backgrounds */
-  --nk-surface-sunken: #E8EDF2;        /* Inset search bars, sunken toggles */
-  --nk-surface-inset: #E8EDF2;         /* Alias */
+  color-scheme: dark;
 
-  /* ---- Borders ---- */
-  --nk-border-subtle: rgba(0, 0, 0, 0.05);
-  --nk-border-card: rgba(255, 255, 255, 0.8);   /* Top-edge highlight rim for elevation */
-  --nk-border-strong: rgba(0, 0, 0, 0.12);
+  /* ---- Canvas & surface tiers ---- */
+  --nk-canvas-bg: #090D12;             /* near-black floor, deliberately not #000 */
+  --nk-surface-base: #090D12;          /* alias of canvas (semantic compat) */
+  --nk-surface-raised: #0F151F;        /* cards, panels, table rows */
+  --nk-surface-subtle: #0C121A;        /* secondary surfaces, input backgrounds */
+  --nk-surface-sunken: #06090D;        /* inset inputs, sunken toggles */
+  --nk-surface-inset: #06090D;         /* alias */
+  --nk-surface-elevated: #161F2E;      /* dropdowns, drawers, inspectors, modals (new) */
 
-  /* ---- Sidebar (Deep Dark) ---- */
-  --nk-sidebar-bg: #111216;
-  --nk-sidebar-active-bg: #1E2026;
-  --nk-sidebar-text: #8E929D;
-  --nk-sidebar-text-active: #FFFFFF;
-  --nk-sidebar-accent: #38B6FF;
+  /* ---- Borders: hairlines carry hierarchy; dark-on-dark shadows are invisible ---- */
+  --nk-border-subtle: rgba(255, 255, 255, 0.08);
+  --nk-border-card: rgba(255, 255, 255, 0.08);
+  --nk-border-strong: rgba(255, 255, 255, 0.14);
+
+  /* ---- Sidebar ---- */
+  --nk-sidebar-bg: #06090D;
+  --nk-sidebar-active-bg: #111826;
+  --nk-sidebar-text: #7A8494;
+  --nk-sidebar-text-active: #E7EAEE;
+  --nk-sidebar-accent: #38BDF8;
 
   /* ---- Text ---- */
-  --nk-text-primary: #121417;
-  --nk-text-secondary: #667085;
-  --nk-text-muted: #98A2B3;
-  --nk-text-inverse: #FFFFFF;
+  --nk-text-primary: #E7EAEE;
+  --nk-text-secondary: #98A2B3;
+  --nk-text-tertiary: #5D6673;         /* new; dimmed secondary chrome */
+  --nk-text-muted: #5D6673;            /* alias of tertiary */
+  --nk-text-inverse: #090D12;          /* text on light/accent fills */
 
-  /* ---- Brand ---- */
-  --nk-brand-primary: #38B6FF;
-  --nk-brand-accent: #5B3CEB;
+  /* ---- Single non-severity accent: focus rings, links, active nav only ---- */
+  --nk-accent: #38BDF8;
+  --nk-brand-primary: #38BDF8;
+  --nk-brand-accent: #38BDF8;          /* second brand hue retired: one accent only */
 
-  /* ---- Pastel Card Accents ---- */
-  --nk-pastel-lilac-bg: #E1D9FF;
-  --nk-pastel-lilac-text: #5B3CEB;
-  --nk-pastel-lime-bg: #E2F4A6;
-  --nk-pastel-lime-text: #3F6E00;
-  --nk-pastel-sky-bg: #D4EBFD;
-  --nk-pastel-sky-text: #1D79E8;
-  --nk-pastel-peach-bg: #FFE0D6;
-  --nk-pastel-peach-text: #C83A14;
+  /* ---- Metric-tile tints: neutral surfaces; colour is reserved (§1.3) ---- */
+  --nk-pastel-lilac-bg: #161F2E;
+  --nk-pastel-lilac-text: #E7EAEE;
+  --nk-pastel-lime-bg: #161F2E;
+  --nk-pastel-lime-text: #E7EAEE;
+  --nk-pastel-sky-bg: #161F2E;
+  --nk-pastel-sky-text: #E7EAEE;
+  --nk-pastel-peach-bg: #161F2E;
+  --nk-pastel-peach-text: #E7EAEE;
 
-  /* ---- Status / Semantic ---- */
-  --nk-severity-low: #22C55E;
+  /* ---- Severity: the ONLY place colour carries meaning ---- */
+  --nk-severity-low: #10B981;
   --nk-severity-medium: #F59E0B;
   --nk-severity-high: #F97316;
   --nk-severity-critical: #EF4444;
 
-  --nk-verdict-good: #22C55E;
-  --nk-verdict-warn: #F59E0B;
-  --nk-verdict-bad: #EF4444;
+  /* Verdict / status / ladder do NOT get their own hues (Golden Color Rule):
+     these tokens resolve to neutrals and badges tell them apart by glyph,
+     weight and fill. Names kept because they are part of the frozen contract. */
+  --nk-verdict-good: #98A2B3;
+  --nk-verdict-warn: #E7EAEE;
+  --nk-verdict-bad: #E7EAEE;
 
-  --nk-status-open: #38B6FF;
-  --nk-status-ack: #A78BFA;
-  --nk-status-actioned: #22C55E;
-  --nk-status-expired: #98A2B3;
+  --nk-status-open: #E7EAEE;
+  --nk-status-ack: #98A2B3;
+  --nk-status-actioned: #E7EAEE;
+  --nk-status-expired: #5D6673;
 
-  --nk-color-status-success: #22C55E;
+  --nk-color-status-success: #10B981;
   --nk-color-status-warning: #F59E0B;
   --nk-color-status-danger: #EF4444;
 
-  /* ---- Focus ring ---- */
-  --nk-focus-ring: #38B6FF;
+  /* ---- Tactical glow: severity-tinted, used sparingly on critical rows/nodes ---- */
+  --nk-glow-critical: 0 0 12px rgba(239, 68, 68, 0.25);
+  --nk-glow-high: 0 0 12px rgba(249, 115, 22, 0.20);
+  --nk-glow-live: 0 0 10px rgba(16, 185, 129, 0.20);   /* streaming/healthy, not severity */
 
-  /* ---- Typography ---- */
-  --nk-font-sans: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
-  --nk-font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  /* ---- Focus ring ---- */
+  --nk-focus-ring: #38BDF8;
+
+  /* ---- Typography: sans for chrome, mono for data. Both bundled (offline). ---- */
+  --nk-font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --nk-font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* Type scale */
   --nk-size-10: 0.625rem;
@@ -98,12 +115,17 @@
   --nk-size-28: 1.75rem;
   --nk-size-32: 2rem;
 
-  /* Weight */
-  --nk-weight-400: 400;
-  --nk-weight-500: 500;
-  --nk-weight-600: 600;
-  --nk-weight-700: 700;
-  --nk-weight-800: 800;
+  /* Three-tier weight scale (read / UI / strong). The legacy numeric names are
+     kept because ~30 rules use them; they now resolve onto the three tiers so
+     nothing on screen is heavier than 590. */
+  --nk-weight-read: 400;
+  --nk-weight-ui: 510;
+  --nk-weight-strong: 590;
+  --nk-weight-400: var(--nk-weight-read);
+  --nk-weight-500: var(--nk-weight-ui);
+  --nk-weight-600: var(--nk-weight-strong);
+  --nk-weight-700: var(--nk-weight-strong);
+  --nk-weight-800: var(--nk-weight-strong);
 
   /* Space (4-point scale) */
   --nk-space-1: 0.25rem;
@@ -117,58 +139,21 @@
   --nk-space-12: 3rem;
   --nk-space-16: 4rem;
 
-  /* ---- Radius (Neomorphic — no sharp corners!) ---- */
-  --nk-radius-sm: 0.5rem;        /* 8px  — pill badges, toggles */
-  --nk-radius-md: 0.875rem;      /* 14px — buttons, search insets */
-  --nk-radius-lg: 1.375rem;      /* 22px — nested inner cards, metric tiles */
-  --nk-radius-xl: 1.75rem;       /* 28px — primary cards & modals */
-  --nk-radius-pill: 9999px;      /* full pill */
-  --nk-radius-nav: 0.75rem;      /* 12px — nav items */
+  /* ---- Radius: tight corners for a dense instrument, not soft neomorphism ---- */
+  --nk-radius-sm: 0.25rem;       /* 4px  — pill badges, toggles */
+  --nk-radius-md: 0.375rem;      /* 6px  — buttons, inputs */
+  --nk-radius-lg: 0.5rem;        /* 8px  — nested inner cards, metric tiles */
+  --nk-radius-xl: 0.625rem;      /* 10px — primary cards & modals */
+  --nk-radius-pill: 9999px;
+  --nk-radius-nav: 0.375rem;     /* 6px  — nav items */
 
-  /* ---- Shadows (Neomorphic Layered Elevation) ---- */
-  /* Primary Floating White Card */
-  --nk-shadow-sm:
-    0 4px 10px -2px rgba(18, 24, 40, 0.05),
-    0 1px 3px rgba(18, 24, 40, 0.03),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  --nk-shadow-md:
-    0 12px 28px -6px rgba(18, 24, 40, 0.06),
-    0 4px 10px -2px rgba(18, 24, 40, 0.03),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  /* Soft Inset / Sunken Element */
-  --nk-shadow-inset:
-    inset 0 2px 4px rgba(0, 0, 0, 0.04),
-    inset 0 -1px 2px rgba(255, 255, 255, 0.9);
-  /* Tactile Pill Button */
-  --nk-shadow-button:
-    0 6px 16px -2px rgba(0, 0, 0, 0.06),
-    0 2px 4px rgba(0, 0, 0, 0.03),
-    inset 0 1px 1px rgba(255, 255, 255, 0.6);
-  /* Dark Sidebar Card */
-  --nk-shadow-dark-card:
-    0 16px 32px rgba(0, 0, 0, 0.35),
-    inset 0 1px 1px rgba(255, 255, 255, 0.1);
-}
-
-/* Legacy dark theme (kept for backward compat if any component forces it) */
-:root[data-theme="dark"] {
-  --nk-canvas-bg: #0f1117;
-  --nk-surface-base: #0f1117;
-  --nk-surface-raised: #1a1f2e;
-  --nk-surface-subtle: #141720;
-  --nk-surface-sunken: #090c12;
-  --nk-surface-inset: #090c12;
-  --nk-border-subtle: #1e2a3a;
-  --nk-border-card: rgba(255,255,255,0.08);
-  --nk-border-strong: #334155;
-  --nk-text-primary: #e2e8f0;
-  --nk-text-secondary: #94a3b8;
-  --nk-text-muted: #64748b;
-  --nk-text-inverse: #0f1117;
-  --nk-brand-primary: #60A5FA;
-  --nk-brand-accent: #a78bfa;
-  --nk-shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
-  --nk-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  /* ---- Shadows: separation comes from borders; shadows only lift floating layers.
+     Kept as valid comma-list members (rules combine them), so "none" is a no-op shadow. ---- */
+  --nk-shadow-sm: 0 0 0 0 transparent;
+  --nk-shadow-md: 0 12px 32px -12px rgba(0, 0, 0, 0.7);
+  --nk-shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  --nk-shadow-button: 0 0 0 0 transparent;
+  --nk-shadow-dark-card: 0 12px 32px -12px rgba(0, 0, 0, 0.7);
 }
 
 /* -------------------------------------------------------------------------
@@ -190,8 +175,22 @@ html {
   background-color: var(--nk-canvas-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Tabular numerals for accounting accuracy (design.md §3) */
-  font-feature-settings: "tnum" 0;
+  /* Tabular figures everywhere so digits never jitter as values change. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Data digits: monospace + tabular + slashed zero (amounts, timestamps, ids,
+   countdowns, metrics). Applied to every numeric render (plan §1.4). */
+.data-digit,
+.nk-countdown,
+.nk-masked-ref__value,
+.nk-timeline__time,
+.nk-timeline-h__time,
+.nk-conf-bar__label,
+.nk-metric-tile__value {
+  font-family: var(--nk-font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: "zero" 1;
 }
 
 body {
@@ -255,13 +254,13 @@ body {
   width: 2rem;
   height: 2rem;
   border-radius: var(--nk-radius-nav);
-  background: linear-gradient(135deg, var(--nk-sidebar-accent), #7C3AED);
+  background: var(--nk-accent);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--nk-size-14);
-  font-weight: var(--nk-weight-800);
-  color: #fff;
+  font-weight: var(--nk-weight-strong);
+  color: var(--nk-text-inverse);
   letter-spacing: -0.03em;
   flex-shrink: 0;
 }
@@ -359,7 +358,7 @@ body {
   align-items: center;
   gap: var(--nk-space-4);
   padding: 0 var(--nk-space-6);
-  height: 4.5rem;                    /* Generous height per design */
+  height: 3.25rem;                   /* dense instrument bar */
   background: var(--nk-canvas-bg);
   border-bottom: 1px solid var(--nk-border-subtle);
   position: sticky;
@@ -690,7 +689,7 @@ body {
 /* Variants */
 .nk-btn--primary {
   background: var(--nk-brand-primary);
-  color: #fff;
+  color: var(--nk-text-inverse);
   border: 1px solid transparent;
   box-shadow: var(--nk-shadow-button);
 }
@@ -875,7 +874,7 @@ body {
 .nk-select-item[data-highlighted] {
   outline: none;
   background: var(--nk-brand-primary);
-  color: #fff;
+  color: var(--nk-text-inverse);
 }
 
 .nk-select-item__indicator {
@@ -890,15 +889,16 @@ body {
   font-family: var(--nk-font-sans);
   font-size: var(--nk-size-12);
   line-height: 1.4;
-  color: var(--nk-text-inverse);
-  background: var(--nk-sidebar-bg);
+  color: var(--nk-text-primary);
+  background: var(--nk-surface-elevated);
+  border: 1px solid var(--nk-border-strong);
   border-radius: var(--nk-radius-sm);
   padding: var(--nk-space-2) var(--nk-space-3);
   box-shadow: var(--nk-shadow-md);
 }
 
 .nk-tooltip-arrow {
-  fill: var(--nk-sidebar-bg);
+  fill: var(--nk-surface-elevated);
 }
 
 /* -------------------------------------------------------------------------
@@ -935,22 +935,38 @@ body {
 .nk-badge--severity-high    { background: color-mix(in srgb, var(--nk-severity-high) 15%, transparent); color: var(--nk-severity-high); }
 .nk-badge--severity-critical{ background: color-mix(in srgb, var(--nk-severity-critical) 15%, transparent); color: var(--nk-severity-critical); }
 
-/* Verdict */
-.nk-badge--verdict-good  { background: color-mix(in srgb, var(--nk-verdict-good) 15%, transparent); color: var(--nk-verdict-good); }
-.nk-badge--verdict-warn  { background: color-mix(in srgb, var(--nk-verdict-warn) 15%, transparent); color: var(--nk-verdict-warn); }
-.nk-badge--verdict-bad   { background: color-mix(in srgb, var(--nk-verdict-bad) 15%, transparent); color: var(--nk-verdict-bad); }
+/* Verdict, ladder and status carry NO hue of their own (Golden Color Rule, plan §1.3):
+   they sit on neutral surfaces and are told apart by glyph (in Badge.tsx), weight and fill.
+   Colour stays reserved for severity and live-telemetry state. */
+.nk-badge--verdict-good,
+.nk-badge--ladder-none,
+.nk-badge--status-ack,
+.nk-badge--status-expired {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--nk-text-secondary);
+  font-weight: var(--nk-weight-ui);
+}
+.nk-badge--status-expired { color: var(--nk-text-tertiary); }
 
-/* Ladder */
-.nk-badge--ladder-none { background: color-mix(in srgb, var(--nk-text-secondary) 15%, transparent); color: var(--nk-text-secondary); }
-.nk-badge--ladder-l1   { background: color-mix(in srgb, var(--nk-status-ack) 15%, transparent); color: var(--nk-status-ack); }
-.nk-badge--ladder-l2   { background: color-mix(in srgb, var(--nk-severity-high) 15%, transparent); color: var(--nk-severity-high); }
-.nk-badge--ladder-l3   { background: color-mix(in srgb, var(--nk-severity-critical) 15%, transparent); color: var(--nk-severity-critical); }
+.nk-badge--verdict-warn,
+.nk-badge--ladder-l1,
+.nk-badge--status-open,
+.nk-badge--status-actioned {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--nk-text-primary);
+  font-weight: var(--nk-weight-strong);
+  box-shadow: inset 0 0 0 1px var(--nk-border-strong);
+}
 
-/* Status */
-.nk-badge--status-open     { background: color-mix(in srgb, var(--nk-status-open) 15%, transparent); color: var(--nk-status-open); }
-.nk-badge--status-ack      { background: color-mix(in srgb, var(--nk-status-ack) 15%, transparent); color: var(--nk-status-ack); }
-.nk-badge--status-actioned { background: color-mix(in srgb, var(--nk-status-actioned) 15%, transparent); color: var(--nk-status-actioned); }
-.nk-badge--status-expired  { background: color-mix(in srgb, var(--nk-status-expired) 15%, transparent); color: var(--nk-status-expired); }
+/* Highest-consequence states invert to a solid light chip: unmistakable without a hue. */
+.nk-badge--verdict-bad,
+.nk-badge--ladder-l2,
+.nk-badge--ladder-l3 {
+  background: var(--nk-text-primary);
+  color: var(--nk-text-inverse);
+  font-weight: var(--nk-weight-strong);
+}
+.nk-badge--ladder-l2 { background: var(--nk-text-secondary); }
 
 /* -------------------------------------------------------------------------
    C3 — ConfidenceBar
@@ -4078,4 +4094,131 @@ body {
   gap: var(--nk-space-2);
   border-bottom: 1px solid var(--nk-border-subtle);
   padding-bottom: var(--nk-space-2);
+}
+
+
+/* -------------------------------------------------------------------------
+   HUD chrome (overhaul Phase 1): sim clock, stream pill, keyboard hints,
+   shortcut cheat-sheet. Hairline borders, no shadows, no new hues.
+   ------------------------------------------------------------------------- */
+
+.nk-hud-clock {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--nk-space-2);
+  font-size: var(--nk-size-12);
+  font-weight: var(--nk-weight-ui);
+  color: var(--nk-text-primary);
+  letter-spacing: 0.02em;
+}
+
+.nk-hud-clock__tag {
+  font-size: var(--nk-size-10);
+  font-weight: var(--nk-weight-strong);
+  color: var(--nk-text-tertiary);
+  letter-spacing: 0.08em;
+}
+
+.nk-hud-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--nk-space-2);
+  padding: 2px var(--nk-space-3);
+  font-size: var(--nk-size-10);
+  font-weight: var(--nk-weight-strong);
+  letter-spacing: 0.08em;
+  color: var(--nk-text-secondary);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-pill);
+}
+
+.nk-hud-pill--live {
+  color: var(--nk-text-primary);
+  box-shadow: var(--nk-glow-live);
+}
+
+.nk-kbd {
+  display: inline-block;
+  min-width: 1.25rem;
+  padding: 0 var(--nk-space-1);
+  text-align: center;
+  font-family: var(--nk-font-mono);
+  font-size: var(--nk-size-11);
+  font-weight: var(--nk-weight-ui);
+  line-height: 1.2rem;
+  color: var(--nk-text-secondary);
+  background: var(--nk-surface-elevated);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-sm);
+}
+
+.nk-shortcuts__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.nk-shortcuts {
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: var(--nk-space-5);
+  background: var(--nk-surface-elevated);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-xl);
+  box-shadow: var(--nk-shadow-md);
+}
+
+.nk-shortcuts__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--nk-space-4);
+}
+
+.nk-shortcuts__title {
+  font-size: var(--nk-size-14);
+  font-weight: var(--nk-weight-strong);
+  color: var(--nk-text-primary);
+}
+
+.nk-shortcuts__close {
+  font-family: var(--nk-font-mono);
+  font-size: var(--nk-size-11);
+  color: var(--nk-text-secondary);
+  background: transparent;
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-sm);
+  padding: 0 var(--nk-space-2);
+  cursor: pointer;
+}
+
+.nk-shortcuts__group + .nk-shortcuts__group {
+  margin-top: var(--nk-space-4);
+  padding-top: var(--nk-space-4);
+  border-top: 1px solid var(--nk-border-subtle);
+}
+
+.nk-shortcuts__group-title {
+  margin-bottom: var(--nk-space-2);
+  font-size: var(--nk-size-10);
+  font-weight: var(--nk-weight-strong);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nk-text-tertiary);
+}
+
+.nk-shortcuts__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nk-space-4);
+  padding: var(--nk-space-1) 0;
+  font-size: var(--nk-size-14);
+  color: var(--nk-text-secondary);
 }

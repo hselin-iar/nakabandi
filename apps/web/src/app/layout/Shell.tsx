@@ -3,13 +3,15 @@
  * DOC 3 Web App Shell: layout/ → Shell.tsx
  *
  * C3: sim time from useSimTime() (stream-driven); connection dot from useStream().
- * UI: Neomorphic Hybrid Fintech design — design.md
+ * Overhaul Phase 1: HUD chrome (SIM clock, stream status, shortcut hint) lives in the top bar.
+ * The clock is SIM time (the sim.time SSE event), never wall-clock — see plan §0.
  */
 
 import { usePrincipal } from "../auth/usePrincipal";
 import { useStream, useSimTime } from "../../shared/stream/useStream";
 import { formatSimTime } from "../../shared/lib/format";
 import { roleLabel } from "../../shared/lib/roles";
+import { ShortcutSheet } from "../../shared/ui";
 
 /**
  * Connection status dot — amber = degraded / polling, green = streaming.
@@ -38,19 +40,45 @@ function ConnectionDot({ status }: { status: "streaming" | "polling" | "disconne
   );
 }
 
+const STREAM_LABEL = {
+  streaming: "LIVE",
+  polling: "POLLING",
+  disconnected: "OFFLINE",
+} as const;
+
+/** Stream status as a labelled pill; glows only while genuinely streaming. */
+function StreamPill({ status }: { status: "streaming" | "polling" | "disconnected" }) {
+  return (
+    <span
+      className={`nk-hud-pill${status === "streaming" ? " nk-hud-pill--live" : ""}`}
+      id="hud-stream-status"
+    >
+      <ConnectionDot status={status} />
+      {STREAM_LABEL[status]}
+    </span>
+  );
+}
+
+/** SIM clock, in Zulu. Driven by sim.time events: it stops when the simulator pauses. */
+function SimClock({ simTime }: { simTime: string | null }) {
+  const text = simTime ? formatSimTime(simTime, { includeSeconds: true }) : "--:--:--";
+  return (
+    <span className="nk-hud-clock data-digit" id="hud-sim-clock" title="Simulation time (UTC)">
+      <span className="nk-hud-clock__tag">SIM</span>
+      {text}Z
+    </span>
+  );
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const { principal, logout } = usePrincipal();
   const { status } = useStream();
   const simTime = useSimTime();
 
-  const simLabel = simTime
-    ? `SIM ${formatSimTime(simTime)}`
-    : "SIM --:--";
-
   return (
     <div className="nk-shell">
       {/* Dark Sidebar */}
-      <SideNav simLabel={simLabel} connectionStatus={status} />
+      <SideNav />
 
       {/* Right side: topbar + main */}
       <div className="nk-shell__body">
@@ -61,36 +89,21 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="nk-topbar__subtitle">Financial Crime Detection Platform</span>
           </div>
 
-          {/* Center pill search */}
-          <div className="nk-topbar__search">
-            <svg
-              className="nk-topbar__search-icon"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              aria-hidden="true"
-            >
-              <circle cx="9" cy="9" r="6" />
-              <path d="M15 15l-3.5-3.5" strokeLinecap="round" />
-            </svg>
-            <input
-              className="nk-topbar__search-input"
-              type="search"
-              placeholder="Search alerts, cases, refs…"
-              aria-label="Search"
-              id="topbar-search"
-            />
-          </div>
+          {/* Spacer: the command palette trigger lands here in Phase 3 */}
+          <div className="flex-1" />
 
-          {/* Right: role pill, connection, logout */}
+          {/* Right: HUD (sim clock, stream status), role pill, logout */}
           <div className="nk-topbar__right">
+            <SimClock simTime={simTime} />
+            <StreamPill status={status} />
+            <span className="hidden text-nk-text-tertiary text-xs lg:inline" id="hud-shortcut-hint">
+              Press <kbd className="nk-kbd">?</kbd> for shortcuts
+            </span>
             {principal && (
               <>
                 <span className="nk-topbar__role" id="principal-role">
                   {roleLabel(principal.role)}
                 </span>
-                <ConnectionDot status={status} />
                 <button
                   id="topbar-logout-btn"
                   className="nk-topbar__logout"
@@ -107,6 +120,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <ShortcutSheet />
     </div>
   );
 }
@@ -207,12 +221,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/demo", label: "Demo", description: "Simulator controls for demonstrations", id: "nav-demo", icon: Icons.Demo, allowedRoles: ["demo_operator", "admin"] },
 ];
 
-interface SideNavProps {
-  simLabel: string;
-  connectionStatus: "streaming" | "polling" | "disconnected";
-}
-
-export function SideNav({ simLabel, connectionStatus }: SideNavProps) {
+export function SideNav() {
   const { can, principal } = useP();
 
   return (
@@ -250,13 +259,8 @@ export function SideNav({ simLabel, connectionStatus }: SideNavProps) {
         ))}
       </ul>
 
-      {/* Footer: sim time + connection status */}
+      {/* Footer: attribution (sim time and stream status live in the top bar HUD) */}
       <div className="nk-sidenav__footer">
-        <div className="nk-sidenav__simtime">
-          <span className="nk-sidenav__icon" style={{ opacity: 0.6 }}>{Icons.Clock}</span>
-          <span>{simLabel}</span>
-          <ConnectionDot status={connectionStatus} />
-        </div>
         <p className="nk-sidenav__attribution">
           ATM &amp; bank branch locations © OpenStreetMap contributors, ODbL.
         </p>
