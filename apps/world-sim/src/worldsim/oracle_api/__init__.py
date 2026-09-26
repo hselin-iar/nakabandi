@@ -18,16 +18,23 @@ from fastapi import FastAPI, HTTPException
 app = FastAPI(title="NAKABANDI Oracle API (internal only)", version="0")
 
 _store: TruthStore | None = None  # type: ignore[name-defined]  # noqa: F821
-_run_id: str = ""
+_clock: ClockState | None = None  # type: ignore[name-defined]  # noqa: F821
 
 _UTC = UTC
 
 
-def set_store(store, run_id: str) -> None:  # type: ignore[no-untyped-def]
-    """Called once by the CLI before starting uvicorn."""
-    global _store, _run_id
+def set_store(store, clock) -> None:  # type: ignore[no-untyped-def]
+    """Called once by the CLI before starting uvicorn.
+
+    Takes the live `ClockState` (shared with control_api/runner), not a static run_id string:
+    `/control/start` assigns a fresh `clock.run_id` on every start (including after a reset),
+    so a run_id captured once at boot would go stale the first time a client actually used the
+    control API to reset-then-restart a live session, silently emptying GET /oracle/clusters —
+    the hidden-truth source evaluation depends on — for that new run.
+    """
+    global _store, _clock
     _store = store
-    _run_id = run_id
+    _clock = clock
 
 
 def _require_store():
@@ -52,7 +59,8 @@ def cashouts(from_: str, to: str) -> list[dict]:
 def clusters() -> list[dict]:
     """Return all clusters (including injected) for the current run."""
     store = _require_store()
-    return store.get_clusters(_run_id)
+    run_id = _clock.run_id if _clock is not None else ""
+    return store.get_clusters(run_id)
 
 
 @app.get("/oracle/complaints/{external_ref}/truth")

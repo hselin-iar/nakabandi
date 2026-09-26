@@ -11,7 +11,6 @@ guided_demo_script() -> list[DemoEvent]
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
@@ -58,9 +57,14 @@ def inject_cluster(
     )
     from worldsim.core.rng import rng_for
 
-    cluster_id: ClusterId = f"INJ-{uuid.uuid4().hex[:8].upper()}"
+    # Seeded from call-time-deterministic inputs, not uuid.uuid4(): DOC1 M1 requires the whole
+    # simulator "fully seedable and reproducible from a single config file", and the id used to
+    # come from OS entropy. It also used to seed this function's own `rng` (footprint/timing
+    # perturbation), so the non-determinism cascaded into the injected cluster's properties too.
     cfg = world.cfg
-    rng = rng_for(cfg.seed, "inject_cluster", cluster_id)
+    seed_rng = rng_for(cfg.seed, "inject_cluster", f"{district_id}:{sim_now}")
+    cluster_id: ClusterId = f"INJ-{int(seed_rng.integers(0, 2**32)):08X}"
+    rng = seed_rng
 
     # Try to find the district's centre from the registry
     district = next((d for d in world.registry.districts if d.id == district_id), None)
@@ -90,10 +94,12 @@ def inject_cluster(
     base_timing = cfg.timing
     cluster_timing = _perturb_timing(base_timing, rng)
 
-    # Build channel mix from config
-    channel_mix: dict[str, float] = {}
-    for ch in ["ATM", "BRANCH", "AGENT"]:
-        channel_mix[ch] = getattr(cfg.channels, ch.lower(), 0.33)
+    # Build channel mix from config. `ChannelsConfig` has one field, `mix: dict[...]` — there is
+    # no `.atm`/`.branch`/`.agent` attribute to read via getattr(), which always missed and
+    # silently gave every injected cluster a flat 33/33/33 split regardless of the configured
+    # (ATM-heavy) mix.
+    channels: tuple[Literal["ATM", "BRANCH", "AGENT"], ...] = ("ATM", "BRANCH", "AGENT")
+    channel_mix: dict[str, float] = {ch: cfg.channels.mix.get(ch, 0.33) for ch in channels}
     total = sum(channel_mix.values()) or 1.0
     channel_mix = {k: v / total for k, v in channel_mix.items()}
 

@@ -47,10 +47,11 @@ export function FilterPanel({
         </button>
       </div>
 
-      {/* 2. Level / Resolution Select */}
+      {/* 2. Level / Resolution Select — bound to map zoom (§7.3); picking one here also
+          nudges the camera into that level's zoom band, so both stay in agreement. */}
       <div className="nk-filter-field">
         <label htmlFor="filter-level" className="nk-filter-label">
-          Resolution
+          Resolution <span className="nk-text-xs text-muted">(follows zoom)</span>
         </label>
         <Select
           id="filter-level"

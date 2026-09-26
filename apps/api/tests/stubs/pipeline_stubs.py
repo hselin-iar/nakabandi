@@ -185,7 +185,9 @@ class StubInterceptor:
                 target=TargetRef(kind="location", id="loc-1"),
                 channel=Channel.ATM.value,
                 window_min=30.0,
-                best_unit=BestUnit(unit_id="unit-1", unit_kind="cyber_cell", eta_min=12.0),
+                best_unit=BestUnit(
+                    unit_id="unit-1", unit_kind="cyber_cell", eta_min=12.0, lat=28.63, lon=77.22
+                ),
                 interception_probability=0.55,
                 verdict=verdict,
                 ladder_level=level,

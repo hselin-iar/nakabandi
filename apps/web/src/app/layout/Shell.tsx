@@ -191,15 +191,19 @@ const Icons = {
   ),
 };
 
-/** Navigation items. Each item is gated by permission or specific roles. */
+/**
+ * Navigation items — 5 task-shaped destinations (Frontend Strategy §3.1), not 8
+ * resource-shaped ones: Triage, Deployment and Investigate answer "what do I do", System
+ * Integrity answers "can I trust this" as one destination (tabs inside), Command is the
+ * thin ambient landing (reached via the brand mark, not its own sidebar item) and Outbox
+ * is demoted to a secondary admin route (its per-alert data now lives in Alert Focus).
+ * Each item is gated by permission or specific roles.
+ */
 const NAV_ITEMS: readonly NavItem[] = [
-  { to: "/alerts", label: "Alerts", description: "Live fraud alerts awaiting action", id: "nav-alerts", icon: Icons.Alerts, require: "VIEW_ALERTS" },
-  { to: "/clusters", label: "Clusters & Cases", description: "Related-account networks bundled into investigation cases", id: "nav-clusters", icon: Icons.Clusters, require: "VIEW_CASES" },
-  { to: "/map", label: "Map", description: "Where fraud risk is concentrated right now", id: "nav-map", icon: Icons.Map, require: "VIEW_ALERTS" },
-  { to: "/evaluation", label: "Evaluation", description: "How accurate the forecasting model has been", id: "nav-evaluation", icon: Icons.Evaluation, require: "VIEW_EVALUATION" },
-  { to: "/ops", label: "Ops", description: "System health and processing throughput", id: "nav-ops", icon: Icons.Ops, require: "SIM_CONTROL" },
-  { to: "/outbox", label: "Outbox", description: "Notifications sent to banks, SMS and email", id: "nav-outbox", icon: Icons.Outbox, require: "VIEW_AUDIT" },
-  { to: "/audit", label: "Audit", description: "Tamper-evident log of every action taken", id: "nav-audit", icon: Icons.Audit, require: "VIEW_AUDIT" },
+  { to: "/alerts", label: "Triage", description: "Live fraud alerts awaiting action", id: "nav-alerts", icon: Icons.Alerts, require: "VIEW_ALERTS" },
+  { to: "/map", label: "Deployment", description: "Where fraud risk is concentrated right now", id: "nav-map", icon: Icons.Map, require: "VIEW_ALERTS" },
+  { to: "/cases", label: "Investigate", description: "Mule networks bundled into investigation cases", id: "nav-cases", icon: Icons.Clusters, require: "VIEW_CASES" },
+  { to: "/system", label: "System Integrity", description: "Can this system be trusted — statistically, operationally, tamper-evidently", id: "nav-system", icon: Icons.Evaluation, require: "VIEW_EVALUATION" },
   { to: "/demo", label: "Demo", description: "Simulator controls for demonstrations", id: "nav-demo", icon: Icons.Demo, allowedRoles: ["demo_operator", "admin"] },
 ];
 
@@ -213,11 +217,11 @@ export function SideNav({ simLabel, connectionStatus }: SideNavProps) {
 
   return (
     <nav className="nk-sidenav" aria-label="Main navigation">
-      {/* Brand mark */}
-      <div className="nk-sidenav__brand">
+      {/* Brand mark — links to Command (§3.2/§4.1): thin ambient landing, not its own nav item */}
+      <NavLink to="/" end className="nk-sidenav__brand" title="Command">
         <div className="nk-sidenav__logo" aria-hidden="true">NK</div>
         <span className="nk-sidenav__wordmark">Nakabandi</span>
-      </div>
+      </NavLink>
 
       {/* Nav links */}
       <ul className="nk-sidenav__list">

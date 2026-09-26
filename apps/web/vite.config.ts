@@ -29,6 +29,7 @@ export default defineConfig({
       "/sim-control": {
         target: "http://localhost:8101",
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/sim-control/, "/control"),
       },
       "/bank": {
         target: "http://localhost:4001",

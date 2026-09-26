@@ -61,6 +61,8 @@ class ClusterEdge:
     from_id: Id
     to_id: Id
     amount_paise: Paise
+    layer: int
+    event_at: SimTime
 
 
 @dataclass(frozen=True, slots=True)

@@ -21,6 +21,8 @@ def make_client(
     monkeypatch.setenv("API_SERVICE_KEY", "test-only-service-key")
     monkeypatch.setenv("JWT_SECRET", "test-only-jwt-secret-at-least-32-bytes-long")
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'ops.db'}")
+    # Isolated, guaranteed-empty model store — see integration/conftest.py's client fixture.
+    monkeypatch.setenv("NAKABANDI_MODEL_STORE_DIR", str(tmp_path / "models"))
     opened: list[TestClient] = []
 
     def make(**env: str) -> TestClient:
@@ -208,6 +210,7 @@ def test_a_restart_restores_the_sim_clock_from_the_newest_ingested_batch(  # noq
     monkeypatch.setenv("API_SERVICE_KEY", "test-only-service-key")
     monkeypatch.setenv("JWT_SECRET", "test-only-jwt-secret-at-least-32-bytes-long")
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'restart.db'}")
+    monkeypatch.setenv("NAKABANDI_MODEL_STORE_DIR", str(tmp_path / "models"))
 
     with TestClient(create_app()) as first:
         post(first, "registry", registry())

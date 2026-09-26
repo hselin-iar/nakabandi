@@ -158,6 +158,8 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClie
     monkeypatch.setenv("API_SERVICE_KEY", "test-only-service-key")
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'live.db'}")
     monkeypatch.setenv("JWT_SECRET", "test-only-jwt-secret-at-least-32-bytes-long")
+    # Isolated, guaranteed-empty model store — see integration/conftest.py's client fixture.
+    monkeypatch.setenv("NAKABANDI_MODEL_STORE_DIR", str(tmp_path / "models"))
     with TestClient(create_app()) as c:
         yield c
 
@@ -314,6 +316,8 @@ def test_a_confirmed_hit_changes_the_next_forecast_for_that_cluster(
 ) -> None:
     monkeypatch.setenv("API_SERVICE_KEY", "test-only-service-key")
     monkeypatch.setenv("JWT_SECRET", "test-only-jwt-secret-at-least-32-bytes-long")
+    # Isolated, guaranteed-empty model store — see integration/conftest.py's client fixture.
+    monkeypatch.setenv("NAKABANDI_MODEL_STORE_DIR", str(tmp_path / "models"))
 
     def run(confirm: bool) -> tuple[dict[str, float], list[tuple]]:
         monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / f'confirm-{confirm}.db'}")

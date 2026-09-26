@@ -11,6 +11,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAlerts, type AlertFilters } from "./api/useAlerts";
 import { AlertDetail } from "./AlertDetail";
 import { ReviewQueue } from "./ReviewQueue";
+import { AttentionBudgetStrip } from "./AttentionBudgetStrip";
 import { DataTable, type Column } from "../../shared/ui/DataTable";
 import { Select } from "../../shared/ui/Select";
 import { shouldShowKindBadge } from "../../shared/lib/format";
@@ -53,11 +54,18 @@ export default function AlertsInbox() {
       status: statusFilter,
       severity: severityFilter,
       search: searchQuery,
+      view: "queue",
     }),
     [statusFilter, severityFilter, searchQuery],
   );
 
   const { data: alerts = [], isLoading, error, refetch } = useAlerts(queryFilters);
+
+  // Attention-budget strip (§4.2/§7.6): the same filters, against the deferred backlog —
+  // makes the alert-budget policy visible as a trust signal, not an invisible server split.
+  const { data: backlogAlerts = [] } = useAlerts(
+    useMemo(() => ({ ...queryFilters, view: "backlog" }), [queryFilters]),
+  );
 
   function handleRowClick(alert: AlertSummary) {
     setSelectedAlertId(alert.id);
@@ -81,15 +89,13 @@ export default function AlertsInbox() {
       },
       {
         key: "id",
-        header: "Alert / Cluster",
+        header: "Cluster",
         sortable: true,
         width: "14rem",
         cell: (row) => (
           <div className="nk-alert-id-cell">
-            <span className="font-mono font-bold">{row.id}</span>
-            <span className="nk-text-xs text-muted">
-              <MaskedRef value={row.cluster_ref} masked={row.masked} />
-            </span>
+            <MaskedRef value={row.cluster_ref} masked={row.masked} className="font-bold" />
+            <span className="nk-text-xs text-muted font-mono">{row.id}</span>
           </div>
         ),
       },
@@ -211,6 +217,9 @@ export default function AlertsInbox() {
           </Button>
         </div>
       </header>
+
+      {/* Attention-Budget Strip */}
+      <AttentionBudgetStrip shownCount={alerts.length} backlogCount={backlogAlerts.length} />
 
       {/* KPI Summary Strip */}
       <div className="nk-kpi-strip" aria-label="Alert summary statistics">

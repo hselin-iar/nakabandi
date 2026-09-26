@@ -102,6 +102,11 @@ class SqlClusterRepo(ClusterRepo):
         ).all()
         return sorted(rows)
 
+    def get_all_account_ids(self) -> list[Id]:
+        """Every account currently assigned to any cluster, sorted (TrainModels' delay_records)."""
+        rows = self._s.scalars(sa.select(cluster_members.c.account_id)).all()
+        return sorted(set(rows))
+
     def save_cluster(self, cluster_id: Id, created_at: SimTime) -> None:
         self._s.execute(
             sa.insert(clusters)

@@ -30,6 +30,8 @@ class BestUnit:
     unit_id: Id
     unit_kind: str
     eta_min: float
+    lat: float
+    lon: float
 
 
 @dataclass(frozen=True)

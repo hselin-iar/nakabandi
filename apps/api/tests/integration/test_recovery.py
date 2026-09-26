@@ -74,6 +74,10 @@ class Api:
             # the test suite disables the background workers; a real process runs them
             "NAKABANDI_OUTBOX_WORKER_ENABLED": "true",
             "NAKABANDI_TIMER_WORKER_ENABLED": "true",
+            # Isolated, guaranteed-empty model store — see integration/conftest.py's client
+            # fixture for why: this test asserts an alert gets raised, which needs the
+            # fallback heuristic scorer, not whatever real model happens to be on disk.
+            "NAKABANDI_MODEL_STORE_DIR": str(db.parent / "models"),
         }
         self.proc: subprocess.Popen | None = None
 

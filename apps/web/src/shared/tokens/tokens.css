@@ -247,6 +247,8 @@ body {
   padding: 0 var(--nk-space-2) var(--nk-space-6);
   border-bottom: 1px solid rgba(255,255,255,0.06);
   margin-bottom: var(--nk-space-4);
+  text-decoration: none;
+  color: inherit;
 }
 
 .nk-sidenav__logo {
@@ -1153,8 +1155,10 @@ body {
 }
 
 .nk-timeline__dot--success { background: var(--nk-verdict-good); }
-.nk-timeline__dot--warn    { background: var(--nk-severity-high); }
+.nk-timeline__dot--warn,
+.nk-timeline__dot--warning { background: var(--nk-severity-high); }
 .nk-timeline__dot--error   { background: var(--nk-severity-critical); }
+.nk-timeline__dot--info    { background: var(--nk-brand-primary); }
 
 .nk-timeline__content { flex: 1; min-width: 0; }
 
@@ -1182,6 +1186,81 @@ body {
   font-size: var(--nk-size-14);
   color: var(--nk-text-secondary);
   padding: var(--nk-space-4);
+}
+
+/* -------------------------------------------------------------------------
+   Horizontal Timeline — the complaint -> cluster -> forecast -> assess ->
+   alert -> action -> outcome chain as a scrubbable sequence, not a vertical
+   bullet list, so the "seconds, not hours" speed claim is visible (§5.3).
+   ------------------------------------------------------------------------- */
+
+.nk-timeline-h {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nk-space-5);
+  overflow-x: auto;
+  list-style: none;
+  margin: 0;
+  padding: var(--nk-space-3) var(--nk-space-1) var(--nk-space-2);
+}
+
+.nk-timeline-h__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 8rem;
+  max-width: 10rem;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.nk-timeline-h__item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 1.55rem;
+  left: 50%;
+  width: calc(100% + var(--nk-space-5));
+  height: 1px;
+  background: var(--nk-border-strong);
+  z-index: 0;
+}
+
+.nk-timeline-h__time {
+  display: block;
+  font-size: var(--nk-size-11);
+  font-family: var(--nk-font-mono);
+  color: var(--nk-text-secondary);
+  margin-bottom: var(--nk-space-1);
+  white-space: nowrap;
+}
+
+.nk-timeline-h__dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--nk-brand-primary);
+  border: 2px solid var(--nk-surface-raised);
+  z-index: 1;
+  margin-bottom: var(--nk-space-1);
+}
+
+.nk-timeline-h__dot--success { background: var(--nk-verdict-good); }
+.nk-timeline-h__dot--warning { background: var(--nk-severity-high); }
+.nk-timeline-h__dot--error   { background: var(--nk-severity-critical); }
+.nk-timeline-h__dot--info    { background: var(--nk-brand-primary); }
+
+.nk-timeline-h__title {
+  font-size: var(--nk-size-12);
+  color: var(--nk-text-primary);
+  font-weight: var(--nk-weight-500);
+  margin: 0;
+}
+
+.nk-timeline-h__desc {
+  margin-top: var(--nk-space-1);
+  font-size: var(--nk-size-11);
+  color: var(--nk-text-secondary);
 }
 
 /* -------------------------------------------------------------------------
@@ -1575,6 +1654,107 @@ body {
 }
 
 /* -------------------------------------------------------------------------
+   Ladder-as-decision-path — the ladder recommendation as a reasoned
+   comparison (window remaining vs. best-unit ETA), not just a badge.
+   ------------------------------------------------------------------------- */
+
+.nk-ladder-path {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nk-space-2);
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-md);
+  padding: var(--nk-space-3);
+}
+
+.nk-ladder-path__badges {
+  display: flex;
+  gap: var(--nk-space-2);
+}
+
+.nk-ladder-path__bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nk-space-1);
+}
+
+.nk-ladder-path__bar-row {
+  display: grid;
+  grid-template-columns: 7rem 1fr 3.5rem;
+  align-items: center;
+  gap: var(--nk-space-2);
+}
+
+.nk-ladder-path__bar-label {
+  font-size: var(--nk-size-12);
+  color: var(--nk-text-secondary);
+}
+
+.nk-ladder-path__bar-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--nk-surface-sunken);
+  overflow: hidden;
+}
+
+.nk-ladder-path__bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+.nk-ladder-path__bar-fill--window { background: var(--nk-verdict-warn); }
+.nk-ladder-path__bar-fill--eta { background: var(--nk-brand-primary); }
+
+.nk-ladder-path__bar-value {
+  font-size: var(--nk-size-12);
+  text-align: right;
+  color: var(--nk-text-secondary);
+}
+
+.nk-ladder-path__reason {
+  color: var(--nk-text-secondary);
+  margin: 0;
+}
+
+/* -------------------------------------------------------------------------
+   Proportionality Strip — the lien's structural cap, load-bearing not a
+   compliance footnote (DOC1 §1.2 M6: disputed/proposed/ratio/expiry/review/
+   magistrate reminder; no whole-account-freeze value in the domain).
+   ------------------------------------------------------------------------- */
+
+.nk-proportionality-strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nk-space-2);
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-md);
+  padding: var(--nk-space-3);
+}
+
+.nk-proportionality-strip__amounts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--nk-space-3);
+}
+
+.nk-proportionality-strip__meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--nk-size-12);
+  color: var(--nk-text-secondary);
+}
+
+.nk-proportionality-strip__reminder {
+  font-size: var(--nk-size-12);
+  color: var(--nk-verdict-warn-text, #92400e);
+  background: var(--nk-surface-sunken);
+  border-radius: var(--nk-radius-sm);
+  padding: var(--nk-space-2);
+}
+
+/* -------------------------------------------------------------------------
    C4 — Outcome Buttons
    ------------------------------------------------------------------------- */
 
@@ -1716,20 +1896,105 @@ body {
   color: var(--nk-text-secondary);
 }
 
-.nk-feedback-factors {
+.nk-evidence-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nk-space-2);
+}
+
+.nk-evidence-card {
+  background: var(--nk-surface-sunken);
+  border-left: 3px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-sm);
+  padding: var(--nk-space-2) var(--nk-space-3);
+}
+
+.nk-evidence-text {
+  font-size: var(--nk-size-13);
+  color: var(--nk-text-primary);
+  margin: 0;
+}
+
+.nk-evidence-empty {
+  font-style: italic;
+}
+
+.nk-timing-curve__caption {
+  margin: 0 0 var(--nk-space-1) 0;
+}
+
+/* -------------------------------------------------------------------------
+   Evidence Pack Panel — one-click generation, SHA-256 + audit-head-hash
+   shown as the actual point (tamper evidence), not just a download button.
+   ------------------------------------------------------------------------- */
+
+.nk-evidence-pack-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nk-space-3);
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-md);
+  padding: var(--nk-space-3);
+}
+
+.nk-evidence-pack-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nk-space-3);
+}
+
+.nk-evidence-pack-panel__result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nk-space-2);
+  padding-top: var(--nk-space-2);
+  border-top: 1px solid var(--nk-border-subtle);
+}
+
+.nk-evidence-pack-panel__hashes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--nk-space-2);
+  margin: 0;
+}
+
+.nk-evidence-pack-panel__hashes dt {
+  margin-bottom: 2px;
+}
+
+.nk-evidence-pack-panel__hashes dd {
+  margin: 0;
+}
+
+.nk-evidence-pack-panel__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nk-space-2);
+}
+
+.nk-delivery-log {
   display: flex;
   flex-direction: column;
   gap: var(--nk-space-1);
 }
 
-.nk-factor-row {
+.nk-delivery-log__row {
   display: flex;
-  justify-content: space-between;
-  font-size: var(--nk-size-12);
+  align-items: center;
+  gap: var(--nk-space-2);
+  padding: var(--nk-space-1) 0;
+  border-bottom: 1px solid var(--nk-border-subtle);
 }
 
-.nk-factor-name { color: var(--nk-text-secondary); }
-.nk-factor-weight { color: var(--nk-verdict-good); }
+.nk-delivery-log__channel {
+  font-size: var(--nk-size-12);
+  font-weight: var(--nk-weight-600);
+  text-transform: uppercase;
+  min-width: 4.5rem;
+}
 
 .nk-feedback-actions {
   display: flex;
@@ -1860,6 +2125,49 @@ body {
   pointer-events: auto;
 }
 
+.nk-map-stage__radar-panel {
+  position: absolute;
+  bottom: var(--nk-space-3);
+  left: var(--nk-space-3);
+  z-index: 10;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nk-space-1);
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-md);
+  padding: var(--nk-space-3);
+  box-shadow: var(--nk-shadow-md);
+}
+
+.nk-radar-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nk-space-2);
+}
+
+.nk-radar-panel__title {
+  font-size: var(--nk-size-13);
+  font-weight: var(--nk-weight-600);
+}
+
+.nk-radar-panel__abstain {
+  color: var(--nk-verdict-warn);
+}
+
+.nk-radar-panel__disclaimer {
+  font-style: italic;
+}
+
+.nk-radar-unit-marker {
+  font-size: 20px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  transform: translateY(-2px);
+}
+
 .nk-map-viewport {
   width: 100%;
   height: 100%;
@@ -1872,18 +2180,20 @@ body {
   min-height: 520px;
 }
 
-/* Time Slider */
+/* Time Slider — always on dark map canvas; explicit light-on-dark colors */
 .nk-time-slider {
-  background: rgba(13, 19, 31, 0.9);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--nk-border-subtle);
+  background: rgba(13, 19, 31, 0.92);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--nk-radius-md);
   padding: var(--nk-space-3);
   display: flex;
   flex-direction: column;
   gap: var(--nk-space-2);
-  box-shadow: var(--nk-shadow-md);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
   max-width: 440px;
+  /* Force white text on dark background regardless of root theme */
+  color: #e2e8f0;
 }
 
 .nk-time-slider__header {
@@ -1928,23 +2238,27 @@ body {
   cursor: pointer;
 }
 
-/* Legend */
+/* Legend — always on dark map canvas; explicit light-on-dark colors */
 .nk-map-legend {
   background: rgba(13, 19, 31, 0.92);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--nk-border-subtle);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--nk-radius-md);
   padding: var(--nk-space-3);
   display: flex;
   flex-direction: column;
   gap: var(--nk-space-2);
-  box-shadow: var(--nk-shadow-md);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  /* Force white text on dark background regardless of root theme */
+  color: #e2e8f0;
 }
 
 .nk-legend-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
+  gap: var(--nk-space-2);
+  flex-wrap: wrap;
 }
 
 .nk-legend-scale {
@@ -1954,15 +2268,17 @@ body {
 }
 
 .nk-legend-bar {
-  height: 8px;
+  height: 10px;
   border-radius: var(--nk-radius-full);
   background: linear-gradient(
     to right,
-    #06b6d4 0%,
-    #f59e0b 25%,
-    #f97316 60%,
-    #ef4444 85%,
-    #b91c1c 100%
+    rgba(33,102,172,0.6) 0%,
+    rgb(103,169,207) 20%,
+    rgb(209,229,240) 40%,
+    rgb(253,219,199) 55%,
+    rgb(239,138,98)  75%,
+    rgb(215,48,31)   90%,
+    rgb(178,24,43)   100%
   );
 }
 
@@ -1989,10 +2305,10 @@ body {
   border-radius: 50%;
 }
 
-.nk-legend-dot--low { background: #06b6d4; }
-.nk-legend-dot--med { background: #f59e0b; }
-.nk-legend-dot--high { background: #f97316; }
-.nk-legend-dot--crit { background: #ef4444; }
+.nk-legend-dot--low  { background: rgb(103,169,207); }
+.nk-legend-dot--med  { background: rgb(253,219,199); }
+.nk-legend-dot--high { background: rgb(239,138,98); }
+.nk-legend-dot--crit { background: rgb(178,24,43); }
 
 .nk-legend-infra {
   display: flex;
@@ -2016,13 +2332,42 @@ body {
 
 .nk-legend-suppressed {
   font-size: var(--nk-size-11);
-  color: var(--nk-text-muted);
+  color: rgba(148, 163, 184, 0.9);
 }
 
 .nk-legend-note {
   font-size: var(--nk-size-11);
   line-height: 1.3;
+  color: rgba(148, 163, 184, 0.8);
 }
+
+/* -------------------------------------------------------------------------
+   Utility classes used in map overlay components (TimeSlider, Legend)
+   These ensure text is visible on the dark MapLibre canvas background.
+   ------------------------------------------------------------------------- */
+
+/* Text sizes */
+.text-xs   { font-size: 0.75rem; line-height: 1rem; }
+.text-sm   { font-size: 0.875rem; line-height: 1.25rem; }
+
+/* Font utilities */
+.font-mono     { font-family: var(--nk-font-mono); }
+.font-sans     { font-family: var(--nk-font-sans); }
+.font-semibold { font-weight: 600; }
+.font-bold     { font-weight: 700; }
+.font-medium   { font-weight: 500; }
+
+/* Text transform / decoration */
+.uppercase       { text-transform: uppercase; }
+.italic          { font-style: italic; }
+.tracking-wider  { letter-spacing: 0.05em; }
+
+/* Map overlay-safe color utilities (light on dark) */
+.text-muted     { color: rgba(148, 163, 184, 0.85); }
+.text-secondary { color: rgba(203, 213, 225, 0.85); }
+
+/* Spacing */
+.ml-1  { margin-left: 0.25rem; }
 
 /* Table View Fallback */
 .nk-table-fallback {
@@ -2789,6 +3134,12 @@ body {
   border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
+.nk-demo-status-pill--stalled {
+  background: rgba(248, 113, 113, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+}
+
 /* Status rows */
 .nk-demo-status-items {
   display: flex;
@@ -2846,6 +3197,9 @@ body {
 }
 
 .nk-demo-error-banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nk-space-2);
   margin-top: var(--nk-space-4);
   padding: var(--nk-space-3);
   background: rgba(248, 113, 113, 0.15);
@@ -2853,6 +3207,39 @@ body {
   color: #f87171;
   border-radius: var(--nk-radius-md);
   font-size: var(--nk-size-12);
+}
+
+.nk-demo-error-banner__headline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nk-demo-error-banner__headline strong {
+  color: #fca5a5;
+}
+
+.nk-demo-error-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--nk-space-3);
+  flex-wrap: wrap;
+}
+
+.nk-demo-error-banner__detail {
+  color: #f87171;
+  font-size: var(--nk-size-11);
+}
+
+.nk-demo-error-banner__detail summary {
+  cursor: pointer;
+  color: #fca5a5;
+}
+
+.nk-demo-error-banner__detail code {
+  display: block;
+  margin-top: var(--nk-space-1);
+  word-break: break-all;
 }
 
 /* Execution form controls */
@@ -3199,6 +3586,19 @@ body {
 .nk-countdown--warn {
   color: #f59e0b;
   font-weight: 600;
+}
+
+/* Attention-budget strip — the alert-budget/triage-tier split, made visible on purpose */
+.nk-attention-budget-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--nk-surface-sunken);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-md);
+  padding: var(--nk-space-2) var(--nk-space-3);
+  margin-bottom: var(--nk-space-3);
+  font-size: var(--nk-size-13);
 }
 
 /* KPI strip above the alerts table (Phase 2 prep) */
@@ -3591,86 +3991,91 @@ body {
   color: var(--nk-text-muted);
 }
 
-/* ---- Section label ---- */
-.nk-dash-section-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--nk-text-muted);
-  padding-bottom: var(--nk-space-1);
-  border-bottom: 1px solid var(--nk-border-subtle);
+/* ---- Command call-to-action: the single soonest-expiring alert (§4.1), not a tile grid ---- */
+.nk-dash-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nk-space-4);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-severity-critical, #ef4444);
+  border-radius: var(--nk-radius-lg);
+  padding: var(--nk-space-4);
+  box-shadow: var(--nk-shadow-sm);
+  transition: box-shadow 0.15s, transform 0.12s;
 }
 
-/* ---- Module grid ---- */
-.nk-dash-modules-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+.nk-dash-cta:hover {
+  box-shadow: var(--nk-shadow-md);
+  transform: translateY(-1px);
+}
+
+.nk-dash-cta__left {
+  display: flex;
+  align-items: center;
   gap: var(--nk-space-3);
 }
 
-.nk-dash-module-card {
-  background: var(--nk-surface-raised);
-  border: 1px solid var(--nk-border-subtle);
-  border-radius: var(--nk-radius-lg);
-  padding: var(--nk-space-4);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
-  box-shadow: var(--nk-shadow-sm);
+.nk-dash-cta__text {
   display: flex;
   flex-direction: column;
-  gap: var(--nk-space-2);
+  gap: 2px;
 }
 
-.nk-dash-module-card:hover {
-  border-color: var(--nk-brand-primary);
-  box-shadow: var(--nk-shadow-md), 0 0 0 1px var(--nk-brand-primary);
-  transform: translateY(-2px);
+.nk-dash-cta__label {
+  font-size: var(--nk-size-11);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--nk-text-muted);
 }
 
-.nk-dash-module-card__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--nk-space-2);
-}
-
-.nk-dash-module-card__icon {
-  font-size: 24px;
-  line-height: 1;
-}
-
-.nk-dash-module-card__badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(99, 102, 241, 0.12);
-  color: #818cf8;
-  border: 1px solid rgba(99, 102, 241, 0.25);
-}
-
-.nk-dash-module-card__badge--urgent {
-  background: rgba(239, 68, 68, 0.12);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
-  animation: nk-pulse-text 2s ease-in-out infinite;
-}
-
-@keyframes nk-pulse-text {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.6; }
-}
-
-.nk-dash-module-card__title {
+.nk-dash-cta__target {
   font-size: var(--nk-size-14);
-  font-weight: 700;
+  font-weight: var(--nk-weight-600);
   color: var(--nk-text-primary);
 }
 
-.nk-dash-module-card__desc {
-  font-size: var(--nk-size-12);
+.nk-dash-cta__right {
+  display: flex;
+  align-items: center;
+  gap: var(--nk-space-3);
+}
+
+.nk-dash-cta__go {
+  font-size: var(--nk-size-13);
+  font-weight: var(--nk-weight-600);
+  color: var(--nk-brand-primary);
+}
+
+/* -------------------------------------------------------------------------
+   System Integrity — Evaluation/Ops/Audit as tabs under one destination
+   ------------------------------------------------------------------------- */
+
+.nk-system-integrity-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nk-space-4);
+}
+
+.nk-system-integrity-title {
+  font-size: var(--nk-size-24);
+  font-weight: 700;
+  color: var(--nk-text-primary);
+  margin: 0;
+}
+
+.nk-system-integrity-subtitle {
+  font-size: var(--nk-size-13);
   color: var(--nk-text-secondary);
-  line-height: 1.5;
+  margin: var(--nk-space-1) 0 0 0;
+}
+
+.nk-system-integrity-tabs {
+  display: flex;
+  gap: var(--nk-space-2);
+  border-bottom: 1px solid var(--nk-border-subtle);
+  padding-bottom: var(--nk-space-2);
 }

@@ -13,8 +13,25 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AlertDetail } from "../AlertDetail";
 import { AuthContext } from "../../../app/auth/AuthContext";
 import { apiClient } from "../../../shared/api/client";
-import type { Permission } from "../../../shared/api/enums.ts";
+import type { ActionType, Permission } from "../../../shared/api/enums.ts";
 import type { AlertDetail as AlertDetailModel, Principal } from "../../../shared/api/types.ts";
+
+// Mirrors apps/api/src/nakabandi/interception/... alerting/domain/action.py's _PERMISSION_FOR:
+// the action bar is gated by AlertDetailModel.allowed_actions (server-computed from this same
+// permission mapping), not by client-side permission checks (§10.1 essential fix).
+const PERMISSION_TO_ACTION: Partial<Record<Permission, ActionType>> = {
+  ACKNOWLEDGE: "acknowledge",
+  REQUEST_HOLD: "request_hold",
+  NOTIFY_STATION: "notify_station",
+  DISPATCH: "dispatch",
+  OVERRIDE: "override",
+};
+
+function allowedActionsFor(permissions: Permission[]): ActionType[] {
+  return permissions
+    .map((p) => PERMISSION_TO_ACTION[p])
+    .filter((a): a is ActionType => a !== undefined);
+}
 
 vi.mock("../../../shared/api/client", () => ({
   apiClient: { GET: vi.fn(), POST: vi.fn() },
@@ -120,6 +137,10 @@ function renderAlertDetail(
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
 
+  // The server (not the client) decides allowed_actions; drive it from the same
+  // permission list the test already passes in, so existing test intent still holds.
+  alertState = { ...alertState, allowed_actions: allowedActionsFor(permissions) };
+
   return render(
     <AuthContext.Provider
       value={{
@@ -148,9 +169,11 @@ describe("AlertDetail", () => {
   it("renders detail with timeline, target, confidence, and countdown", async () => {
     renderAlertDetail("ALT-2026-001");
 
-    expect(await screen.findByText("Alert ALT-2026-001")).toBeTruthy();
-    expect(screen.getByText("CLS-DL-8821")).toBeTruthy();
-    expect(screen.getByText(/SBI ATM — Connaught Place/i)).toBeTruthy();
+    expect(
+      await screen.findByText("CLS-DL-8821 · SBI ATM — Connaught Place Inner Circle"),
+    ).toBeTruthy();
+    expect(screen.getByText(/ALT-2026-001/)).toBeTruthy();
+    expect(screen.getAllByText(/SBI ATM — Connaught Place/i).length).toBeGreaterThan(0);
     expect(screen.getByText("Evidence & Audit Trail")).toBeTruthy();
     expect(screen.getByText("Confidence Score")).toBeTruthy();
     expect(screen.getByText("Window Expiry")).toBeTruthy();
@@ -177,7 +200,7 @@ describe("AlertDetail", () => {
     // Only has VIEW_ALERTS (e.g. read-only auditor or restricted role)
     renderAlertDetail("ALT-2026-001", ["VIEW_ALERTS"]);
 
-    await screen.findByText("Alert ALT-2026-001");
+    await screen.findByText("Evidence & Audit Trail");
 
     expect(screen.queryByRole("button", { name: /Acknowledge/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /Request Hold/i })).toBeNull();

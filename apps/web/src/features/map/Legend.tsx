@@ -16,10 +16,10 @@ export function Legend({ legend, suppressedCount }: LegendProps) {
   return (
     <div className="nk-map-legend" aria-label="Risk heatmap legend">
       <div className="nk-legend-header">
-        <span className="nk-text-xs font-semibold uppercase tracking-wider text-muted">
-          Forecast Risk Intensity
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+          Fraud Risk Density
         </span>
-        <span className="nk-text-xs font-mono text-secondary">{legend.unit}</span>
+        <span className="text-xs font-mono text-muted">{legend.unit}</span>
       </div>
 
       <div className="nk-legend-scale" aria-hidden="true">

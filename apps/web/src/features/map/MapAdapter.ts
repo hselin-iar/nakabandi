@@ -61,4 +61,23 @@ export interface MapAdapter {
    * Cleanly destroys map instance and unbinds event handlers.
    */
   destroy(): void;
+
+  /**
+   * Adds an HTML overlay marker at the given [lon, lat] coordinate.
+   * Returns a cleanup function to remove it.
+   */
+  addHtmlMarker?(element: HTMLElement, lngLat: [number, number]): () => void;
+
+  /**
+   * Registers a handler fired when the user finishes a zoom gesture, with the new zoom level.
+   * Drives zoom-bound resolution switching (Frontend Strategy §7.3) instead of a disconnected
+   * resolution dropdown.
+   */
+  onZoomChange?(handler: (zoom: number) => void): void;
+
+  /**
+   * Sets the camera zoom level directly (no bounds change), so a manual resolution pick can
+   * still move the map into that resolution's zoom band — two-way binding, not just one-way.
+   */
+  setZoom?(zoom: number): void;
 }

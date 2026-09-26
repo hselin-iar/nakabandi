@@ -158,3 +158,43 @@ def load_real_registry(
         districts=districts,
         cells=list(cells_seen.values()),
     )
+
+
+# ---------------------------------------------------------------------------
+# Category priors (data/seed/complaint_category_priors.csv)
+# ---------------------------------------------------------------------------
+
+# The four ComplaintCategory values are a locked shared contract (nakabandi_contracts.enums,
+# LC-1) that generator.py may not widen without the Contract Change Process — even though the
+# real CSV documents 16 categories. Two of the four map to differently-named CSV rows; the
+# other two match the contract's own spelling exactly.
+_CATEGORY_ID_MAP = {
+    "digital_arrest": "digital_arrest",
+    "investment_scam": "investment_fraud",
+    "upi_phishing": "upi_phishing",
+    "task_job_scam": "job_fraud",
+}
+
+
+def load_category_weights(data_dir: Path) -> dict[str, float] | None:
+    """Real relative shares (RS/LS USQ-cited where noted, else the CSV's own "Estimated share")
+    for the four ComplaintCategory values, renormalised to sum to 1.0 among just those four —
+    not the CSV's full-population share_pct, which sums to 100 across all 16 real categories.
+    Returns None (not an exception) if the CSV is missing, so callers fall back to a uniform
+    distribution over the four categories rather than crashing.
+    """
+    path = data_dir / "complaint_category_priors.csv"
+    if not path.is_file():
+        return None
+
+    rows = {r["category_id"]: float(r["share_pct"]) for r in _read_csv(path)}
+    raw = {
+        contract_id: rows[csv_id]
+        for contract_id, csv_id in _CATEGORY_ID_MAP.items()
+        if csv_id in rows
+    }
+    if len(raw) != len(_CATEGORY_ID_MAP):
+        return None  # a mapped id is missing from the CSV; don't silently under-weight
+
+    total = sum(raw.values())
+    return {k: v / total for k, v in raw.items()}

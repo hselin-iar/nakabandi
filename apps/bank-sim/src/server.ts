@@ -54,7 +54,7 @@ export function createApp(opts: AppOptions = {}): Application {
   // Session middleware for the console login.
   app.use(
     session({
-      secret: config.webhookSecret,   // reuse the webhook secret; good enough for demo
+      secret: config.sessionSecret,
       resave: false,
       saveUninitialized: false,
       cookie: { sameSite: "lax", httpOnly: true },

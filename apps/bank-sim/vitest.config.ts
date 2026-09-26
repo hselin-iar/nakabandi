@@ -15,6 +15,7 @@ export default defineConfig({
     env: {
       NODE_ENV: "test",
       WEBHOOK_SECRET: "test-secret-32-chars-long-for-hmac",
+      SESSION_SECRET: "test-session-secret-32-chars-long",
       API_BASE_URL: "http://api.test",
       API_SERVICE_KEY: "test-service-key",
       SIM_STATUS_URL: "http://sim.test/status",

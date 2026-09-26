@@ -22,7 +22,6 @@ from __future__ import annotations
 import heapq
 import logging
 import time
-import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -156,10 +155,24 @@ class LiveRunner:
         locality: str,
     ) -> str:
         """Add a never-seen cluster. If paused, takes effect on resume (DOC 3 M1)."""
-        cluster_id = f"INJ-{uuid.uuid4().hex[:8].upper()}"
         # Build a minimal cluster and append to world
         # (full build_clusters logic not needed for injection)
         with self._lock:
+            # Add to world so future steps can route complaints to it. cluster_id comes from
+            # THIS call (scenarios.inject_cluster's own seeded id) — a second, independently
+            # generated id here used to be saved to the truth store and returned to the caller
+            # while a DIFFERENT id was the one actually on the cluster in world.clusters, so
+            # nothing cross-referenced correctly.
+            from worldsim.core.scenarios import inject_cluster as _inject
+
+            cluster_id = _inject(
+                self._world,
+                district_id=district_id,
+                size=size,
+                fast_weight=fast_weight,
+                locality=locality,
+                sim_now=self._clock.now_sim,
+            )
             # Persist to truth store so oracle API can see it
             self._store.save_cluster(
                 run_id=self._clock.run_id,
@@ -168,17 +181,6 @@ class LiveRunner:
                 size=size,
                 fast_weight=fast_weight,
                 locality=locality,
-            )
-            # Add to world so future steps can route complaints to it
-            from worldsim.core.scenarios import inject_cluster as _inject
-
-            _inject(
-                self._world,
-                district_id=district_id,
-                size=size,
-                fast_weight=fast_weight,
-                locality=locality,
-                sim_now=self._clock.now_sim,
             )
         logger.info(
             "runner.inject_cluster cluster_id=%s district_id=%s",

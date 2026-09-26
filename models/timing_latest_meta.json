@@ -1,0 +1,9 @@
+{
+  "version_id": "01M3DRYZ7Y8Z0NX54TYD9TD09Z",
+  "name": "mixture_v1",
+  "data_hash": "bf9f3058ac2c1799d6d741e944d911ad5779e36e22473a06f529ea9e43c80553",
+  "trained_as_of": "2026-01-18T05:30:01.726030+00:00",
+  "created_at": "2026-09-26T02:33:29.086906",
+  "brier_before": null,
+  "brier_after": null
+}

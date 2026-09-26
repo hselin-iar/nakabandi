@@ -62,6 +62,13 @@ export const config = {
   /** HMAC-SHA256 shared secret with the NAKABANDI API. Agreed before Sync 5. */
   webhookSecret: required("WEBHOOK_SECRET"),
 
+  /**
+   * Signs the console's session cookie. Independent of webhookSecret (which authenticates
+   * INBOUND webhooks) so a leak of either key doesn't weaken the other — they protect two
+   * different trust boundaries.
+   */
+  sessionSecret: required("SESSION_SECRET"),
+
   /** Base URL of the NAKABANDI API (no trailing slash). */
   apiBaseUrl: required("API_BASE_URL"),
 
@@ -77,11 +84,17 @@ export const config = {
   /** Express server port. Defaults to 3001. */
   port: Number(optional("PORT", "3001")),
 
-  /** Console login username (basic auth for the bank nodal console). */
-  consoleUser: optional("CONSOLE_USER", "bank_nodal"),
+  /**
+   * Console login username/password (the bank nodal console that approves/rejects real lien
+   * amounts). Required, not optional-with-a-default like the rest of this file's `optional()`
+   * fields: a well-known public default here (previously "bank_nodal"/"change-me") means a
+   * deployment that forgets to set these boots reachable with a public login instead of
+   * refusing to start, unlike every other secret in this file.
+   */
+  consoleUser: required("CONSOLE_USER"),
 
-  /** Console login password. */
-  consolePass: optional("CONSOLE_PASS", "change-me"),
+  /** Console login password. See consoleUser. */
+  consolePass: required("CONSOLE_PASS"),
 
   /** SQLite database path. Overridable for tests. */
   dbPath: optional("BANK_SIM_DB_PATH", "bank-sim.db"),

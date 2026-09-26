@@ -10,8 +10,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { getDb } from "../store.js";
 import { config } from "../config.js";
-import { applyLien, releaseLien } from "../services/liens.js";
-import { sendCallback } from "../services/callback.js";
+import { applyLien, releaseLien, rejectLien } from "../services/liens.js";
 import type { SimTimeSource } from "../simtime.js";
 import type { RequestRow, LienRow, CallbackRow } from "../types.js";
 
@@ -147,28 +146,15 @@ export function createConsoleRouter(simTime: SimTimeSource): Router {
     "/console/requests/:id/reject",
     requireLogin,
     (req: Request, res: Response) => {
-      let simNow: string;
-      try {
-        simNow = simTime.now();
-      } catch {
-        res.status(503).send("Sim time not available yet.");
-        return;
-      }
-
-      // Update status and send "rejected" callback.
-      const db = getDb();
-      db.prepare(`UPDATE requests SET status = 'rejected' WHERE request_id = ?`)
-        .run(req.params["id"]);
-
-      sendCallback({
-        request_id: req.params["id"] as string,
-        status: "rejected",
-        at_sim: simNow,
-      })
+      // Routed through liens.ts's rejectLien (look up + validate, like apply/release) instead
+      // of an unconditional UPDATE: that used to be a no-op on a missing id and would silently
+      // overwrite an already-applied/released request's status back to 'rejected' while still
+      // firing a real callback to the live API either way.
+      rejectLien(req.params["id"] as string, simTime)
         .then(() => res.redirect(`/console/requests/${req.params["id"]}`))
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
-          res.status(500).send(`Callback failed: ${msg}`);
+          res.status(400).send(`Reject failed: ${msg}`);
         });
     },
   );

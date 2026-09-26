@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     evidence_font_path: Path | None = None
     """A Devanagari-capable TrueType font for evidence-pack PDFs (DOC 3 S2). Unset falls back to
     Helvetica (Latin-only) — this build ships no such font file (A12, see Learnings)."""
+    model_store_dir: Path = Field(default=Path("models"))
+    """Where scripts/train.py (B6) persists the trained v1 scorer/timing models; the live API
+    loads from the same directory. Matches ModelStore's own class default."""
 
     @field_validator("nightly_reset_at")
     @classmethod

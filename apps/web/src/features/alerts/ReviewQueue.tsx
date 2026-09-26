@@ -99,11 +99,11 @@ export function ReviewQueue({
           </div>
 
           <div className="nk-review-target">
-            <span className="font-mono font-bold">{current.id}</span>
+            <span className="font-mono font-bold">{current.cluster_ref}</span>
             <div className="text-sm font-medium">
               {String(current.target.name ?? current.target.id ?? "")}
             </div>
-            <div className="text-xs text-muted font-mono">{current.cluster_ref}</div>
+            <div className="text-xs text-muted font-mono">{current.id}</div>
           </div>
 
           <div className="nk-review-countdown">

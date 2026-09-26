@@ -3,19 +3,19 @@
  *
  * CRITICAL ARCHITECTURAL INVARIANT (DOC 3 M3, DOC 4 Step C5):
  *   This is the ONLY file in the entire repository that imports "maplibre-gl".
- *   Zero external CDN or tile server URLs are fetched (DOC 2 §2.7 offline NFR).
- *   If WebGL is unavailable, initialization fails gracefully, prompting the UI
- *   to render the TableViewFallback component.
+ *   Basemap: OpenFreeMap Positron — clean light street map, no API key, unlimited.
+ *   Data overlays: smooth GPU heatmap + alert markers + boundary outlines.
+ *   If WebGL is unavailable, initialization fails gracefully to TableViewFallback.
  */
 
 import * as maplibregl from "maplibre-gl";
-import type { Map as MapLibreMap, StyleSpecification, GeoJSONSource } from "maplibre-gl";
+import type { Map as MapLibreMap, GeoJSONSource } from "maplibre-gl";
 import type { MapAdapter, MapInitOptions } from "../MapAdapter";
 import {
-  CELLS_SOURCE_ID,
-  CELLS_FILL_LAYER_ID,
-  CELLS_LINE_LAYER_ID,
-} from "../layers/cellsLayer";
+  HEATMAP_SOURCE_ID,
+  HEATMAP_LAYER_ID,
+  HEATMAP_POINT_LAYER_ID,
+} from "../layers/heatmapLayer";
 import {
   LOCATIONS_SOURCE_ID,
   LOCATIONS_CIRCLE_LAYER_ID,
@@ -25,47 +25,38 @@ import {
   ALERTS_HALO_LAYER_ID,
   ALERTS_POINT_LAYER_ID,
 } from "../layers/alertsLayer";
+import { RADAR_SOURCE_ID, RADAR_LINE_LAYER_ID } from "../layers/radarLayer";
 
 // ---------------------------------------------------------------------------
 // MapLibre GL v6 + Vite worker fix
 // ---------------------------------------------------------------------------
-// maplibre-gl v6 ships as ESM. Vite's dependency pre-bundler inlines the
-// internal worker URL as a blob:, which breaks at runtime. The fix is to:
-//   1. Exclude maplibre-gl from optimizeDeps (vite.config.ts already does this)
-//   2. Tell MapLibre the correct worker URL via its exported setWorkerUrl()
-//
-// Using Vite's ?worker&url suffix gives us a properly bundled, cache-busted
-// URL that MapLibre can spawn as a real Worker thread.
-// @ts-ignore — Vite virtual module; no TS types for ?url query
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker?url";
 maplibregl.setWorkerUrl(workerUrl as string);
 
+// ---------------------------------------------------------------------------
+// Exported layer IDs used by MapPage to set data
+// ---------------------------------------------------------------------------
 export const BOUNDARIES_SOURCE_ID = "nk-boundaries-source";
 export const BOUNDARIES_FILL_LAYER_ID = "nk-boundaries-fill";
 export const BOUNDARIES_LINE_LAYER_ID = "nk-boundaries-line";
 
+// Re-export heatmap layer ID so MapPage can call setLayerData with it
+export { HEATMAP_LAYER_ID };
+
 /**
- * 100% Offline style with zero CDN or external tile dependencies.
+ * Basemap: OpenFreeMap Positron
+ * Clean light map with full streets, city names, POIs — no API key required.
+ * Style URL: https://tiles.openfreemap.org/styles/positron
  */
-const OFFLINE_MAP_STYLE: StyleSpecification = {
-  version: 8,
-  sources: {},
-  layers: [
-    {
-      id: "nk-base-bg",
-      type: "background",
-      paint: {
-        "background-color": "#0d131f", // Dark theme grid background
-      },
-    },
-  ],
-};
+const POSITRON_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 
 export class MapLibreAdapter implements MapAdapter {
   private map: MapLibreMap | null = null;
   private isLoaded = false;
   private clickHandlers: Map<string, (feature: unknown) => void> = new Map();
   private pendingLayerData: Map<string, GeoJSON.FeatureCollection | GeoJSON.Feature> = new Map();
+  private radarAnimationHandle: ReturnType<typeof setInterval> | null = null;
+  private radarDashOffset = 0;
 
   /**
    * Static helper to check WebGL support without initializing full map.
@@ -101,30 +92,31 @@ export class MapLibreAdapter implements MapAdapter {
     return new Promise<void>((resolve, reject) => {
       try {
         const center = options.center ?? [79.5, 24.5]; // Centered across UP/MH/HR/JH
-        const zoom = options.zoom ?? 5;
+        const zoom = options.zoom ?? 5.5;
 
         const mapInstance = new maplibregl.Map({
           container,
-          style: OFFLINE_MAP_STYLE,
+          style: POSITRON_STYLE_URL,
           center,
           zoom,
           interactive: options.interactive ?? true,
-          attributionControl: false,
+          attributionControl: { compact: true },
         });
         this.map = mapInstance;
 
         mapInstance.on("load", () => {
           this.isLoaded = true;
           try {
-            this.setupSourcesAndLayers();
+            this.setupDataLayers();
 
             // Apply any pending data that arrived before load event
             this.pendingLayerData.forEach((data, layerId) => {
               this.setLayerData(layerId, data);
             });
             this.pendingLayerData.clear();
+            this.startRadarAnimation();
           } catch (err) {
-            console.error("MapLibreAdapter: setupSourcesAndLayers failed", err);
+            console.error("MapLibreAdapter: setupDataLayers failed", err);
             reject(err instanceof Error ? err : new Error("Failed to set up map layers"));
             return;
           }
@@ -133,7 +125,6 @@ export class MapLibreAdapter implements MapAdapter {
         });
 
         mapInstance.on("error", (e) => {
-          // Log or reject on fatal errors
           if (!this.isLoaded) {
             reject(e.error || new Error("Failed to initialize MapLibre GL map"));
           }
@@ -144,19 +135,21 @@ export class MapLibreAdapter implements MapAdapter {
     });
   }
 
-  private setupSourcesAndLayers(): void {
+  private setupDataLayers(): void {
     if (!this.map) return;
 
-    const emptyGeoJSON: GeoJSON.FeatureCollection = {
+    const emptyPoints: GeoJSON.FeatureCollection = {
       type: "FeatureCollection",
       features: [],
     };
 
-    // 1. Boundaries (Demo states)
+    // -----------------------------------------------------------------------
+    // 1. State boundary outlines (subtle on light basemap)
+    // -----------------------------------------------------------------------
     if (!this.map.getSource(BOUNDARIES_SOURCE_ID)) {
       this.map.addSource(BOUNDARIES_SOURCE_ID, {
         type: "geojson",
-        data: emptyGeoJSON,
+        data: emptyPoints,
       });
 
       this.map.addLayer({
@@ -164,8 +157,8 @@ export class MapLibreAdapter implements MapAdapter {
         type: "fill",
         source: BOUNDARIES_SOURCE_ID,
         paint: {
-          "fill-color": "#1e3a5f",   // visible blue-tinted state fill
-          "fill-opacity": 0.6,
+          "fill-color": "#6366f1",
+          "fill-opacity": 0.04,   // very subtle — let the street map breathe
         },
       });
 
@@ -174,59 +167,104 @@ export class MapLibreAdapter implements MapAdapter {
         type: "line",
         source: BOUNDARIES_SOURCE_ID,
         paint: {
-          "line-color": "#94a3b8",   // slate-400 — clearly visible
-          "line-width": 2,
-          "line-dasharray": [3, 2],
+          "line-color": "#4f46e5",   // indigo — visible but not overpowering
+          "line-width": 2.5,
+          "line-dasharray": [4, 3],
+          "line-opacity": 0.7,
         },
       });
     }
 
-    // 2. Risk Cells Layer
-    if (!this.map.getSource(CELLS_SOURCE_ID)) {
-      this.map.addSource(CELLS_SOURCE_ID, {
+    // -----------------------------------------------------------------------
+    // 2. Smooth density heatmap (kernel-style, GPU-accelerated)
+    //    Uses MapLibre native 'heatmap' layer type on raw Point GeoJSON.
+    // -----------------------------------------------------------------------
+    if (!this.map.getSource(HEATMAP_SOURCE_ID)) {
+      this.map.addSource(HEATMAP_SOURCE_ID, {
         type: "geojson",
-        data: emptyGeoJSON,
+        data: emptyPoints,
       });
 
+      // Main smooth density heatmap
       this.map.addLayer({
-        id: CELLS_FILL_LAYER_ID,
-        type: "fill",
-        source: CELLS_SOURCE_ID,
+        id: HEATMAP_LAYER_ID,
+        type: "heatmap",
+        source: HEATMAP_SOURCE_ID,
         paint: {
-          "fill-color": ["coalesce", ["get", "color"], "#3b82f6"],
-          "fill-opacity": [
-            "interpolate",
-            ["linear"],
-            ["coalesce", ["get", "value"], 0],
-            0,
-            0.15,
-            0.5,
-            0.45,
-            1.0,
-            0.8,
+          // Weight each point by the 'intensity' property (0–1)
+          "heatmap-weight": [
+            "interpolate", ["linear"], ["get", "intensity"],
+            0, 0,
+            1, 1,
           ],
+          // Boost intensity — higher at state-overview zoom so blobs are visible
+          "heatmap-intensity": [
+            "interpolate", ["linear"], ["zoom"],
+            3,  1.5,
+            6,  2.5,
+            10, 4,
+            14, 6,
+          ],
+          // Classic warm density color ramp (blue → yellow → orange → red)
+          "heatmap-color": [
+            "interpolate", ["linear"], ["heatmap-density"],
+            0,    "rgba(33,102,172,0)",
+            0.1,  "rgba(103,169,207,0.5)",
+            0.3,  "rgba(209,229,240,0.75)",
+            0.5,  "rgba(253,219,199,0.85)",
+            0.7,  "rgba(239,138,98,0.9)",
+            0.85, "rgba(215,48,31,0.95)",
+            1,    "rgb(178,24,43)",
+          ],
+          // Large radius at state overview (zoom 5–6), tighter at street level
+          "heatmap-radius": [
+            "interpolate", ["linear"], ["zoom"],
+            3,  80,
+            5,  100,
+            8,  60,
+            12, 40,
+            15, 25,
+          ],
+          "heatmap-opacity": 0.85,
         },
       });
 
+      // Optional: individual point dots at high zoom levels for precision
       this.map.addLayer({
-        id: CELLS_LINE_LAYER_ID,
-        type: "line",
-        source: CELLS_SOURCE_ID,
+        id: HEATMAP_POINT_LAYER_ID,
+        type: "circle",
+        source: HEATMAP_SOURCE_ID,
+        minzoom: 9,   // Only show dots when zoomed in close
         paint: {
-          "line-color": ["coalesce", ["get", "color"], "#60a5fa"],
-          "line-width": 1,
-          "line-opacity": 0.6,
+          "circle-radius": [
+            "interpolate", ["linear"], ["zoom"],
+            9, 3,
+            14, 8,
+          ],
+          "circle-color": [
+            "interpolate", ["linear"], ["get", "intensity"],
+            0,    "#3b82f6",
+            0.25, "#f59e0b",
+            0.6,  "#f97316",
+            0.85, "#ef4444",
+            1,    "#b91c1c",
+          ],
+          "circle-stroke-width": 1.5,
+          "circle-stroke-color": "#ffffff",
+          "circle-opacity": 0.9,
         },
       });
 
-      this.bindLayerClick(CELLS_FILL_LAYER_ID);
+      this.bindLayerClick(HEATMAP_POINT_LAYER_ID);
     }
 
-    // 3. Location Points Layer
+    // -----------------------------------------------------------------------
+    // 3. Bank infrastructure locations (ATM / branch / BC agent points)
+    // -----------------------------------------------------------------------
     if (!this.map.getSource(LOCATIONS_SOURCE_ID)) {
       this.map.addSource(LOCATIONS_SOURCE_ID, {
         type: "geojson",
-        data: emptyGeoJSON,
+        data: emptyPoints,
       });
 
       this.map.addLayer({
@@ -235,49 +273,128 @@ export class MapLibreAdapter implements MapAdapter {
         source: LOCATIONS_SOURCE_ID,
         paint: {
           "circle-color": ["coalesce", ["get", "color"], "#38bdf8"],
-          "circle-radius": 4,
-          "circle-stroke-width": 1,
+          "circle-radius": 5,
+          "circle-stroke-width": 1.5,
           "circle-stroke-color": "#ffffff",
-          "circle-opacity": 0.85,
+          "circle-opacity": 0.9,
         },
       });
 
       this.bindLayerClick(LOCATIONS_CIRCLE_LAYER_ID);
     }
 
-    // 4. Alerts Layer
+    // -----------------------------------------------------------------------
+    // 4. Active alert point markers (halo + core)
+    // -----------------------------------------------------------------------
     if (!this.map.getSource(ALERTS_SOURCE_ID)) {
       this.map.addSource(ALERTS_SOURCE_ID, {
         type: "geojson",
-        data: emptyGeoJSON,
+        data: emptyPoints,
       });
 
+      // Halo glow ring
       this.map.addLayer({
         id: ALERTS_HALO_LAYER_ID,
         type: "circle",
         source: ALERTS_SOURCE_ID,
         paint: {
           "circle-color": ["coalesce", ["get", "color"], "#ef4444"],
-          "circle-radius": 12,
-          "circle-opacity": 0.25,
-          "circle-stroke-width": 1.5,
+          "circle-radius": 16,
+          "circle-opacity": 0.2,
+          "circle-stroke-width": 2,
           "circle-stroke-color": ["coalesce", ["get", "color"], "#ef4444"],
+          "circle-stroke-opacity": 0.5,
         },
       });
 
+      // Core dot
       this.map.addLayer({
         id: ALERTS_POINT_LAYER_ID,
         type: "circle",
         source: ALERTS_SOURCE_ID,
         paint: {
           "circle-color": ["coalesce", ["get", "color"], "#ef4444"],
-          "circle-radius": 5,
-          "circle-stroke-width": 1.5,
+          "circle-radius": 6,
+          "circle-stroke-width": 2,
           "circle-stroke-color": "#ffffff",
         },
       });
 
       this.bindLayerClick(ALERTS_POINT_LAYER_ID);
+    }
+
+    // -----------------------------------------------------------------------
+    // 5. Interception Radar — unit-to-target ETA vector (§7.1). Colour by
+    //    verdict; an animated dash-offset gives a "closing the gap" motion
+    //    cue. This is a computed illustration of eta_min, not a live GPS feed.
+    // -----------------------------------------------------------------------
+    if (!this.map.getSource(RADAR_SOURCE_ID)) {
+      this.map.addSource(RADAR_SOURCE_ID, {
+        type: "geojson",
+        data: emptyPoints,
+      });
+
+      this.map.addLayer({
+        id: RADAR_LINE_LAYER_ID,
+        type: "line",
+        source: RADAR_SOURCE_ID,
+        layout: {
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": [
+            "match",
+            ["get", "verdict"],
+            "INTERCEPTABLE", "#22c55e",
+            "MARGINAL", "#f59e0b",
+            "NOT_INTERCEPTABLE", "#ef4444",
+            "#64748b",
+          ],
+          "line-width": 3,
+          "line-dasharray": [0, 4, 3],
+        },
+      });
+    }
+  }
+
+  /**
+   * Marching-dash animation for the radar line — MapLibre/Mapbox GL has no native
+   * line-dash-offset paint property, so "flow" is simulated by cycling through a
+   * sequence of dasharray patterns with a shifting phase (the documented technique for
+   * this). A decorative "closing the gap" motion cue, not a literal progress readout —
+   * there is no live unit telemetry to animate against.
+   */
+  private static readonly RADAR_DASH_SEQUENCE: number[][] = [
+    [0, 4, 3],
+    [0.5, 4, 2.5],
+    [1, 4, 2],
+    [1.5, 4, 1.5],
+    [2, 4, 1],
+    [2.5, 4, 0.5],
+    [3, 4, 0],
+    [0, 0.5, 3, 3.5],
+    [0, 1, 3, 3],
+    [0, 1.5, 3, 2.5],
+    [0, 2, 3, 2],
+    [0, 2.5, 3, 1.5],
+    [0, 3, 3, 1],
+    [0, 3.5, 3, 0.5],
+  ];
+
+  private startRadarAnimation(): void {
+    if (this.radarAnimationHandle) return;
+    this.radarAnimationHandle = setInterval(() => {
+      if (!this.map || !this.isLoaded || !this.map.getLayer(RADAR_LINE_LAYER_ID)) return;
+      const seq = MapLibreAdapter.RADAR_DASH_SEQUENCE;
+      this.radarDashOffset = (this.radarDashOffset + 1) % seq.length;
+      this.map.setPaintProperty(RADAR_LINE_LAYER_ID, "line-dasharray", seq[this.radarDashOffset]);
+    }, 60);
+  }
+
+  private stopRadarAnimation(): void {
+    if (this.radarAnimationHandle) {
+      clearInterval(this.radarAnimationHandle);
+      this.radarAnimationHandle = null;
     }
   }
 
@@ -309,16 +426,31 @@ export class MapLibreAdapter implements MapAdapter {
       return;
     }
 
-    // Map layerId to appropriate sourceId
+    // Map layerId → sourceId
     let sourceId = layerId;
-    if (layerId === CELLS_FILL_LAYER_ID || layerId === CELLS_LINE_LAYER_ID || layerId === "cells") {
-      sourceId = CELLS_SOURCE_ID;
+    if (
+      layerId === HEATMAP_LAYER_ID ||
+      layerId === HEATMAP_POINT_LAYER_ID ||
+      layerId === "cells" ||
+      layerId === "heatmap"
+    ) {
+      sourceId = HEATMAP_SOURCE_ID;
     } else if (layerId === LOCATIONS_CIRCLE_LAYER_ID || layerId === "locations") {
       sourceId = LOCATIONS_SOURCE_ID;
-    } else if (layerId === ALERTS_POINT_LAYER_ID || layerId === ALERTS_HALO_LAYER_ID || layerId === "alerts") {
+    } else if (
+      layerId === ALERTS_POINT_LAYER_ID ||
+      layerId === ALERTS_HALO_LAYER_ID ||
+      layerId === "alerts"
+    ) {
       sourceId = ALERTS_SOURCE_ID;
-    } else if (layerId === BOUNDARIES_FILL_LAYER_ID || layerId === BOUNDARIES_LINE_LAYER_ID || layerId === "boundaries") {
+    } else if (
+      layerId === BOUNDARIES_FILL_LAYER_ID ||
+      layerId === BOUNDARIES_LINE_LAYER_ID ||
+      layerId === "boundaries"
+    ) {
       sourceId = BOUNDARIES_SOURCE_ID;
+    } else if (layerId === RADAR_LINE_LAYER_ID || layerId === "radar") {
+      sourceId = RADAR_SOURCE_ID;
     }
 
     const source = this.map.getSource(sourceId) as GeoJSONSource | undefined;
@@ -341,7 +473,7 @@ export class MapLibreAdapter implements MapAdapter {
       | [[number, number], [number, number]],
   ): void {
     if (!this.map || !this.isLoaded) return;
-    this.map.fitBounds(bounds, { padding: 40, duration: 600 });
+    this.map.fitBounds(bounds, { padding: 60, duration: 800 });
   }
 
   public onFeatureClick(layerId: string, handler: (feature: unknown) => void): void {
@@ -355,6 +487,7 @@ export class MapLibreAdapter implements MapAdapter {
   }
 
   public destroy(): void {
+    this.stopRadarAnimation();
     if (this.map) {
       this.clickHandlers.clear();
       this.pendingLayerData.clear();
@@ -362,5 +495,25 @@ export class MapLibreAdapter implements MapAdapter {
       this.map = null;
       this.isLoaded = false;
     }
+  }
+
+  public onZoomChange(handler: (zoom: number) => void): void {
+    if (!this.map) return;
+    this.map.on("zoomend", () => {
+      if (this.map) handler(this.map.getZoom());
+    });
+  }
+
+  public setZoom(zoom: number): void {
+    if (!this.map || !this.isLoaded) return;
+    this.map.easeTo({ zoom, duration: 500 });
+  }
+
+  public addHtmlMarker(element: HTMLElement, lngLat: [number, number]): () => void {
+    if (!this.map) return () => {};
+    const marker = new maplibregl.Marker({ element, anchor: "center" })
+      .setLngLat(lngLat)
+      .addTo(this.map);
+    return () => marker.remove();
   }
 }

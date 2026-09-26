@@ -33,6 +33,8 @@ class ClusterEdgeModel(BaseModel):
     from_: str = Field(alias="from")
     to: str
     amount_paise: int | None
+    layer: int
+    event_at: str
 
 
 class ClusterModel(BaseModel):
@@ -109,7 +111,13 @@ def _cluster_view(graph, principal: Principal) -> ClusterModel:  # noqa: ANN001
         ],
         edges=[
             ClusterEdgeModel.model_validate(
-                {"from": e.from_id, "to": e.to_id, "amount_paise": e.amount_paise}
+                {
+                    "from": e.from_id,
+                    "to": e.to_id,
+                    "amount_paise": e.amount_paise,
+                    "layer": e.layer,
+                    "event_at": e.event_at.isoformat(),
+                }
             )
             for e in graph.edges
         ],

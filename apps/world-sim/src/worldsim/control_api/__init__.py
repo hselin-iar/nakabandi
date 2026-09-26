@@ -132,14 +132,26 @@ def speed(req: SpeedRequest) -> dict:
 @app.post("/control/reset")
 def reset(req: ResetRequest) -> dict:
     """Admin only; gated at the Caddy proxy with forward_auth."""
+    global _world
     runner, clock = _require_runner()
     runner.stop()
     if _runner_thread and _runner_thread.is_alive():
         _runner_thread.join(timeout=5.0)
 
-    # Re-seed if requested
+    # Re-seed if requested — and actually rebuild the world's registry/clusters on the new
+    # seed, not just the reported clock.seed: World.step() draws from the World's own frozen
+    # cfg.seed, set once at CLI startup, so generation used to silently keep running on the
+    # OLD seed forever after a "reset". Rebuilding also clears any clusters injected before
+    # the reset (world.clusters starts fresh), matching DOC3's reset edge-case table
+    # ("restores seeded state... wipes world.db").
     if req.seed is not None:
         clock.seed = req.seed
+        from worldsim.cli import _build_world  # local import: cli owns world construction
+
+        new_cfg = runner._world.cfg.model_copy(update={"seed": req.seed})
+        new_world = _build_world(new_cfg)
+        runner._world = new_world
+        _world = new_world
 
     # Reset counts
     clock.now_sim = 0.0

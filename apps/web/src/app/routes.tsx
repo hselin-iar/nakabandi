@@ -2,12 +2,14 @@
  * routes.tsx — route table with RoleGuard.
  * DOC 3 Web App Shell: app/routes.tsx
  *
- * Routes defined in DOC 3 Interfaces & Contracts:
+ * Base routes defined in DOC 3 Interfaces & Contracts:
  *   /login, /, /alerts, /alerts/:id, /clusters/:id, /cases, /cases/:id,
  *   /evaluation, /ops, /outbox, /audit, /demo (demo_operator and admin only)
  *
- * Feature page components are stubs at C1 — they will be replaced as
- * each step (C4, C5, C6, C7, C8) lands.
+ * Restructured per the Frontend Strategy doc's 5-destination IA (§3): /clusters (bare) and
+ * /evaluation, /ops, /audit now redirect to /cases and /system respectively — /system tabs
+ * Evaluation/Ops/Audit under one "can I trust this system?" destination. Every original path
+ * above still resolves (redirect, not removed), so bookmarks/deep links keep working.
  */
 
 import { Routes, Route, Navigate } from "react-router-dom";
@@ -26,10 +28,8 @@ const DashboardPage = lazy(() => import("../features/dashboard/DashboardPage"));
 const MapPage = lazy(() => import("../features/map/MapPage"));
 const ClustersPage = lazy(() => import("../features/clusters/ClustersPage"));
 const CasesPage = lazy(() => import("../features/cases/CasesPage"));
-const EvaluationPage = lazy(() => import("../features/evaluation/EvaluationPage"));
-const OpsPage = lazy(() => import("../features/ops/OpsPage"));
+const SystemIntegrityPage = lazy(() => import("../features/system/SystemIntegrityPage"));
 const OutboxPage = lazy(() => import("../features/outbox/OutboxPage"));
-const AuditPage = lazy(() => import("../features/audit/AuditPage"));
 const DemoPage = lazy(() => import("../features/demo/DemoPage"));
 
 /** Generic page-level loading fallback. */
@@ -73,14 +73,10 @@ export function AppRoutes() {
 
                   <Route path="map" element={<MapPage />} />
 
-                  <Route
-                    path="clusters"
-                    element={
-                      <RoleGuard require="VIEW_CASES">
-                        <ClustersPage />
-                      </RoleGuard>
-                    }
-                  />
+                  {/* Investigate (§4.4): Cases is the primary list; a bare /clusters list
+                      duplicated it, so it now redirects there. /clusters/:id remains a deep
+                      link (e.g. from an alert's cluster_ref) and still renders ClustersPage. */}
+                  <Route path="clusters" element={<Navigate to="/cases" replace />} />
                   <Route
                     path="clusters/:id"
                     element={
@@ -107,38 +103,24 @@ export function AppRoutes() {
                     }
                   />
 
+                  {/* System Integrity (§4.5): Evaluation/Ops/Audit as tabs under one
+                      destination; the old routes redirect, preserving deep links/bookmarks.
+                      Permission gating happens per-tab inside the page itself. */}
+                  <Route path="system" element={<SystemIntegrityPage />} />
                   <Route
                     path="evaluation"
-                    element={
-                      <RoleGuard require="VIEW_EVALUATION">
-                        <EvaluationPage />
-                      </RoleGuard>
-                    }
+                    element={<Navigate to="/system?tab=evaluation" replace />}
                   />
+                  <Route path="ops" element={<Navigate to="/system?tab=ops" replace />} />
+                  <Route path="audit" element={<Navigate to="/system?tab=audit" replace />} />
 
-                  <Route
-                    path="ops"
-                    element={
-                      <RoleGuard require="SIM_CONTROL">
-                        <OpsPage />
-                      </RoleGuard>
-                    }
-                  />
-
+                  {/* Outbox (§4.6): demoted from primary nav to an admin-only debugging
+                      route; per-alert delivery status now lives inline in Alert Focus. */}
                   <Route
                     path="outbox"
                     element={
                       <RoleGuard require="VIEW_AUDIT">
                         <OutboxPage />
-                      </RoleGuard>
-                    }
-                  />
-
-                  <Route
-                    path="audit"
-                    element={
-                      <RoleGuard require="VIEW_AUDIT">
-                        <AuditPage />
                       </RoleGuard>
                     }
                   />

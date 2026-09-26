@@ -97,6 +97,10 @@ class World:
     cfg: SimConfig
     registry: Registry
     clusters: list[MuleCluster]
+    # Real relative shares for the four ComplaintCategory values (real_seed.load_category_weights),
+    # set by the caller (cli.py's _build_world does the CSV I/O; this module stays pure). Empty
+    # means "uniform" — the previous, unweighted behaviour.
+    category_weights: dict[str, float] = field(default_factory=dict)
     # internal counters (mutable)
     _complaint_counter: int = field(default=0, repr=False)
     _hop_counter: int = field(default=0, repr=False)
@@ -175,8 +179,14 @@ class World:
             sigma_ln = self.cfg.amounts.shape_sigma
             amount_paise = int(max(1, math.exp(step_rng.normal(mean_ln, sigma_ln))))
 
-            # Category
-            cat_idx = int(step_rng.integers(len(_CATEGORIES)))
+            # Category: real relative shares among the four locked categories when
+            # `category_weights` was loaded from data/seed/complaint_category_priors.csv
+            # (real_seed.load_category_weights); uniform otherwise (no I/O in this module).
+            if self.category_weights:
+                probs = [self.category_weights[c] for c in _CATEGORIES]
+                cat_idx = int(step_rng.choice(len(_CATEGORIES), p=probs))
+            else:
+                cat_idx = int(step_rng.integers(len(_CATEGORIES)))
             category: ComplaintCategory = _CATEGORIES[cat_idx]
 
             complaint = ComplaintTruth(

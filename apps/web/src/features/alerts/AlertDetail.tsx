@@ -19,9 +19,12 @@ import { Select } from "../../shared/ui/Select";
 import { OutcomeButtons } from "./OutcomeButtons";
 import { NoveltyBanner } from "./NoveltyBanner";
 import { FeedbackPanel } from "./FeedbackPanel";
+import { LadderDecisionPath } from "./LadderDecisionPath";
+import { ProportionalityStrip } from "./ProportionalityStrip";
+import { TimingDecayCurve } from "./TimingDecayCurve";
+import { EvidencePackPanel } from "./EvidencePackPanel";
+import { DeliveryLog } from "./DeliveryLog";
 import { useAlert, useAlertAction } from "./api/useAlerts";
-import { usePrincipal } from "../../app/auth/usePrincipal";
-import { can } from "../../shared/lib/permissions";
 import { formatSimTime, humanizeStatus } from "../../shared/lib/format";
 import type { ActionType, AlertStatus, LadderLevel, Severity } from "../../shared/api/enums.ts";
 
@@ -31,7 +34,6 @@ interface AlertDetailProps {
 }
 
 export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
-  const { principal } = usePrincipal();
   const { data: alert, isLoading } = useAlert(alertId);
   const actionMutation = useAlertAction();
 
@@ -43,12 +45,30 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
 
   if (!alertId) return null;
 
-  // Permission checks (DOC 3 M5 / invariant 7)
-  const canAck = can(principal, "ACKNOWLEDGE");
-  const canHold = can(principal, "REQUEST_HOLD");
-  const canDispatch = can(principal, "DISPATCH");
-  const canNotify = can(principal, "NOTIFY_STATION");
-  const canOverride = can(principal, "OVERRIDE");
+  if (isLoading || !alert) {
+    return (
+      <Drawer open={Boolean(alertId)} onClose={onClose} title="Alert Detail" width="lg">
+        <div className="nk-drawer-loading" aria-live="polite">
+          Loading alert details…
+        </div>
+      </Drawer>
+    );
+  }
+
+  // Action bar is driven by the server's own per-alert allowed_actions (LC-4), not a
+  // client-side role table — this is the source of truth for what this principal may
+  // record on THIS alert right now (DOC2 §2.4 / invariant 7).
+  const allowedActions = new Set(alert.allowed_actions);
+  const canAck = allowedActions.has("acknowledge");
+  const canHold = allowedActions.has("request_hold");
+  const canDispatch = allowedActions.has("dispatch");
+  const canNotify = allowedActions.has("notify_station");
+  const canOverride = allowedActions.has("override");
+
+  // Latest interception assessment — the ladder recommendation reflects the most recent one.
+  const latestAssessment = alert.interception.at(-1) ?? null;
+
+  const targetName = String(alert.target.name ?? alert.target.id ?? "Target");
 
   function handleActionSubmit(type: ActionType) {
     if (!alert) return;
@@ -80,7 +100,7 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
 
   // Convert alert timeline to UITimelineEntry[]
   const timelineItems: UITimelineEntry[] =
-    alert?.timeline.map((entry, idx) => ({
+    alert.timeline.map((entry, idx) => ({
       id: `${entry.at}-${idx}`,
       timestamp: entry.at,
       title: humanizeStatus(entry.text_code.replace(/^alert\./, "")),
@@ -95,24 +115,19 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
             : entry.kind === "outcome"
               ? "nk-timeline__dot--success"
               : undefined,
-    })) ?? [];
+    }));
 
   return (
     <Drawer
       open={Boolean(alertId)}
       onClose={onClose}
-      title={alert ? `Alert ${alert.id}` : "Alert Detail"}
+      title={`${alert.cluster_ref} · ${targetName}`}
       width="lg"
     >
-      {isLoading || !alert ? (
-        <div className="nk-drawer-loading" aria-live="polite">
-          Loading alert details…
-        </div>
-      ) : (
-        <div className="nk-alert-detail">
+      <div className="nk-alert-detail">
           {/* Subtitle */}
           <div className="nk-text-xs font-mono text-muted mb-2">
-            Cluster: {alert.cluster_ref}
+            Alert Ref: {alert.id}
           </div>
 
           {/* Novelty / Exploration Banner */}
@@ -319,23 +334,58 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
             />
           </div>
 
-          {/* Evidence Timeline */}
+          {/* Timing-Decay Curve */}
+          {alert.forecast?.timing && (
+            <div className="nk-detail-section">
+              <span className="nk-detail-section-title">Cash-Out Timing Forecast</span>
+              <TimingDecayCurve timing={alert.forecast.timing} />
+            </div>
+          )}
+
+          {/* Interception Assessment — ladder-as-decision-path + proportionality safeguard */}
+          {latestAssessment && (
+            <div className="nk-detail-section">
+              <span className="nk-detail-section-title">Interception Assessment</span>
+              <LadderDecisionPath assessment={latestAssessment} expiresAt={alert.expires_at} />
+              {latestAssessment.proportionality && (
+                <ProportionalityStrip proportionality={latestAssessment.proportionality} />
+              )}
+            </div>
+          )}
+
+          {/* Evidence Timeline — horizontal, so the ingest -> ... -> alert -> action chain
+              reads as the fast, single-request pipeline it actually is (DOC2 §2.1). */}
           <div className="nk-detail-section">
             <span className="nk-detail-section-title">Evidence & Audit Trail</span>
-            <Timeline entries={timelineItems} />
+            <Timeline entries={timelineItems} orientation="horizontal" />
           </div>
 
           {/* Model Feedback Loop */}
           <div className="nk-detail-section">
-            <FeedbackPanel alertId={alert.id} confidence={alert.confidence} />
+            <FeedbackPanel
+              alertId={alert.id}
+              confidence={alert.confidence}
+              evidence={alert.forecast?.evidence ?? []}
+            />
           </div>
 
           {/* Post-Interception Outcome Logging */}
           <div className="nk-detail-section">
             <OutcomeButtons alertId={alert.id} />
           </div>
-        </div>
-      )}
+
+          {/* Court-Ready Evidence Pack */}
+          <div className="nk-detail-section">
+            <span className="nk-detail-section-title">Evidence Pack</span>
+            <EvidencePackPanel alertId={alert.id} />
+          </div>
+
+          {/* Delivery Log — did the bank/station/email actually get notified? (§4.6) */}
+          <div className="nk-detail-section">
+            <span className="nk-detail-section-title">Delivery Log</span>
+            <DeliveryLog deliveries={alert.deliveries} />
+          </div>
+      </div>
     </Drawer>
   );
 }

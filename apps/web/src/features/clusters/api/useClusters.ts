@@ -55,6 +55,8 @@ export function useCluster(clusterRef: string | undefined) {
         from: e.from,
         to: e.to,
         amount_paise: e.amount_paise ?? undefined,
+        layer: e.layer,
+        event_at: e.event_at,
       }));
       return {
         cluster_ref: data.cluster_ref,

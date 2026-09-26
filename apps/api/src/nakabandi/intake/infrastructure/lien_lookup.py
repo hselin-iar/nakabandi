@@ -160,6 +160,42 @@ class LienContextLookup:
             layer1_home_district_id=account.home_district_id,
         )
 
+    def complaints_up_to(self, as_of: SimTime) -> list[ComplaintDetail]:
+        """Every complaint observed by `as_of` (LC-2), for forecast/TrainModels (DOC 3 M2 B6):
+        building historical training examples needs to enumerate complaints, not just look one
+        up by id."""
+        details: list[ComplaintDetail] = []
+        for complaint in self._session.scalars(
+            select(ComplaintModel).where(ComplaintModel.observed_at <= as_of)
+        ):
+            detail = self.complaint_detail(complaint.id)
+            if detail is not None:
+                details.append(detail)
+        return sorted(details, key=lambda d: d.reported_event_at)
+
+    def first_cashout_after(
+        self, account_ids: list[str], after: SimTime, as_of: SimTime
+    ) -> tuple[str, SimTime] | None:
+        """(location_id, event_at) of the earliest cash-out at any of these accounts with
+        event_at >= `after`, from what was known by `as_of` (observed_at <= as_of, LC-2). Used
+        by TrainModels to label a complaint's candidate list with its real outcome — mirrors
+        `cluster_delays_min`'s as-of bound but returns the location instead of just the delay."""
+        if not account_ids:
+            return None
+        best: tuple[str, SimTime] | None = None
+        for obs in self._session.scalars(
+            select(CashOutObservationModel).where(
+                CashOutObservationModel.account_id.in_(account_ids),
+                CashOutObservationModel.observed_at <= as_of,
+            )
+        ):
+            event_at = to_sim_time(obs.event_at)
+            if event_at < after:
+                continue
+            if best is None or event_at < best[1]:
+                best = (obs.location_id, event_at)
+        return best
+
     def accounts_of(self, complaint_id: str) -> list[str]:
         """Every account a complaint's money reached (layer 1 and each hop's ends), sorted."""
         complaint = self._session.get(ComplaintModel, complaint_id)
@@ -242,20 +278,28 @@ class LienContextLookup:
             )
         return sorted(facts, key=lambda f: f.id)
 
-    def hops_among(self, account_ids: list[str]) -> list[tuple[str, str, int]]:
-        """(from_account_id, to_account_id, amount_paise) for every hop with both ends inside this
-        set of accounts (casework's cluster graph, DOC 3 S1)."""
+    def hops_among(self, account_ids: list[str]) -> list[tuple[str, str, int, int, SimTime]]:
+        """(from_account_id, to_account_id, amount_paise, layer, event_at) for every hop with
+        both ends inside this set of accounts (casework's cluster graph, DOC 3 S1; layer/event_at
+        feed the fund-flow directed timeline, Frontend Strategy §7.4)."""
         if not account_ids:
             return []
         rows = self._session.execute(
             select(
-                FundHopModel.from_account_id, FundHopModel.to_account_id, FundHopModel.amount_paise
+                FundHopModel.from_account_id,
+                FundHopModel.to_account_id,
+                FundHopModel.amount_paise,
+                FundHopModel.layer,
+                FundHopModel.event_at,
             ).where(
                 FundHopModel.from_account_id.in_(account_ids),
                 FundHopModel.to_account_id.in_(account_ids),
             )
         ).all()
-        return [(r.from_account_id, r.to_account_id, r.amount_paise) for r in rows]
+        return [
+            (r.from_account_id, r.to_account_id, r.amount_paise, r.layer, to_sim_time(r.event_at))
+            for r in rows
+        ]
 
     def cluster_delays_min(self, account_ids: list[str], as_of: SimTime) -> list[float]:
         """Observed credit-to-cash-out delays (minutes) at these accounts, from what was known by

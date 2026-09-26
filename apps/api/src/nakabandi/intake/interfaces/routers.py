@@ -17,6 +17,7 @@ from nakabandi_contracts.ingest import (
     Tick,
 )
 
+from nakabandi.alerting import SseEvent
 from nakabandi.intake import IngestService
 from nakabandi.intake.interfaces.deps import require_service_key
 from nakabandi.shared import SimClock, SqlAlchemyUnitOfWork
@@ -95,9 +96,16 @@ def post_cashout_observations(
 @router.post("/tick")
 def post_tick(
     tick: Tick,
+    request: Request,
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     service: IngestService = Depends(get_ingest_service),
 ) -> IngestResponse:
     response = service.advance_clock(tick)
     uow.commit()
+    # sim.time has no alert_id/scope: LC-5 sends it to every connected subscriber, same as
+    # analytics' heat.version. This is the only source of the SSE event useStream.tsx listens
+    # for to drive the on-screen sim clock; the :heartbeat comment carries no payload.
+    request.app.state.sse_hub.publish(
+        SseEvent(name="sim.time", data={"sim_time": response.sim_time.isoformat()})
+    )
     return response

@@ -15,3 +15,5 @@ apps/web/openapi.json
 *.egg-info/
 test-results/
 playwright-report/
+cookies.txt
+data/evidence_packs/

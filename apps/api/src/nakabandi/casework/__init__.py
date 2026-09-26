@@ -117,8 +117,8 @@ class CaseService:
             for a in capped
         ]
         edges = [
-            ClusterEdge(from_id=f, to_id=t, amount_paise=amt)
-            for f, t, amt in self._complaint_source.hops_among(account_ids)
+            ClusterEdge(from_id=f, to_id=t, amount_paise=amt, layer=layer, event_at=event_at)
+            for f, t, amt, layer, event_at in self._complaint_source.hops_among(account_ids)
             if f in capped_ids and t in capped_ids
         ]
         return ClusterGraph(

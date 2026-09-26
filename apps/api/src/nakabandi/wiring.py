@@ -207,7 +207,7 @@ class CaseworkComplaintSource:
             for a in self._intake.accounts_by_ids(account_ids)
         ]
 
-    def hops_among(self, account_ids: list[str]) -> list[tuple[str, str, int]]:
+    def hops_among(self, account_ids: list[str]) -> list[tuple[str, str, int, int, SimTime]]:
         return self._intake.hops_among(account_ids)
 
 
