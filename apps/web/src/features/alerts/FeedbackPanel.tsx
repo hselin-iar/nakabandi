@@ -10,6 +10,7 @@
 import React, { useState } from "react";
 import { Button } from "../../shared/ui/Button";
 import type { EvidenceModel } from "../../shared/api/types.ts";
+import { Icon } from "../../shared/ui/Icon";
 
 interface FeedbackPanelProps {
   alertId: string;
@@ -63,14 +64,14 @@ export function FeedbackPanel({ alertId, confidence, evidence }: FeedbackPanelPr
               variant="outline"
               onClick={() => handleFeedback("accurate")}
             >
-              👍 Relevant
+              <Icon name="check" /> Relevant
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => handleFeedback("inaccurate")}
             >
-              👎 False Positive
+              <Icon name="cross" /> False Positive
             </Button>
           </div>
         </div>

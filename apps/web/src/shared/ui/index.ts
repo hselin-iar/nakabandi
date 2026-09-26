@@ -44,3 +44,6 @@ export { CommandPalette } from "./CommandPalette";
 export type { PaletteGroup, PaletteItem } from "./CommandPalette";
 export { ProgressRing } from "./ProgressRing";
 export { Sparkline } from "./Sparkline";
+
+export { Icon } from "./Icon";
+export type { IconName } from "./Icon";

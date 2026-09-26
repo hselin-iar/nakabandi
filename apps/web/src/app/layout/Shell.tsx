@@ -90,6 +90,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       {/* Right side: topbar + main */}
       <div className="nk-shell__body">
+        <div className="nk-classification" role="note">
+          Synthetic data // Training environment // No real accounts
+        </div>
         <header className="nk-topbar" role="banner">
           {/* Greeting / page context */}
           <div className="nk-topbar__greeting">

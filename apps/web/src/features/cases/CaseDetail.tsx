@@ -19,6 +19,7 @@ import { MaskedRef } from "../../shared/ui/MaskedRef";
 import { CaseFundFlowSankey } from "./CaseFundFlowSankey";
 import { REQUIRED_FIR_DISCLAIMER, useCaseExplanation } from "./api/useCases";
 import type { Case } from "./types";
+import { Icon } from "../../shared/ui/Icon";
 
 interface CaseDetailProps {
   caseData: Case;
@@ -340,7 +341,7 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                 gap: 10,
               }}
             >
-              <span aria-hidden="true" style={{ fontSize: "16px" }}>⚖️</span>
+              <Icon name="scale" size={16} />
               <span>{REQUIRED_FIR_DISCLAIMER}</span>
             </div>
           </div>

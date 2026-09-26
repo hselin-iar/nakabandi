@@ -23,6 +23,7 @@ import {
 import { useOpsMetrics } from "./api/useOps";
 import { formatSimTime } from "../../shared/lib/format";
 import type { StageLatency, ChannelHealth } from "./api/useOps";
+import { Icon } from "../../shared/ui/Icon";
 
 // ---------------------------------------------------------------------------
 // Stat card
@@ -177,7 +178,7 @@ function ChannelTable({ channels }: { channels: ChannelHealth[] }) {
                   ch.failed_24h > 0 ? "nk-text-bad" : ""
                 }`}
               >
-                {ch.failed_24h > 0 ? `⚠ ${ch.failed_24h}` : ch.failed_24h}
+                {ch.failed_24h > 0 ? ch.failed_24h : ch.failed_24h}
               </td>
             </tr>
           ))}
@@ -205,7 +206,7 @@ export default function OpsPage() {
   if (error || !metrics) {
     return (
       <div className="nk-error-state" role="alert">
-        <span className="nk-error-state__icon" aria-hidden="true">⚠</span>
+        <span className="nk-error-state__icon" aria-hidden="true"><Icon name="alert" size={20} /></span>
         <p className="nk-error-state__message">Could not load operations metrics. Please retry.</p>
       </div>
     );
@@ -217,7 +218,7 @@ export default function OpsPage() {
         <h1 className="nk-ops-page__title">Operations Console</h1>
         {metrics.auto_paused && (
           <div className="nk-ops-auto-pause-banner" role="alert" data-testid="ops-auto-pause-banner">
-            ⏸ Auto-paused — simulator has been suspended
+            <Icon name="pause" /> Auto-paused — simulator has been suspended
           </div>
         )}
         <p className="nk-ops-page__subtitle">

@@ -19,6 +19,7 @@ import { formatSimTime } from "../../shared/lib/format";
 import { Select } from "../../shared/ui/Select";
 import type { DemoUser } from "./types";
 import type { InjectClusterRequest } from "./types";
+import { Icon } from "../../shared/ui/Icon";
 
 const DISTRICT_PRESETS = [
   { id: "UP-LKO", label: "Lucknow (UP-LKO)" },
@@ -192,10 +193,10 @@ export function DemoConsole() {
           <code>/sim-control/*</code> reverse proxy path (DOC 2 §2.2 / §2.7).
         </p>
         <div className="nk-demo-banner__specs">
-          <span className="nk-demo-banner__pill">⚡ Speed Capped at 60x</span>
-          <span className="nk-demo-banner__pill">🔒 Reset/Seed Restricted to Admin</span>
+          <span className="nk-demo-banner__pill"><Icon name="bolt" size={12} /> Speed Capped at 60x</span>
+          <span className="nk-demo-banner__pill"><Icon name="lock" size={12} /> Reset/Seed Restricted to Admin</span>
           <span className="nk-demo-banner__pill">⏱ Auto-Pause on Inactivity</span>
-          <span className="nk-demo-banner__pill">🛡 Reverse Proxy Auth Gated</span>
+          <span className="nk-demo-banner__pill"><Icon name="shield" size={12} /> Reverse Proxy Auth Gated</span>
         </div>
       </div>
 

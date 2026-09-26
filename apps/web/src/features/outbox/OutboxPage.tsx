@@ -12,6 +12,7 @@ import { useOutboxDeliveries } from "./api/useOutbox";
 import type { Delivery, DeliveryStatus } from "./api/useOutbox";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { formatSimTime } from "../../shared/lib/format";
+import { Icon } from "../../shared/ui/Icon";
 
 // ---------------------------------------------------------------------------
 // Delivery status badge
@@ -95,7 +96,7 @@ function DeliveryRow({ d }: { d: Delivery }) {
               <span>Message preview</span>
               {d.last_error && (
                 <span className="nk-outbox-last-error" role="alert">
-                  ⚠ Last error: {d.last_error}
+                  <Icon name="alert" size={12} /> Last error: {d.last_error}
                 </span>
               )}
             </div>
@@ -125,7 +126,7 @@ export default function OutboxPage() {
   if (error) {
     return (
       <div className="nk-error-state" role="alert">
-        <span className="nk-error-state__icon" aria-hidden="true">⚠</span>
+        <span className="nk-error-state__icon" aria-hidden="true"><Icon name="alert" size={20} /></span>
         <p className="nk-error-state__message">Could not load delivery outbox. Please retry.</p>
       </div>
     );
@@ -148,7 +149,7 @@ export default function OutboxPage() {
         <h1 className="nk-outbox-page__title">Delivery Outbox</h1>
         <p className="nk-outbox-page__subtitle">
           {deliveries.length} deliveries · {failedCount > 0
-            ? <><span className="nk-text-bad">⚠ {failedCount} failed</span></>
+            ? <><span className="nk-text-bad"><Icon name="alert" size={12} /> {failedCount} failed</span></>
             : "all channels healthy"}
         </p>
       </header>

@@ -68,6 +68,7 @@ import type {
   HotspotDetail,
   HotspotContributingAlert,
 } from "./types";
+import { Icon } from "../../shared/ui/Icon";
 
 // Zoom bands driving resolution — replaces a disconnected Resolution dropdown as the sole
 // input (§7.3): zoomed out shows district rollups, zooming in reveals cell then location
@@ -587,7 +588,7 @@ export default function MapPage() {
       const el = document.createElement("div");
       el.className = "nk-radar-unit-marker";
       el.style.color = radarVerdictColor(radarLatestAssessment.verdict);
-      el.textContent = "🚓";
+      el.textContent = "▲";
       el.title = `${radarBestUnit.unit_kind} ${radarBestUnit.unit_id} — ${radarBestUnit.eta_min.toFixed(1)} min ETA (computed estimate)`;
       radarMarkerCleanupRef.current = adapterRef.current.addHtmlMarker(
         el,
@@ -740,7 +741,7 @@ export default function MapPage() {
             disabled={webGlFailed}
             aria-pressed={viewMode === "map"}
           >
-            🗺️ Map View
+            <Icon name="map" /> Map View
           </button>
           <button
             type="button"
@@ -748,7 +749,7 @@ export default function MapPage() {
             onClick={() => setViewMode("table")}
             aria-pressed={viewMode === "table"}
           >
-            📊 Table View
+            <Icon name="table" /> Table View
           </button>
         </div>
       </header>
@@ -857,7 +858,7 @@ export default function MapPage() {
           >
             <div className="nk-radar-panel__header">
               <span className="nk-radar-panel__title">
-                📡 Interception Radar
+                <Icon name="radar" /> Interception Radar
               </span>
               <button
                 type="button"
@@ -884,7 +885,7 @@ export default function MapPage() {
                 </p>
                 {radarAlert.forecast?.levels?.location?.abstained && (
                   <p className="nk-radar-panel__abstain nk-text-xs">
-                    ⚠ District-level only — insufficient confidence for a
+                    <Icon name="alert" size={12} /> District-level only — insufficient confidence for a
                     specific location at this target.
                   </p>
                 )}

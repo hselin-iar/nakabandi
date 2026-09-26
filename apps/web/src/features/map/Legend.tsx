@@ -6,6 +6,7 @@
 
 import React from "react";
 import type { LegendData } from "./types";
+import { Icon } from "../../shared/ui/Icon";
 
 interface LegendProps {
   legend: LegendData;
@@ -62,7 +63,7 @@ export function Legend({ legend, suppressedCount }: LegendProps) {
       {suppressedCount > 0 && (
         <div className="nk-legend-suppressed">
           <span className="text-xs text-muted">
-            🛡️ {suppressedCount} cell{suppressedCount > 1 ? "s" : ""} suppressed below <em>k</em>-threshold
+            <Icon name="shield" size={12} /> {suppressedCount} cell{suppressedCount > 1 ? "s" : ""} suppressed below <em>k</em>-threshold
           </span>
         </div>
       )}

@@ -11,6 +11,7 @@ import React from "react";
 import { useEvalReport } from "./api/useEvaluation";
 import type { EvalReport, MetricPoint } from "./api/useEvaluation";
 import { ProgressRing } from "../../shared/ui/ProgressRing";
+import { Icon } from "../../shared/ui/Icon";
 
 // ---------------------------------------------------------------------------
 // MetricsTable
@@ -81,7 +82,7 @@ export default function EvaluationPage() {
   if (error) {
     return (
       <div className="nk-error-state" role="alert">
-        <span className="nk-error-state__icon" aria-hidden="true">⚠</span>
+        <span className="nk-error-state__icon" aria-hidden="true"><Icon name="alert" size={20} /></span>
         <p className="nk-error-state__message">Could not load evaluation run data. Please retry.</p>
       </div>
     );

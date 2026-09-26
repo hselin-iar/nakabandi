@@ -37,6 +37,7 @@ import { ErrorState } from "../../shared/ui/ErrorState";
 import { Button } from "../../shared/ui/Button";
 import type { ActionType, AlertStatus, LadderLevel, Severity } from "../../shared/api/enums.ts";
 import type { AlertSummary } from "../../shared/api/types.ts";
+import { Icon } from "../../shared/ui/Icon";
 
 const EMPTY_ALERTS: AlertSummary[] = [];
 const SEVERITY_RANK: Record<string, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
@@ -292,7 +293,7 @@ export default function AlertsInbox() {
             <div className="nk-alert-target-cell">
               <span className="font-medium text-primary">{name}</span>
               {shouldShowKindBadge(name, kind) && <span className="nk-text-xs nk-tag">{kind}</span>}
-              {district && <span className="nk-geo-badge">📍 {district}</span>}
+              {district && <span className="nk-geo-badge"><Icon name="pin" size={12} /> {district}</span>}
             </div>
           );
         },
@@ -408,7 +409,7 @@ export default function AlertsInbox() {
               aria-pressed={soundOn}
               title="Play a cue when a CRITICAL alert arrives"
             >
-              {soundOn ? "🔔 Sound on" : "🔕 Sound off"}
+              <Icon name={soundOn ? "bell" : "bellOff"} /> {soundOn ? "Sound on" : "Sound off"}
             </Button>
             <Button
               size="sm"
@@ -425,7 +426,7 @@ export default function AlertsInbox() {
             onClick={() => setShowReviewQueue((prev) => !prev)}
             aria-pressed={showReviewQueue}
           >
-            ⚡ {showReviewQueue ? "Close Triage Queue" : "Rapid Triage Mode"}
+            <Icon name="bolt" /> {showReviewQueue ? "Close Triage Queue" : "Rapid Triage Mode"}
           </Button>
         </div>
       </header>

@@ -7,6 +7,7 @@
 
 import React from "react";
 import type { UiError } from "../api/apiError";
+import { Icon } from "./Icon";
 
 interface ErrorStateProps {
   error: UiError;
@@ -17,7 +18,7 @@ interface ErrorStateProps {
 export function ErrorState({ error, onRetry, className = "" }: ErrorStateProps) {
   return (
     <div className={`nk-error-state ${className}`} role="alert">
-      <span className="nk-error-state__icon" aria-hidden="true">⚠</span>
+      <span className="nk-error-state__icon" aria-hidden="true"><Icon name="alert" size={20} /></span>
       <p className="nk-error-state__message">{error.message}</p>
       {error.code && error.code !== "error" && (
         <p className="nk-error-state__code">Error: {error.code}</p>

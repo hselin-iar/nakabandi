@@ -4,6 +4,7 @@
  */
 
 import React from "react";
+import { Icon } from "../../shared/ui/Icon";
 
 interface NoveltyBannerProps {
   isProbe?: boolean;
@@ -21,7 +22,7 @@ export function NoveltyBanner({
   return (
     <div className="nk-novelty-banner" role="status" aria-label="Novelty probe alert">
       <div className="nk-novelty-banner__icon" aria-hidden="true">
-        🔬
+        <Icon name="flask" size={16} />
       </div>
       <div className="nk-novelty-banner__content">
         <div className="nk-novelty-banner__title">

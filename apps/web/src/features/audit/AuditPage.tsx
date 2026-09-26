@@ -15,6 +15,7 @@ import type { VerifyResponse } from "../../shared/api/types.ts";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { humanizeAction, formatSimTime } from "../../shared/lib/format";
 import { roleLabel } from "../../shared/lib/roles";
+import { Icon } from "../../shared/ui/Icon";
 
 // ---------------------------------------------------------------------------
 // VerifyBanner
@@ -90,7 +91,7 @@ export default function AuditPage() {
   if (error) {
     return (
       <div className="nk-error-state" role="alert">
-        <span className="nk-error-state__icon" aria-hidden="true">⚠</span>
+        <span className="nk-error-state__icon" aria-hidden="true"><Icon name="alert" size={20} /></span>
         <p className="nk-error-state__message">Could not load the audit log. Please retry.</p>
       </div>
     );

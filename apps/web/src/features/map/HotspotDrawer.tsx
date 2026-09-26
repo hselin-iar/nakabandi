@@ -10,6 +10,7 @@ import { SeverityBadge, StatusBadge } from "../../shared/ui/Badge";
 import { Button } from "../../shared/ui/Button";
 import { Countdown } from "../../shared/ui/Countdown";
 import type { HotspotDetail } from "./types";
+import { Icon } from "../../shared/ui/Icon";
 
 interface HotspotDrawerProps {
   hotspot: HotspotDetail | null;
@@ -102,7 +103,7 @@ export function HotspotDrawer({
                           variant="ghost"
                           onClick={() => onTrackAlert(alert.id)}
                         >
-                          📡 Track on Map
+                          <Icon name="radar" /> Track on Map
                         </Button>
                       )}
                       {onSelectAlert ? (

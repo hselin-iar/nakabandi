@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Button } from "../../shared/ui/Button";
 import { formatSimTime } from "../../shared/lib/format";
 import { useBuildEvidencePack } from "./api/useAlerts";
+import { Icon } from "../../shared/ui/Icon";
 
 interface EvidencePackPanelProps {
   alertId: string;
@@ -40,7 +41,7 @@ export function EvidencePackPanel({ alertId }: EvidencePackPanelProps) {
             })
           }
         >
-          📄 Generate Evidence Pack
+          <Icon name="file" /> Generate Evidence Pack
         </Button>
       </div>
 

@@ -10,6 +10,7 @@ import React from "react";
 import { ConfidenceBar } from "../../shared/ui/ConfidenceBar";
 import { formatInr, formatSimTime } from "../../shared/lib/format";
 import type { ProportionalityModel } from "../../shared/api/types.ts";
+import { Icon } from "../../shared/ui/Icon";
 
 interface ProportionalityStripProps {
   proportionality: ProportionalityModel;
@@ -44,7 +45,7 @@ export function ProportionalityStrip({ proportionality }: ProportionalityStripPr
 
       {proportionality.magistrate_report_reminder && (
         <div className="nk-proportionality-strip__reminder" role="note">
-          ⚖ This lien must be reported to the Magistrate. It is capped, time-boxed, and
+          <Icon name="scale" /> This lien must be reported to the Magistrate. It is capped, time-boxed, and
           anchored to this complaint — there is no whole-account freeze option in this system.
         </div>
       )}

@@ -30,6 +30,7 @@ import { useAlert, useAlertAction, useAlertHoldAccounts } from "./api/useAlerts"
 import { holdTally } from "./holdTally";
 import { formatInr, formatSimTime, humanizeStatus } from "../../shared/lib/format";
 import type { ActionType, AlertStatus, LadderLevel, Severity } from "../../shared/api/enums.ts";
+import { Icon } from "../../shared/ui/Icon";
 
 interface AlertDetailProps {
   alertId: string | null;
@@ -248,7 +249,7 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
                   loading={actionMutation.isPending}
                   onClick={() => handleActionSubmit("acknowledge")}
                 >
-                  ✓ Acknowledge
+                  <Icon name="check" /> Acknowledge
                 </Button>
               )}
 
@@ -259,7 +260,7 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
                   disabled={alert.status === "actioned" || alert.status === "expired"}
                   onClick={() => setActiveActionModal("request_hold")}
                 >
-                  🔒 Request Hold
+                  <Icon name="lock" /> Request Hold
                 </Button>
               )}
 
@@ -270,7 +271,7 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
                   disabled={alert.status === "actioned" || alert.status === "expired"}
                   onClick={() => setActiveActionModal("dispatch")}
                 >
-                  🚓 Dispatch Patrol
+                  <Icon name="unit" /> Dispatch Patrol
                 </Button>
               )}
 
@@ -280,7 +281,7 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
                   variant="outline"
                   onClick={() => handleActionSubmit("notify_station")}
                 >
-                  📢 Notify Station
+                  <Icon name="broadcast" /> Notify Station
                 </Button>
               )}
 
@@ -290,7 +291,7 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
                   variant="ghost"
                   onClick={() => setActiveActionModal("override")}
                 >
-                  ⚡ Override
+                  <Icon name="bolt" /> Override
                 </Button>
               )}
             </div>

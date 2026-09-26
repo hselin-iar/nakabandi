@@ -12,6 +12,7 @@ import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import type { ClusterNode } from "./types";
+import { Icon } from "../../shared/ui/Icon";
 
 export default function ClustersPage() {
   const { id } = useParams<{ id?: string }>();
@@ -190,7 +191,7 @@ export default function ClustersPage() {
                 {/* Sub-communities */}
                 {cluster.sub_communities && cluster.sub_communities.length > 0 && (
                   <span className="nk-bridge-badge">
-                    🔗 {cluster.sub_communities.length} sub-communities
+                    <Icon name="link" /> {cluster.sub_communities.length} sub-communities
                   </span>
                 )}
               </div>

@@ -6,6 +6,7 @@
 import React from "react";
 import { Select } from "../../shared/ui/Select";
 import type { HeatmapFilters, HeatmapLevel, Region } from "./types";
+import { Icon } from "../../shared/ui/Icon";
 
 interface FilterPanelProps {
   filters: HeatmapFilters;
@@ -35,7 +36,7 @@ export function FilterPanel({
           onClick={() => onChange({ layer: "live" })}
           aria-pressed={filters.layer === "live"}
         >
-          ⚡ Live Forecast
+          <Icon name="bolt" /> Live Forecast
         </button>
         <button
           type="button"
@@ -43,7 +44,7 @@ export function FilterPanel({
           onClick={() => onChange({ layer: "potential" })}
           aria-pressed={filters.layer === "potential"}
         >
-          ⏳ Decayed Potential (72h)
+          <Icon name="hourglass" /> Decayed Potential (72h)
         </button>
       </div>
 

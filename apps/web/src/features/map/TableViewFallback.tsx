@@ -8,6 +8,7 @@
 import React from "react";
 import type { HeatCell } from "./types";
 import { Button } from "../../shared/ui/Button";
+import { Icon } from "../../shared/ui/Icon";
 
 interface TableViewFallbackProps {
   cells: HeatCell[];
@@ -26,7 +27,7 @@ export function TableViewFallback({
     <div className="nk-table-fallback" aria-label="Risk heatmap tabular view">
       <div className="nk-fallback-banner" role="status">
         <div className="nk-fallback-banner__content">
-          <span className="nk-fallback-banner__icon">📊</span>
+          <span className="nk-fallback-banner__icon"><Icon name="table" size={18} /></span>
           <div>
             <div className="font-semibold text-sm">
               Tabular Risk View {reason ? `(${reason})` : "Active"}
@@ -39,7 +40,7 @@ export function TableViewFallback({
 
         {onRetryWebGL && (
           <Button size="sm" variant="outline" onClick={onRetryWebGL}>
-            🔄 Try WebGL Map
+            <Icon name="refresh" /> Try WebGL Map
           </Button>
         )}
       </div>

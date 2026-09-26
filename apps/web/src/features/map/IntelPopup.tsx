@@ -23,6 +23,7 @@ import type {
   Severity,
 } from "../../shared/api/enums.ts";
 import type { HeatCell, HotspotDetail, LocationPoint, Region } from "./types";
+import { Icon } from "../../shared/ui/Icon";
 
 const SEVERITY_ORDER: Record<string, number> = {
   CRITICAL: 4,
@@ -186,25 +187,8 @@ export function IntelPopup({
       data-testid="intel-popup"
       aria-label={`Intelligence dossier: ${designation}`}
     >
-      <span
-        className="nk-intel__corner nk-intel__corner--tl"
-        aria-hidden="true"
-      />
-      <span
-        className="nk-intel__corner nk-intel__corner--tr"
-        aria-hidden="true"
-      />
-      <span
-        className="nk-intel__corner nk-intel__corner--bl"
-        aria-hidden="true"
-      />
-      <span
-        className="nk-intel__corner nk-intel__corner--br"
-        aria-hidden="true"
-      />
-
       <div className="nk-intel__banner">
-        <span>RESTRICTED // FININT</span>
+        <span>TRAINING USE</span>
         <span>
           {simNow
             ? `DTG ${formatSimTime(simNow, { includeSeconds: true })}Z`
@@ -449,7 +433,15 @@ export function IntelPopup({
             });
           }}
         >
-          {copied ? "✓ Copied" : "⧉ Copy coordinates"}
+          {copied ? (
+            <>
+              <Icon name="check" size={12} /> Copied
+            </>
+          ) : (
+            <>
+              <Icon name="copy" size={12} /> Copy coordinates
+            </>
+          )}
         </button>
         {focus && (
           <Link to={`/alerts/${focus.id}`} className="nk-intel__primary">
