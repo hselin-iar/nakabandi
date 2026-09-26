@@ -203,3 +203,9 @@ All five phases (1, 2, 3, 4a, 4b, 5) are committed on feat/track-a, one commit e
 - Root cause of single-account self-looping clusters: `/control/inject-cluster` created clusters with no accounts; fixed under Track B changes (see docs/state/track-b.md, [A/inject-cluster]).
 - Schema drift: `create_all` does not migrate existing SQLite volumes; after pulling a schema change run the reset (`/control/reset` or drop the api-data volume).
 - Docker volumes created before the fix still hold self-loop data; reset the api DB and restart world-sim.
+
+## Cluster graph rework + live warm-up (Integration Owner session)
+- ClusterGraph: parallel hops merge into one edge (×N, summed amount; `hop_count` is UI-only, not an API field); layered dagre layout runs over forward edges only (BFS depth from origins) and return edges are drawn as dashed pink arcs; role colours (origin green, pass-through blue, pooling amber, terminal red), tempo ramp orange→blue, node size by money moved; dense graphs (> 3 merged edges per account) show only each account's strongest flows with a visible "N weaker flows (₹X) set aside · show all" notice; Full screen button (fixed overlay, Esc exits). This overrides the earlier "colour reserved for severity" note in ClusterGraph.tsx's header for nodes/edges.
+- Root data issue left as is: the simulator picks each hop's target uniformly among the cluster's accounts, so clusters are near-complete random digraphs. A layered, mostly-forward hop model would be a Track B realism change (alters the golden hash), not done here.
+- Alerts: with the committed policy they appear once clusters have cash-out history (12 alerts after ~0.84 simulated days at 60×). No threshold change was made.
+- `npm run ci` green: 689 py, 186 web, 14 bank-sim.
