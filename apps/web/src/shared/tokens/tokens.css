@@ -4385,15 +4385,14 @@ body {
 }
 
 /* Two-pane triage layout (>= 1280px): list left, detail panel right */
-/* Detail opens as a docked panel on the left, about half the page, like an editor side panel;
-   the alert list shifts right into the remaining half. */
+/* Detail opens as a docked panel on the right, about half the page, like an editor side panel;
+   the alert list keeps the left half. */
 .nk-triage-split {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--nk-space-4);
   align-items: start;
 }
-.nk-triage-split > .nk-alert-panel { order: -1; }
 .nk-alert-panel {
   height: calc(100dvh - 8rem);
   display: flex;
