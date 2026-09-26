@@ -40,14 +40,6 @@ interface AlertDetailProps {
   requestedAction?: { type: ActionType; nonce: number } | null;
 }
 
-type DetailTab = "target" | "assess" | "trail" | "evidence";
-const DETAIL_TABS: { id: DetailTab; label: string }[] = [
-  { id: "target", label: "Target" },
-  { id: "assess", label: "Assessment" },
-  { id: "trail", label: "Trail" },
-  { id: "evidence", label: "Evidence" },
-];
-
 /** Actions that get the press-and-hold confirmation instead of a click. */
 const HOLD_ACTIONS: readonly ActionType[] = ["request_hold", "dispatch"];
 
@@ -61,8 +53,6 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
   const [holdAccountId, setHoldAccountId] = useState("");
   const [actionReason, setActionReason] = useState("");
   const [unitId, setUnitId] = useState("UNIT-CRIME-04");
-  // The inline panel groups the long tail of sections into tabs so nothing needs scrolling to read.
-  const [tab, setTab] = useState<DetailTab>("target");
 
   const clusterId = alert?.forecast?.cluster_id ?? null;
   const { data: holdAccounts = [] } = useAlertHoldAccounts(clusterId, activeActionModal === "request_hold");
@@ -214,8 +204,6 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
     }));
 
   const heading = `${alert.cluster_ref} · ${targetName}`;
-  // Drawer: every section, stacked. Panel: only the selected tab's sections.
-  const show = (t: DetailTab) => variant === "drawer" || tab === t;
 
   const body = (
       <div className="nk-alert-detail">
@@ -426,26 +414,9 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
             </div>
           )}
 
-          {variant === "panel" && (
-            <div className="nk-detail-tabs" role="tablist" aria-label="Alert detail sections">
-              {DETAIL_TABS.map((t) => (
-                <button
-                  key={t.id}
-                  role="tab"
-                  type="button"
-                  aria-selected={tab === t.id}
-                  className={`nk-tab-btn${tab === t.id ? " nk-tab-btn--active" : ""}`}
-                  onClick={() => setTab(t.id)}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className={variant === "panel" ? "nk-detail-tabpane" : "nk-detail-tabpane nk-detail-tabpane--flat"}>
+          <div className="nk-detail-sections">
           {/* Target & Metadata Details */}
-          {show("target") && (
+          {(
           <div className="nk-detail-section">
             <span className="nk-detail-section-title">Target Location & Network Anchor</span>
             <KeyValue
@@ -476,7 +447,7 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
           )}
 
           {/* Timing-Decay Curve */}
-          {show("assess") && alert.forecast?.timing && (
+          {alert.forecast?.timing && (
             <div className="nk-detail-section">
               <span className="nk-detail-section-title">Cash-Out Timing Forecast</span>
               <TimingDecayCurve timing={alert.forecast.timing} />
@@ -484,7 +455,7 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
           )}
 
           {/* Interception Assessment — ladder-as-decision-path + proportionality safeguard */}
-          {show("assess") && latestAssessment && (
+          {latestAssessment && (
             <div className="nk-detail-section">
               <span className="nk-detail-section-title">Interception Assessment</span>
               <LadderDecisionPath assessment={latestAssessment} expiresAt={alert.expires_at} />
@@ -496,7 +467,7 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
 
           {/* Evidence Timeline — horizontal, so the ingest -> ... -> alert -> action chain
               reads as the fast, single-request pipeline it actually is (DOC2 §2.1). */}
-          {show("trail") && (
+          {(
           <div className="nk-detail-section">
             <span className="nk-detail-section-title">Evidence & Audit Trail</span>
             <Timeline entries={timelineItems} orientation="horizontal" />
@@ -504,7 +475,7 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
           )}
 
           {/* Model Feedback Loop */}
-          {show("evidence") && (
+          {(
           <div className="nk-detail-section">
             <FeedbackPanel
               alertId={alert.id}
@@ -515,14 +486,14 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
           )}
 
           {/* Post-Interception Outcome Logging */}
-          {show("evidence") && (
+          {(
           <div className="nk-detail-section">
             <OutcomeButtons alertId={alert.id} />
           </div>
           )}
 
           {/* Court-Ready Evidence Pack */}
-          {show("evidence") && (
+          {(
           <div className="nk-detail-section">
             <span className="nk-detail-section-title">Evidence Pack</span>
             <EvidencePackPanel alertId={alert.id} />
@@ -530,7 +501,7 @@ export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAct
           )}
 
           {/* Delivery Log — did the bank/station/email actually get notified? (§4.6) */}
-          {show("trail") && (
+          {(
           <div className="nk-detail-section">
             <span className="nk-detail-section-title">Delivery Log</span>
             <DeliveryLog deliveries={alert.deliveries} />

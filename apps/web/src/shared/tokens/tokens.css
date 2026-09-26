@@ -4376,12 +4376,15 @@ body {
 }
 
 /* Two-pane triage layout (>= 1280px): list left, detail panel right */
+/* Detail opens as a docked panel on the left, about half the page, like an editor side panel;
+   the alert list shifts right into the remaining half. */
 .nk-triage-split {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(22rem, 26rem);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--nk-space-4);
   align-items: start;
 }
+.nk-triage-split > .nk-alert-panel { order: -1; }
 .nk-alert-panel {
   height: calc(100dvh - 8rem);
   display: flex;
@@ -4409,13 +4412,12 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.nk-alert-panel .nk-alert-detail { flex: 1; min-height: 0; gap: var(--nk-space-3); }
-.nk-alert-panel .nk-detail-top-card { padding: var(--nk-space-3); gap: var(--nk-space-2); }
-.nk-alert-panel .nk-detail-metrics-row { padding-top: var(--nk-space-2); gap: var(--nk-space-3); }
-.nk-alert-panel .nk-action-toolbar { padding: var(--nk-space-2) var(--nk-space-3); }
-.nk-detail-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--nk-border-subtle); }
-.nk-detail-tabpane { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--nk-space-4); }
-.nk-detail-tabpane--flat { overflow: visible; flex: none; }
+.nk-alert-panel .nk-alert-detail { flex: 1; min-height: 0; overflow-y: auto; padding-right: var(--nk-space-2); }
+/* Every section stays on screen, laid out in two columns inside the wide panel */
+.nk-alert-panel .nk-detail-sections { columns: 2 22rem; column-gap: var(--nk-space-5); }
+.nk-alert-panel .nk-detail-sections > .nk-detail-section { break-inside: avoid; margin-bottom: var(--nk-space-5); }
+.nk-detail-sections { display: flex; flex-direction: column; gap: var(--nk-space-4); }
+.nk-alert-panel .nk-detail-sections { display: block; }
 
 .nk-inbox-tools {
   display: flex;
@@ -4836,3 +4838,6 @@ body {
 .nk-graph-notices:empty { display: none; }
 .nk-graph-notices .nk-graph-hidden,
 .nk-graph-notices .nk-graph-notice { position: static; }
+
+/* With the detail docked beside the list, the alert id line moves to the panel and the facility name gets the room */
+.nk-triage-split .nk-alert-id-cell > :not(:first-child) { display: none; }
