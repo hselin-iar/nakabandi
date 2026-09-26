@@ -5098,20 +5098,19 @@ h1.nk-inbox-title, .nk-system-integrity-title, .nk-ops-page__title { letter-spac
 .nk-cmd__mono { font-family: var(--nk-font-mono); font-size: 12px; }
 .nk-cmd__amount { font-size: 13px; font-weight: 700; color: var(--nk-text-primary); }
 
-/* Bottom taskbar brand: a plain, square-cornered button back to Command */
+/* Bottom taskbar brand: a plain square button back to Command, same colour and height as the bar */
 .nk-sidenav__logo { display: none; }
 .nk-sidenav__brand {
-  padding: 0 var(--nk-space-5);
-  height: 2.5rem;
+  align-self: stretch;
+  height: var(--nk-taskbar-h);
+  margin: 0 0 0 calc(-1 * var(--nk-space-4));
+  padding: 0 var(--nk-space-6);
   display: inline-flex;
   align-items: center;
-  border: 1px solid #3B4A5E;
+  border: 0;
   border-radius: 0;
-  background: #161F2E;
+  background: var(--nk-sidebar-bg);
   cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease;
 }
-.nk-sidenav__brand:hover { background: var(--nk-accent); border-color: var(--nk-accent); }
-.nk-sidenav__brand:hover .nk-sidenav__wordmark { color: var(--nk-text-inverse); }
-.nk-sidenav__brand.active { border-color: var(--nk-accent); }
+.nk-sidenav__brand:hover .nk-sidenav__wordmark { color: #FFFFFF; }
 .nk-sidenav__wordmark { display: inline !important; letter-spacing: 0.2em; font-weight: 700; }
