@@ -374,12 +374,6 @@ export function CaseDetail({ caseData, onBack }: CaseDetailProps) {
                 }}
               >
                 <h3 className="nk-dossier-h">What this network is doing</h3>
-                <span
-                  style={{ fontSize: "11px", color: "var(--nk-text-tertiary)" }}
-                >
-                  AI-assisted summary
-                  {explanation?.model ? ` · ${explanation.model}` : ""}
-                </span>
               </div>
               {explanationLoading ? (
                 <p
