@@ -6,8 +6,8 @@
  * field has focus.
  */
 
-import { useEffect, useRef, useState } from "react";
-import { useActiveShortcuts } from "./shortcutRegistry";
+import { useEffect, useRef } from "react";
+import { setShortcutSheetOpen, useActiveShortcuts, useShortcutSheetOpen } from "./shortcutRegistry";
 
 const GLOBAL_SCOPE_TITLE = "Everywhere";
 
@@ -17,7 +17,8 @@ function isTypingTarget(el: EventTarget | null): boolean {
 }
 
 export function ShortcutSheet() {
-  const [open, setOpen] = useState(false);
+  const open = useShortcutSheetOpen();
+  const setOpen = setShortcutSheetOpen;
   const scopes = useActiveShortcuts();
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -29,12 +30,12 @@ export function ShortcutSheet() {
       }
       if (e.key === "?" && !e.metaKey && !e.ctrlKey && !e.altKey && !isTypingTarget(e.target)) {
         e.preventDefault();
-        setOpen((o) => !o);
+        setOpen(!open);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [open, setOpen]);
 
   useEffect(() => {
     if (open) closeRef.current?.focus();
@@ -69,6 +70,10 @@ export function ShortcutSheet() {
             <div className="nk-shortcuts__row">
               <dt><kbd className="nk-kbd">?</kbd></dt>
               <dd>Show or hide this sheet</dd>
+            </div>
+            <div className="nk-shortcuts__row">
+              <dt><kbd className="nk-kbd">⌘/Ctrl K</kbd></dt>
+              <dd>Search alerts, cases, accounts, or run a command</dd>
             </div>
           </dl>
         </section>

@@ -80,4 +80,13 @@ export interface MapAdapter {
    * still move the map into that resolution's zoom band — two-way binding, not just one-way.
    */
   setZoom?(zoom: number): void;
+
+  /** Fires with the cursor's [lon, lat] while it moves over the map, and null when it leaves. */
+  onPointerMove?(handler: (lngLat: [number, number] | null) => void): void;
+
+  /** Fires continuously while the camera moves, with the current zoom. */
+  onViewChange?(handler: (view: { zoom: number }) => void): void;
+
+  /** Eases the camera to a point. */
+  flyTo?(lngLat: [number, number], zoom?: number): void;
 }

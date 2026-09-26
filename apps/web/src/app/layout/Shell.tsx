@@ -11,7 +11,10 @@ import { usePrincipal } from "../auth/usePrincipal";
 import { useStream, useSimTime } from "../../shared/stream/useStream";
 import { formatSimTime } from "../../shared/lib/format";
 import { roleLabel } from "../../shared/lib/roles";
+import { useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { ShortcutSheet } from "../../shared/ui";
+import { CommandPaletteHost } from "./CommandPaletteHost";
 
 /**
  * Connection status dot — amber = degraded / polling, green = streaming.
@@ -74,6 +77,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { principal, logout } = usePrincipal();
   const { status } = useStream();
   const simTime = useSimTime();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+
+  // Global palette shortcut: works from any screen, including while a form field has focus.
+  useHotkeys("mod+k", () => setPaletteOpen((o) => !o), { enableOnFormTags: true, preventDefault: true });
 
   return (
     <div className="nk-shell">
@@ -89,8 +97,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="nk-topbar__subtitle">Financial Crime Detection Platform</span>
           </div>
 
-          {/* Spacer: the command palette trigger lands here in Phase 3 */}
-          <div className="flex-1" />
+          {/* Command palette trigger (the shortcut works everywhere) */}
+          <div className="flex flex-1 justify-center">
+            <button
+              type="button"
+              className="nk-palette-trigger"
+              id="topbar-palette-trigger"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Open command palette"
+            >
+              Search or run a command
+              <kbd className="nk-kbd">{isMac ? "⌘ K" : "Ctrl K"}</kbd>
+            </button>
+          </div>
 
           {/* Right: HUD (sim clock, stream status), role pill, logout */}
           <div className="nk-topbar__right">
@@ -121,6 +140,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <ShortcutSheet />
+      {paletteOpen && <CommandPaletteHost open={paletteOpen} onOpenChange={setPaletteOpen} />}
     </div>
   );
 }

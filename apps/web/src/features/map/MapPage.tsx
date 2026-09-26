@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { useHeatmap } from "./useHeatmap";
 import { useRegions } from "./useRegions";
 import { useLocations } from "./useLocations";
@@ -16,15 +17,22 @@ import { FilterPanel } from "./FilterPanel";
 import { TimeSlider } from "./TimeSlider";
 import { Legend } from "./Legend";
 import { HotspotDrawer } from "./HotspotDrawer";
+import { LayerPanel, type LayerKey, type LayerRowSpec } from "./LayerPanel";
+import { MapHud, type MapHudHandle } from "./MapHud";
+import { useRegisterShortcuts, type ShortcutScope } from "../../shared/ui/shortcutRegistry";
+import { selectionStore, useSelection } from "../../shared/state/selectionStore";
 import { TableViewFallback } from "./TableViewFallback";
 import {
   MapLibreAdapter,
   BOUNDARIES_FILL_LAYER_ID,
+  BOUNDARIES_LINE_LAYER_ID,
   HEATMAP_LAYER_ID,
+  SELECTION_LAYER_ID,
 } from "./maplibre/MapLibreAdapter";
-import { heatCellsToPointGeoJSON } from "./layers/heatmapLayer";
+import { heatCellsToPointGeoJSON, HEATMAP_POINT_LAYER_ID } from "./layers/heatmapLayer";
 import { locationsToGeoJSON, LOCATIONS_CIRCLE_LAYER_ID } from "./layers/locationsLayer";
-import { alertsToGeoJSON, ALERTS_POINT_LAYER_ID } from "./layers/alertsLayer";
+import { alertsToGeoJSON, ALERTS_POINT_LAYER_ID, ALERTS_HALO_LAYER_ID } from "./layers/alertsLayer";
+import { HOT_RADAR_LAYER_ID, hotCellsToGeoJSON } from "./layers/radarIconLayer";
 import {
   buildRadarGeoJSON,
   radarVerdictColor,
@@ -56,6 +64,49 @@ const ZOOM_FOR_LEVEL: Record<HeatmapLevel, number> = {
   district: 5.5,
   cell: 8,
   location: 11,
+};
+
+// Layer groups: one toggle can drive several MapLibre layers. The pulsing hot-cell radar belongs
+// to the heat toggle, so hiding heat also stops its repaint loop.
+const LAYER_IDS: Record<LayerKey, string[]> = {
+  heat: [HEATMAP_LAYER_ID, HEATMAP_POINT_LAYER_ID, HOT_RADAR_LAYER_ID],
+  locations: [LOCATIONS_CIRCLE_LAYER_ID],
+  alerts: [ALERTS_HALO_LAYER_ID, ALERTS_POINT_LAYER_ID],
+  route: [RADAR_LINE_LAYER_ID],
+  boundaries: [BOUNDARIES_FILL_LAYER_ID, BOUNDARIES_LINE_LAYER_ID],
+};
+
+const DEFAULT_LAYERS_ON: Record<LayerKey, boolean> = {
+  heat: true,
+  locations: true,
+  alerts: true,
+  route: true,
+  boundaries: true,
+};
+
+const LAYERS_STORAGE_KEY = "nk.map.layers";
+
+function readLayersOn(): Record<LayerKey, boolean> {
+  try {
+    const raw = window.localStorage.getItem(LAYERS_STORAGE_KEY);
+    if (raw) return { ...DEFAULT_LAYERS_ON, ...(JSON.parse(raw) as Partial<Record<LayerKey, boolean>>) };
+  } catch {
+    /* storage unavailable or corrupt: defaults */
+  }
+  return DEFAULT_LAYERS_ON;
+}
+
+const MAP_SHORTCUTS: ShortcutScope = {
+  scope: "map",
+  title: "Map",
+  entries: [
+    { keys: "H", description: "Toggle risk heat" },
+    { keys: "L", description: "Toggle locations" },
+    { keys: "A", description: "Toggle active alerts" },
+    { keys: "I", description: "Toggle interception route" },
+    { keys: "B", description: "Toggle state boundaries" },
+    { keys: "Esc", description: "Close the hotspot panel" },
+  ],
 };
 
 const STATE_BOUNDS: Record<string, [[number, number], [number, number]]> = {
@@ -107,6 +158,11 @@ export default function MapPage() {
 
   // Interception Radar (§7.1) — the alert currently tracked on the map, if any.
   const [radarAlertId, setRadarAlertId] = useState<string | null>(null);
+
+  const [layersOn, setLayersOn] = useState<Record<LayerKey, boolean>>(readLayersOn);
+  const hudRef = useRef<MapHudHandle>(null);
+  const selection = useSelection();
+  useRegisterShortcuts(MAP_SHORTCUTS);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const adapterRef = useRef<MapAdapter | null>(null);
@@ -229,6 +285,20 @@ export default function MapPage() {
           setFilters((prev) => (prev.level === nextLevel ? prev : { ...prev, level: nextLevel }));
         });
 
+        // HUD readouts (cursor, zoom) are written straight to the DOM, never through state.
+        adapter.onPointerMove?.((lngLat) => hudRef.current?.setCursor(lngLat));
+        adapter.onViewChange?.(({ zoom }) => hudRef.current?.setZoom(zoom));
+
+        // Clicking an alert marker or a location links the selection across the app.
+        adapter.onFeatureClick(ALERTS_POINT_LAYER_ID, (feature) => {
+          const id = (feature as { properties?: { id?: unknown } } | null)?.properties?.id;
+          if (typeof id === "string") selectionStore.set({ kind: "alert", id });
+        });
+        adapter.onFeatureClick(LOCATIONS_CIRCLE_LAYER_ID, (feature) => {
+          const id = (feature as { properties?: { id?: unknown } } | null)?.properties?.id;
+          if (typeof id === "string") selectionStore.set({ kind: "location", id });
+        });
+
         // Signal that the map is ready — this re-triggers all data-push effects
         // below, ensuring data that arrived before init() resolved is not lost.
         setMapReady(true);
@@ -257,7 +327,43 @@ export default function MapPage() {
     }
     const geojson = heatCellsToPointGeoJSON(heatmapData.cells);
     adapterRef.current.setLayerData(HEATMAP_LAYER_ID, geojson);
+    // Only the hottest few cells get the animated radar marker (capped in pickHotCells).
+    adapterRef.current.setLayerData(HOT_RADAR_LAYER_ID, hotCellsToGeoJSON(heatmapData.cells));
   }, [mapReady, heatmapData]);
+
+  // Apply layer toggles to the map and remember them.
+  useEffect(() => {
+    if (!mapReady || !adapterRef.current || !adapterRef.current.isReady()) return;
+    for (const key of Object.keys(LAYER_IDS) as LayerKey[]) {
+      for (const id of LAYER_IDS[key]) adapterRef.current.setLayerVisibility(id, layersOn[key]);
+    }
+    try {
+      window.localStorage.setItem(LAYERS_STORAGE_KEY, JSON.stringify(layersOn));
+    } catch {
+      /* preference just isn't remembered */
+    }
+  }, [mapReady, layersOn]);
+
+  // Linked selection: an alert / location chosen elsewhere is highlighted and flown to.
+  useEffect(() => {
+    const adapter = adapterRef.current;
+    if (!mapReady || !adapter || !adapter.isReady()) return;
+    let coords: [number, number] | undefined;
+    if (selection?.kind === "alert") {
+      const a = (alerts ?? []).find((x) => x.id === selection.id);
+      if (a) coords = targetCoords[String(a.target.id ?? "")];
+    } else if (selection?.kind === "location") {
+      coords = targetCoords[selection.id];
+    }
+    adapter.setLayerData(SELECTION_LAYER_ID, {
+      type: "FeatureCollection",
+      features: coords
+        ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: coords } }]
+        : [],
+    });
+    if (coords) adapter.flyTo?.(coords, 10);
+    // Deliberately keyed on the selection only: data refreshes must not re-fly the camera.
+  }, [mapReady, selection?.kind, selection?.id]);
 
   // Push bank infrastructure locations to the map.
   useEffect(() => {
@@ -387,7 +493,33 @@ export default function MapPage() {
     });
   }
 
+  function toggleLayer(key: LayerKey) {
+    setLayersOn((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+  const mapKeysOn = viewMode === "map" && !webGlFailed;
+  useHotkeys("h", () => toggleLayer("heat"), { enabled: mapKeysOn });
+  useHotkeys("l", () => toggleLayer("locations"), { enabled: mapKeysOn });
+  useHotkeys("a", () => toggleLayer("alerts"), { enabled: mapKeysOn });
+  useHotkeys("i", () => toggleLayer("route"), { enabled: mapKeysOn });
+  useHotkeys("b", () => toggleLayer("boundaries"), { enabled: mapKeysOn });
+  useHotkeys("escape", () => setSelectedHotspot(null), { enabled: selectedHotspot !== null });
+
   const cells = heatmapData?.cells ?? [];
+  const layerRows: LayerRowSpec[] = [
+    {
+      key: "heat",
+      name: "Risk heat",
+      hotkey: "H",
+      count: cells.length,
+      note: heatmapData && heatmapData.suppressed_count > 0 ? `+${heatmapData.suppressed_count} hidden` : undefined,
+    },
+    { key: "locations", name: "Locations", hotkey: "L", count: locations?.length ?? 0 },
+    { key: "alerts", name: "Active alerts", hotkey: "A", count: alerts?.length ?? 0 },
+    { key: "route", name: "Interception route", hotkey: "I", count: radarAlertId ? 1 : 0 },
+    { key: "boundaries", name: "Boundaries", hotkey: "B", count: null },
+  ];
+  const layersOnCount = layerRows.filter((r) => layersOn[r.key]).length;
+  const entityCount = layerRows.reduce((n, r) => n + (layersOn[r.key] ? (r.count ?? 0) : 0), 0);
   const legend = heatmapData?.legend ?? {
     min: 0,
     max: 1,
@@ -481,6 +613,8 @@ export default function MapPage() {
               data-testid="maplibre-container"
               aria-label="MapLibre GIS Canvas"
             />
+            <LayerPanel rows={layerRows} on={layersOn} onToggle={toggleLayer} />
+            <MapHud ref={hudRef} layersOn={layersOnCount} layersTotal={layerRows.length} entities={entityCount} />
           </div>
         )}
 

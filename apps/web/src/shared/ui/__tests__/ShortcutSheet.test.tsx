@@ -1,10 +1,11 @@
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ShortcutSheet } from "../ShortcutSheet";
-import { registerShortcuts } from "../shortcutRegistry";
+import { registerShortcuts, setShortcutSheetOpen } from "../shortcutRegistry";
 
 describe("ShortcutSheet", () => {
+  beforeEach(() => setShortcutSheetOpen(false));
   afterEach(cleanup);
 
   it("opens on ? and closes on Escape", async () => {

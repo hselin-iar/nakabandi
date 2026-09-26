@@ -19,6 +19,7 @@ import { RollingCounter } from "../../shared/ui/RollingCounter";
 import { ConsequenceTally } from "../../shared/ui/ConsequenceTally";
 import { useRegisterShortcuts, type ShortcutScope } from "../../shared/ui/shortcutRegistry";
 import { useMediaQuery } from "../../shared/lib/useMediaQuery";
+import { selectionStore, usePendingAction } from "../../shared/state/selectionStore";
 import { armAudio, playTacticalPing } from "../../shared/audio/tacticalPing";
 import { setSoundEnabled, useSoundEnabled } from "../../shared/audio/soundPreference";
 import { useHoldTally } from "./holdTally";
@@ -122,6 +123,24 @@ export default function AlertsInbox() {
 
   useRegisterShortcuts(TRIAGE_SHORTCUTS);
 
+  // Share the keyboard-active alert with the rest of the app (the map flies to it; the
+  // command palette offers actions on it).
+  useEffect(() => {
+    if (activeAlert) selectionStore.set({ kind: "alert", id: activeAlert.id });
+  }, [activeAlert]);
+
+  // The command palette can ask for a hold/dispatch dialog on the selected alert.
+  const pendingAction = usePendingAction();
+  useEffect(() => {
+    if (!pendingAction) return;
+    const sel = selectionStore.get();
+    if (sel?.kind !== "alert") return;
+    const p = selectionStore.consumePendingAction();
+    if (!p) return;
+    setSelectedAlertId(sel.id);
+    setRequestedAction({ type: p.type, nonce: p.nonce });
+  }, [pendingAction]);
+
   // Selected alert ID for drawer (defaults to URL param if provided)
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(urlAlertId ?? null);
 
@@ -157,6 +176,7 @@ export default function AlertsInbox() {
   );
 
   function handleRowClick(alert: AlertSummary) {
+    selectionStore.set({ kind: "alert", id: alert.id });
     setSelectedAlertId(alert.id);
     navigate(`/alerts/${alert.id}`);
   }

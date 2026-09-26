@@ -40,3 +40,5 @@ export { CountdownRing } from "./CountdownRing";
 export { HoldToActuateButton } from "./HoldToActuateButton";
 export { RollingCounter } from "./RollingCounter";
 export { ConsequenceTally } from "./ConsequenceTally";
+export { CommandPalette } from "./CommandPalette";
+export type { PaletteGroup, PaletteItem } from "./CommandPalette";

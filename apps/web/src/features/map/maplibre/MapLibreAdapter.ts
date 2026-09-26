@@ -3,7 +3,7 @@
  *
  * CRITICAL ARCHITECTURAL INVARIANT (DOC 3 M3, DOC 4 Step C5):
  *   This is the ONLY file in the entire repository that imports "maplibre-gl".
- *   Basemap: OpenFreeMap Positron — clean light street map, no API key, unlimited.
+ *   Basemap: OpenFreeMap Dark — near-black vector map, no API key.
  *   Data overlays: smooth GPU heatmap + alert markers + boundary outlines.
  *   If WebGL is unavailable, initialization fails gracefully to TableViewFallback.
  */
@@ -26,6 +26,12 @@ import {
   ALERTS_POINT_LAYER_ID,
 } from "../layers/alertsLayer";
 import { RADAR_SOURCE_ID, RADAR_LINE_LAYER_ID } from "../layers/radarLayer";
+import {
+  HOT_RADAR_SOURCE_ID,
+  HOT_RADAR_LAYER_ID,
+  HOT_RADAR_IMAGE_ID,
+  createPulsingRadarImage,
+} from "../layers/radarIconLayer";
 
 // ---------------------------------------------------------------------------
 // MapLibre GL v6 + Vite worker fix
@@ -43,6 +49,10 @@ export const BOUNDARIES_LINE_LAYER_ID = "nk-boundaries-line";
 // Re-export heatmap layer ID so MapPage can call setLayerData with it
 export { HEATMAP_LAYER_ID };
 
+/** The selected entity's highlight ring (linked selection). */
+export const SELECTION_SOURCE_ID = "nk-selection-source";
+export const SELECTION_LAYER_ID = "nk-selection-ring";
+
 /**
  * Basemap: OpenFreeMap Dark
  * Near-black vector basemap matching the tactical theme — no API key required.
@@ -57,6 +67,9 @@ export class MapLibreAdapter implements MapAdapter {
   private isLoaded = false;
   private clickHandlers: Map<string, (feature: unknown) => void> = new Map();
   private pendingLayerData: Map<string, GeoJSON.FeatureCollection | GeoJSON.Feature> = new Map();
+  /** How many hot-cell radar markers currently exist, and whether their layer is shown. */
+  private hotRadarCount = 0;
+  private hotRadarVisible = true;
   private radarAnimationHandle: ReturnType<typeof setInterval> | null = null;
   private radarDashOffset = 0;
 
@@ -210,13 +223,13 @@ export class MapLibreAdapter implements MapAdapter {
           // Classic warm density color ramp (blue → yellow → orange → red)
           "heatmap-color": [
             "interpolate", ["linear"], ["heatmap-density"],
-            0,    "rgba(33,102,172,0)",
-            0.1,  "rgba(103,169,207,0.5)",
-            0.3,  "rgba(209,229,240,0.75)",
-            0.5,  "rgba(253,219,199,0.85)",
-            0.7,  "rgba(239,138,98,0.9)",
-            0.85, "rgba(215,48,31,0.95)",
-            1,    "rgb(178,24,43)",
+            0,    "rgba(30,64,175,0)",
+            0.1,  "rgba(37,99,235,0.35)",
+            0.3,  "rgba(245,158,11,0.55)",
+            0.5,  "rgba(249,115,22,0.75)",
+            0.7,  "rgba(239,68,68,0.85)",
+            0.85, "rgba(220,38,38,0.92)",
+            1,    "rgb(254,202,202)",
           ],
           // Large radius at state overview (zoom 5–6), tighter at street level
           "heatmap-radius": [
@@ -252,7 +265,7 @@ export class MapLibreAdapter implements MapAdapter {
             1,    "#b91c1c",
           ],
           "circle-stroke-width": 1.5,
-          "circle-stroke-color": "#ffffff",
+          "circle-stroke-color": "#090D12",
           "circle-opacity": 0.9,
         },
       });
@@ -323,6 +336,50 @@ export class MapLibreAdapter implements MapAdapter {
       });
 
       this.bindLayerClick(ALERTS_POINT_LAYER_ID);
+    }
+
+    // -----------------------------------------------------------------------
+    // 4b. Pulsing threat radar on the top few hottest cells (canvas-drawn icon).
+    //     Capped upstream (pickHotCells); the image is idle unless it has something to show.
+    // -----------------------------------------------------------------------
+    if (!this.map.getSource(HOT_RADAR_SOURCE_ID)) {
+      this.map.addSource(HOT_RADAR_SOURCE_ID, { type: "geojson", data: emptyPoints });
+      this.map.addImage(
+        HOT_RADAR_IMAGE_ID,
+        createPulsingRadarImage(
+          () => this.hotRadarCount > 0 && this.hotRadarVisible,
+          () => this.map?.triggerRepaint(),
+        ) as unknown as maplibregl.StyleImageInterface,
+        { pixelRatio: 2 },
+      );
+      this.map.addLayer({
+        id: HOT_RADAR_LAYER_ID,
+        type: "symbol",
+        source: HOT_RADAR_SOURCE_ID,
+        layout: {
+          "icon-image": HOT_RADAR_IMAGE_ID,
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+        },
+      });
+    }
+
+    // -----------------------------------------------------------------------
+    // 4c. Selection highlight ring (linked selection from alerts / palette / graph)
+    // -----------------------------------------------------------------------
+    if (!this.map.getSource(SELECTION_SOURCE_ID)) {
+      this.map.addSource(SELECTION_SOURCE_ID, { type: "geojson", data: emptyPoints });
+      this.map.addLayer({
+        id: SELECTION_LAYER_ID,
+        type: "circle",
+        source: SELECTION_SOURCE_ID,
+        paint: {
+          "circle-radius": 22,
+          "circle-color": "rgba(56, 189, 248, 0.08)",
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#38BDF8",
+        },
+      });
     }
 
     // -----------------------------------------------------------------------
@@ -453,6 +510,13 @@ export class MapLibreAdapter implements MapAdapter {
       sourceId = BOUNDARIES_SOURCE_ID;
     } else if (layerId === RADAR_LINE_LAYER_ID || layerId === "radar") {
       sourceId = RADAR_SOURCE_ID;
+    } else if (layerId === HOT_RADAR_LAYER_ID) {
+      sourceId = HOT_RADAR_SOURCE_ID;
+      const features = (data as GeoJSON.FeatureCollection).features ?? [];
+      this.hotRadarCount = features.length;
+      this.map.triggerRepaint(); // wake the icon if it just gained something to draw
+    } else if (layerId === SELECTION_LAYER_ID) {
+      sourceId = SELECTION_SOURCE_ID;
     }
 
     const source = this.map.getSource(sourceId) as GeoJSONSource | undefined;
@@ -464,6 +528,10 @@ export class MapLibreAdapter implements MapAdapter {
   public setLayerVisibility(layerId: string, visible: boolean): void {
     if (!this.map || !this.isLoaded) return;
     const visibility = visible ? "visible" : "none";
+    if (layerId === HOT_RADAR_LAYER_ID) {
+      this.hotRadarVisible = visible;
+      if (visible) this.map.triggerRepaint();
+    }
     if (this.map.getLayer(layerId)) {
       this.map.setLayoutProperty(layerId, "visibility", visibility);
     }
@@ -504,6 +572,26 @@ export class MapLibreAdapter implements MapAdapter {
     this.map.on("zoomend", () => {
       if (this.map) handler(this.map.getZoom());
     });
+  }
+
+  public onPointerMove(handler: (lngLat: [number, number] | null) => void): void {
+    if (!this.map) return;
+    this.map.on("mousemove", (e) => handler([e.lngLat.lng, e.lngLat.lat]));
+    this.map.on("mouseout", () => handler(null));
+  }
+
+  public onViewChange(handler: (view: { zoom: number }) => void): void {
+    if (!this.map) return;
+    const emit = () => {
+      if (this.map) handler({ zoom: this.map.getZoom() });
+    };
+    this.map.on("move", emit);
+    emit();
+  }
+
+  public flyTo(lngLat: [number, number], zoom?: number): void {
+    if (!this.map || !this.isLoaded) return;
+    this.map.flyTo({ center: lngLat, zoom: zoom ?? Math.max(this.map.getZoom(), 9), duration: 900 });
   }
 
   public setZoom(zoom: number): void {

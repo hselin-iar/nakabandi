@@ -52,3 +52,29 @@ export function useRegisterShortcuts(scope: ShortcutScope): void {
 export function useActiveShortcuts(): readonly ShortcutScope[] {
   return useSyncExternalStore(subscribe, () => scopes);
 }
+
+// ---------------------------------------------------------------------------
+// Sheet open state (so the command palette can open the cheat-sheet too)
+// ---------------------------------------------------------------------------
+
+let sheetOpen = false;
+const sheetListeners = new Set<() => void>();
+
+export function setShortcutSheetOpen(open: boolean): void {
+  if (sheetOpen === open) return;
+  sheetOpen = open;
+  for (const l of sheetListeners) l();
+}
+
+export function useShortcutSheetOpen(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      sheetListeners.add(cb);
+      return () => {
+        sheetListeners.delete(cb);
+      };
+    },
+    () => sheetOpen,
+    () => false,
+  );
+}
