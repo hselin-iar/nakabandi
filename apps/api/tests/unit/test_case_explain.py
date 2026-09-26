@@ -88,6 +88,13 @@ def test_guard_rejects_guilt_language_and_empty_text() -> None:
     assert not violates_policy(GOOD)
 
 
+def test_guard_rejects_leaked_reasoning_and_overlong_text() -> None:
+    leak = "We need to produce 3 short paragraphs, max 150 words total, using only the JSON facts."
+    assert violates_policy(leak)
+    assert violates_policy("Okay, the user wants a summary of this network of accounts and banks.")
+    assert violates_policy("word " * 300)
+
+
 def test_not_configured_is_unavailable_without_a_call() -> None:
     result = ExplainCase(None).run(_case(), _graph())
     assert (result.available, result.reason) == (False, "not_configured")

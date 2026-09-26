@@ -43,10 +43,22 @@ _FORBIDDEN = re.compile(
 )
 
 
+# A reasoning model that leaks its planning ("We need to produce 3 paragraphs...") instead of the
+# answer: never show that to an officer.
+_THINKING_LEAK = re.compile(
+    r"^\s*(okay|we need|let'?s|first,? (i|we)|the user|i need to|hmm|alright|so,? (i|we)|note:)",
+    re.IGNORECASE,
+)
+MAX_WORDS = 220
+
+
 def violates_policy(text: str) -> bool:
-    """True when the model text asserts guilt or legal conclusions, or is unusably empty/long."""
+    """True when the model text asserts guilt or legal conclusions, leaks its reasoning, or is
+    unusably empty or long."""
     stripped = text.strip()
-    if len(stripped) < 40 or len(stripped) > 2000:
+    if len(stripped) < 40 or len(stripped) > 2000 or len(stripped.split()) > MAX_WORDS:
+        return True
+    if _THINKING_LEAK.search(stripped) or "</think>" in stripped.lower():
         return True
     return _FORBIDDEN.search(stripped) is not None
 
