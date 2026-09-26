@@ -74,20 +74,43 @@ export function useAlerts(filters: AlertFilters = {}) {
 /**
  * useAlert — queries single alert detail by ID.
  */
+/** The API's error envelope is { error: { code, message } }; surface its user-facing text. */
+export function errorMessage(error: unknown, fallback: string): string {
+  const msg = (error as { error?: { message?: unknown } } | null)?.error?.message;
+  return typeof msg === "string" && msg ? msg : fallback;
+}
+
+export async function fetchAlertDetail(alertId: string): Promise<AlertDetail> {
+  const { data, error } = await apiClient.GET("/alerts/{alert_id}", {
+    params: { path: { alert_id: alertId } },
+  });
+  if (error) throw new Error("Failed to load alert");
+  return data;
+}
+
 export function useAlert(alertId: string | undefined | null) {
   return useQuery<AlertDetail | null>({
     queryKey: alertId ? streamKeys.alert(alertId) : ["alerts", "null"],
     enabled: Boolean(alertId),
-    queryFn: async () => {
-      if (!alertId) return null;
-      const { data, error } = await apiClient.GET("/alerts/{alert_id}", {
-        params: { path: { alert_id: alertId } },
-      });
-      if (error) throw new Error("Failed to load alert");
-      return data;
-    },
+    queryFn: async () => (alertId ? fetchAlertDetail(alertId) : null),
     staleTime: 5_000,
   });
+}
+
+/** Status an alert moves to once this action type is recorded (mirrors RecordAction on the server). */
+function optimisticStatus(type: string): AlertStatus {
+  return type === "acknowledge" ? "acknowledged" : "actioned";
+}
+
+/** Patch one alert's status inside any cached list ([]) or detail ({id}) under the alerts key. */
+function patchAlertStatus(data: unknown, alertId: string, status: AlertStatus): unknown {
+  if (Array.isArray(data)) {
+    return data.map((a) => (a && a.id === alertId ? { ...a, status } : a));
+  }
+  if (data && typeof data === "object" && (data as { id?: string }).id === alertId) {
+    return { ...(data as object), status };
+  }
+  return data;
 }
 
 /**
@@ -96,19 +119,63 @@ export function useAlert(alertId: string | undefined | null) {
 export function useAlertAction() {
   const qc = useQueryClient();
 
-  return useMutation<ActionModel, Error, { alertId: string; action: ActionIn }>({
+  return useMutation<
+    ActionModel,
+    Error,
+    { alertId: string; action: ActionIn },
+    { snapshot: [readonly unknown[], unknown][] }
+  >({
+    // Optimistic: flip the alert's status in every cached list and detail at once, so the
+    // queue reacts the instant the operator acts. Rolled back on error; the server's
+    // answer (via invalidation below and the SSE alert.updated event) is what finally stands.
+    onMutate: async ({ alertId, action }) => {
+      await qc.cancelQueries({ queryKey: streamKeys.alerts() });
+      const snapshot = qc.getQueriesData({ queryKey: streamKeys.alerts() }) as [
+        readonly unknown[],
+        unknown,
+      ][];
+      const status = optimisticStatus(action.type);
+      qc.setQueriesData({ queryKey: streamKeys.alerts() }, (old: unknown) =>
+        patchAlertStatus(old, alertId, status),
+      );
+      return { snapshot };
+    },
+    onError: (_err, _vars, ctx) => {
+      for (const [key, data] of ctx?.snapshot ?? []) qc.setQueryData(key, data);
+    },
     mutationFn: async ({ alertId, action }) => {
       const { data, error } = await apiClient.POST("/alerts/{alert_id}/actions", {
         params: { path: { alert_id: alertId } },
         body: action,
       });
-      if (error) throw new Error("Failed to record action");
+      if (error) throw new Error(errorMessage(error, "Failed to record action"));
       return data;
     },
-    onSuccess: (_, { alertId }) => {
+    onSettled: (_data, _err, { alertId }) => {
       void qc.invalidateQueries({ queryKey: streamKeys.alerts() });
       void qc.invalidateQueries({ queryKey: streamKeys.alert(alertId) });
     },
+  });
+}
+
+/**
+ * useAlertHoldAccounts — the accounts traced in the alert's cluster, i.e. the candidates a
+ * lien can be requested against. request_hold needs a concrete account_id (the server
+ * re-validates that it was traced from this alert's complaint), so the operator picks one.
+ */
+export function useAlertHoldAccounts(clusterId: string | null | undefined, enabled: boolean) {
+  return useQuery<{ id: string; label: string }[]>({
+    queryKey: ["clusters", "hold-accounts", clusterId],
+    enabled: enabled && Boolean(clusterId),
+    queryFn: async () => {
+      if (!clusterId) return [];
+      const { data, error } = await apiClient.GET("/clusters/{cluster_id}", {
+        params: { path: { cluster_id: clusterId } },
+      });
+      if (error) throw new Error(errorMessage(error, "Failed to load cluster accounts"));
+      return (data?.nodes ?? []).map((n) => ({ id: n.id, label: `${n.masked_ref} · ${n.bank}` }));
+    },
+    staleTime: 30_000,
   });
 }
 

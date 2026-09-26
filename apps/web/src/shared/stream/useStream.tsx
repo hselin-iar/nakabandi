@@ -20,6 +20,9 @@ import React, {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { streamKeys, SSE_EVENTS } from "./streamKeys";
+import { apiClient } from "../api/client";
+import { armAudio, playTacticalPing } from "../audio/tacticalPing";
+import { isSoundEnabled } from "../audio/soundPreference";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -70,6 +73,8 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
   const backoffRef = useRef(1_000);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
+  /** Alerts already pinged, so a re-delivered alert.created never sounds twice. */
+  const pingedRef = useRef<Set<string>>(new Set());
 
   const clearInactivity = useCallback(() => {
     if (inactivityTimerRef.current) {
@@ -111,6 +116,35 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
     }, INACTIVITY_MS);
   }, [clearInactivity, startPolling]);
 
+  /**
+   * alert.created carries only {alert_id, version}, so severity is unknown until the alert
+   * is read. Fetch it (into the same cache key the detail view uses) and sound the cue for
+   * CRITICAL alerts only, to avoid ping fatigue.
+   */
+  const pingIfCritical = useCallback(
+    (alertId: string) => {
+      if (!isSoundEnabled() || pingedRef.current.has(alertId)) return;
+      pingedRef.current.add(alertId);
+      void qc
+        .fetchQuery({
+          queryKey: streamKeys.alert(alertId),
+          queryFn: async () => {
+            const { data, error } = await apiClient.GET("/alerts/{alert_id}", {
+              params: { path: { alert_id: alertId } },
+            });
+            if (error) throw new Error("Failed to load alert");
+            return data;
+          },
+          staleTime: 0,
+        })
+        .then((alert) => {
+          if (alert?.severity === "CRITICAL") playTacticalPing("CRITICAL");
+        })
+        .catch(() => undefined);
+    },
+    [qc],
+  );
+
   const handleEvent = useCallback(
     (eventType: string, data: string) => {
       resetInactivityTimer();
@@ -126,6 +160,7 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
               void qc.invalidateQueries({
                 queryKey: streamKeys.alert(payload.alert_id),
               });
+              if (eventType === SSE_EVENTS.ALERT_CREATED) pingIfCritical(payload.alert_id);
             }
             void qc.invalidateQueries({ queryKey: streamKeys.alerts() });
             break;
@@ -153,7 +188,7 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
         // Malformed event data — ignore.
       }
     },
-    [qc, resetInactivityTimer, clearPoll, invalidateHeat],
+    [qc, resetInactivityTimer, clearPoll, invalidateHeat, pingIfCritical],
   );
 
   const connect = useCallback(() => {
@@ -208,6 +243,21 @@ export function StreamProvider({ children }: { children: React.ReactNode }) {
     resetInactivityTimer,
     startPolling,
   ]);
+
+  // Browsers block audio until a user gesture: arm it on the first click or keypress.
+  useEffect(() => {
+    const arm = () => {
+      armAudio();
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("keydown", arm);
+    };
+    window.addEventListener("pointerdown", arm);
+    window.addEventListener("keydown", arm);
+    return () => {
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("keydown", arm);
+    };
+  }, []);
 
   useEffect(() => {
     isMountedRef.current = true;

@@ -1479,13 +1479,15 @@ body {
 .nk-inbox-subtitle {
   font-size: var(--nk-size-14);
   color: var(--nk-text-secondary);
-  max-width: 48rem;
+  max-width: 34rem;
 }
 
 .nk-inbox-top-actions {
   display: flex;
   align-items: center;
-  gap: var(--nk-space-2);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--nk-space-3);
 }
 
 .nk-inbox-review-container {
@@ -1555,7 +1557,16 @@ body {
   display: flex;
   align-items: center;
   gap: var(--nk-space-2);
+  min-width: 0;
 }
+/* Fixed-height rows: the facility name truncates instead of wrapping to four lines. */
+.nk-alert-target-cell > :first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nk-alert-target-cell > :not(:first-child) { flex-shrink: 0; }
 
 .nk-inbox-loading {
   padding: var(--nk-space-12);
@@ -3589,8 +3600,8 @@ body {
 
 /* Countdown urgency gradient: low → normal, warn → amber, critical → red */
 .nk-countdown--urgent {
-  color: #ef4444;
-  font-weight: 700;
+  color: var(--nk-severity-critical);
+  font-weight: var(--nk-weight-strong);
   animation: nk-tick 1s step-end infinite;
 }
 
@@ -3600,8 +3611,8 @@ body {
 }
 
 .nk-countdown--warn {
-  color: #f59e0b;
-  font-weight: 600;
+  color: var(--nk-severity-medium);
+  font-weight: var(--nk-weight-strong);
 }
 
 /* Attention-budget strip — the alert-budget/triage-tier split, made visible on purpose */
@@ -3657,11 +3668,12 @@ body {
   line-height: 1;
 }
 
-.nk-kpi-card__value--critical { color: #ef4444; }
-.nk-kpi-card__value--high     { color: #f97316; }
-.nk-kpi-card__value--medium   { color: #f59e0b; }
-.nk-kpi-card__value--good     { color: #22c55e; }
-.nk-kpi-card__value--brand    { color: var(--nk-brand-primary); }
+/* Colour only where it means severity (Golden Color Rule); "good"/"brand" stay neutral. */
+.nk-kpi-card__value--critical { color: var(--nk-severity-critical); }
+.nk-kpi-card__value--high     { color: var(--nk-severity-high); }
+.nk-kpi-card__value--medium   { color: var(--nk-severity-medium); }
+.nk-kpi-card__value--good     { color: var(--nk-text-primary); }
+.nk-kpi-card__value--brand    { color: var(--nk-text-primary); }
 
 .nk-kpi-card__sub {
   font-size: var(--nk-size-12);
@@ -4222,3 +4234,180 @@ body {
   font-size: var(--nk-size-14);
   color: var(--nk-text-secondary);
 }
+
+
+/* -------------------------------------------------------------------------
+   Phase 2 — Triage cockpit: countdown ring, hold-to-actuate, tally, virtual
+   table, in-place detail panel, new-alerts pill.
+   ------------------------------------------------------------------------- */
+
+.nk-ring {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nk-ring__track { stroke: var(--nk-border-subtle); }
+.nk-ring__arc {
+  stroke: var(--nk-severity-low);
+  transition: stroke-dashoffset 75ms linear, stroke 200ms;
+}
+.nk-ring--warn .nk-ring__arc { stroke: var(--nk-severity-medium); }
+.nk-ring--urgent .nk-ring__arc,
+.nk-ring--expired .nk-ring__arc { stroke: var(--nk-severity-critical); }
+
+.nk-ring__label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5rem;
+  font-weight: var(--nk-weight-ui);
+  color: var(--nk-text-secondary);
+  letter-spacing: -0.04em;
+  text-align: center;
+  line-height: 1;
+}
+.nk-ring--idle .nk-ring__label { color: var(--nk-text-tertiary); }
+.nk-ring--expired .nk-ring__label { color: var(--nk-text-tertiary); }
+
+/* Hold-to-actuate */
+.nk-hold {
+  position: relative;
+  overflow: hidden;
+  min-width: 11rem;
+  padding: var(--nk-space-2) var(--nk-space-4);
+  font-family: var(--nk-font-sans);
+  font-size: var(--nk-size-14);
+  font-weight: var(--nk-weight-strong);
+  color: var(--nk-text-primary);
+  background: var(--nk-surface-elevated);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-md);
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+}
+.nk-hold--danger { border-color: var(--nk-severity-critical); }
+.nk-hold--primary { border-color: var(--nk-accent); }
+.nk-hold:disabled { opacity: 0.5; cursor: not-allowed; }
+.nk-hold__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--nk-severity-critical);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.nk-hold--primary .nk-hold__fill { background: var(--nk-accent); }
+.nk-hold__label { position: relative; }
+
+/* Consequence tally */
+.nk-tally {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--nk-space-2);
+  padding: var(--nk-space-2) var(--nk-space-4);
+  background: var(--nk-surface-raised);
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-lg);
+}
+.nk-tally__label {
+  font-size: var(--nk-size-10);
+  font-weight: var(--nk-weight-strong);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nk-text-tertiary);
+}
+.nk-tally__value {
+  font-size: var(--nk-size-20);
+  font-weight: var(--nk-weight-strong);
+  color: var(--nk-text-primary);
+}
+.nk-tally__meta { font-size: var(--nk-size-11); color: var(--nk-text-secondary); }
+
+/* Virtualised table: fixed-height scroll container, fixed-height rows */
+.nk-table-wrapper--virtual {
+  overflow: auto;
+  contain: strict;
+  border: 1px solid var(--nk-border-subtle);
+  border-radius: var(--nk-radius-lg);
+}
+.nk-table-wrapper--virtual .nk-table__th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--nk-surface-raised);
+}
+.nk-table-wrapper--virtual .nk-table { table-layout: fixed; }
+.nk-table__row--virtual > td {
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nk-table__row--virtual .nk-alert-id-cell > * { overflow: hidden; text-overflow: ellipsis; }
+.nk-table__row--virtual { height: var(--nk-row-h, 64px); }
+.nk-table__row--active {
+  outline: 1px solid var(--nk-accent);
+  outline-offset: -1px;
+  background: rgba(56, 189, 248, 0.06);
+}
+.nk-table__spacer > td { padding: 0; border: 0; }
+
+/* Sticky "new alerts" pill */
+.nk-new-pill {
+  position: sticky;
+  top: var(--nk-space-2);
+  z-index: 5;
+  display: block;
+  margin: 0 auto var(--nk-space-2);
+  padding: var(--nk-space-1) var(--nk-space-4);
+  font-size: var(--nk-size-12);
+  font-weight: var(--nk-weight-strong);
+  color: var(--nk-text-inverse);
+  background: var(--nk-text-primary);
+  border: 0;
+  border-radius: var(--nk-radius-pill);
+  cursor: pointer;
+}
+
+/* Two-pane triage layout (>= 1280px): list left, detail panel right */
+.nk-triage-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 26rem);
+  gap: var(--nk-space-4);
+  align-items: start;
+}
+.nk-alert-panel {
+  max-height: calc(100dvh - 8rem);
+  overflow-y: auto;
+  position: sticky;
+  top: var(--nk-space-4);
+  background: var(--nk-surface-elevated);
+  border: 1px solid var(--nk-border-strong);
+  border-radius: var(--nk-radius-xl);
+  padding: var(--nk-space-4);
+}
+.nk-alert-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nk-space-3);
+  margin-bottom: var(--nk-space-3);
+}
+.nk-alert-panel__title { font-size: var(--nk-size-16); font-weight: var(--nk-weight-strong); }
+
+.nk-inbox-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--nk-space-3);
+  white-space: nowrap;
+}
+.nk-inbox-tools .nk-kbd { margin-left: var(--nk-space-2); }
+
+/* With the detail pane open the list is narrow: keep the facility name, drop its tags. */
+.nk-triage-split .nk-alert-target-cell > :not(:first-child) { display: none; }

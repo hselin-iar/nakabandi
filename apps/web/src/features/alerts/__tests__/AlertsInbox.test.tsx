@@ -240,4 +240,41 @@ describe("AlertsInbox", () => {
     expect(screen.getByLabelText("Rapid triage queue")).toBeTruthy();
     expect(screen.getByText(/Alert 1 of/i)).toBeTruthy();
   });
+
+  it("j / k move the active row, and typing in the search box does not", async () => {
+    mockGet();
+    renderWithProviders(<AlertsInbox />);
+    await screen.findByText("ALT-2026-001");
+    const user = userEvent.setup();
+    const activeRows = () => document.querySelectorAll("tr[aria-selected='true']");
+
+    expect(activeRows()).toHaveLength(0);
+    await user.keyboard("j");
+    expect(activeRows()).toHaveLength(1);
+    expect(activeRows()[0]!.getAttribute("data-row-key")).toBe("ALT-2026-001");
+    await user.keyboard("j");
+    expect(activeRows()[0]!.getAttribute("data-row-key")).toBe("ALT-2026-002");
+    await user.keyboard("k");
+    expect(activeRows()[0]!.getAttribute("data-row-key")).toBe("ALT-2026-001");
+
+    // Typing hotkey letters into a form field must not trigger them (d would open a dispatch).
+    const search = screen.getByLabelText("Search alerts") as HTMLInputElement;
+    await user.click(search);
+    await user.keyboard("d");
+    expect(search.value).toBe("d");
+    expect(screen.queryByText("Response Actions")).toBeNull();
+  });
+
+  it("sorts by severity when the column header is clicked (sorting is functional)", async () => {
+    mockGet();
+    renderWithProviders(<AlertsInbox />);
+    await screen.findByText("ALT-2026-001");
+    const order = () =>
+      [...document.querySelectorAll("tbody tr[data-row-key]")].map((r) => r.getAttribute("data-row-key"));
+
+    fireEvent.click(screen.getByRole("columnheader", { name: /Severity/ })); // ascending: LOW first
+    expect(order()[0]).toBe("ALT-2026-004");
+    fireEvent.click(screen.getByRole("columnheader", { name: /Severity/ })); // descending: CRITICAL first
+    expect(order()[0]).toBe("ALT-2026-001");
+  });
 });

@@ -6,6 +6,7 @@
  */
 
 import React, { useState } from "react";
+import { toast } from "sonner";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import { can } from "../../shared/lib/permissions";
 import { useAlertOutcome } from "./api/useAlerts";
@@ -43,14 +44,16 @@ export function OutcomeButtons({
 
   function handleConfirm() {
     if (!selectedVerdict) return;
-    outcomeMutation.mutate(
-      { alertId, outcome: { result: selectedVerdict, reason: notes || undefined } },
-      {
-        onSuccess: () => {
-          setShowConfirm(false);
-        },
-      },
-    );
+    const request = outcomeMutation.mutateAsync({
+      alertId,
+      outcome: { result: selectedVerdict, reason: notes || undefined },
+    });
+    setShowConfirm(false);
+    toast.promise(request, {
+      loading: "Recording outcome…",
+      success: `Outcome recorded: ${selectedVerdict.toUpperCase()}`,
+      error: (err: unknown) => (err instanceof Error ? err.message : "Outcome could not be recorded"),
+    });
   }
 
   return (

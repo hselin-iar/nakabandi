@@ -6,8 +6,10 @@
  * and reconciliation outcome marking.
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Drawer } from "../../shared/ui/Drawer";
+import { HoldToActuateButton } from "../../shared/ui/HoldToActuateButton";
 import { SeverityBadge, StatusBadge, LadderBadge } from "../../shared/ui/Badge";
 import { ConfidenceBar } from "../../shared/ui/ConfidenceBar";
 import { Countdown } from "../../shared/ui/Countdown";
@@ -24,33 +26,73 @@ import { ProportionalityStrip } from "./ProportionalityStrip";
 import { TimingDecayCurve } from "./TimingDecayCurve";
 import { EvidencePackPanel } from "./EvidencePackPanel";
 import { DeliveryLog } from "./DeliveryLog";
-import { useAlert, useAlertAction } from "./api/useAlerts";
-import { formatSimTime, humanizeStatus } from "../../shared/lib/format";
+import { useAlert, useAlertAction, useAlertHoldAccounts } from "./api/useAlerts";
+import { holdTally } from "./holdTally";
+import { formatInr, formatSimTime, humanizeStatus } from "../../shared/lib/format";
 import type { ActionType, AlertStatus, LadderLevel, Severity } from "../../shared/api/enums.ts";
 
 interface AlertDetailProps {
   alertId: string | null;
   onClose: () => void;
+  /** "drawer" (default): modal slide-over. "panel": inline pane beside the queue (wide screens). */
+  variant?: "drawer" | "panel";
+  /** Ask the detail to open an action dialog (e.g. from the f / d hotkeys). Fires once per nonce. */
+  requestedAction?: { type: ActionType; nonce: number } | null;
 }
 
-export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
+/** Actions that get the press-and-hold confirmation instead of a click. */
+const HOLD_ACTIONS: readonly ActionType[] = ["request_hold", "dispatch"];
+
+export function AlertDetail({ alertId, onClose, variant = "drawer", requestedAction = null }: AlertDetailProps) {
   const { data: alert, isLoading } = useAlert(alertId);
   const actionMutation = useAlertAction();
 
   // Action dialog states
   const [activeActionModal, setActiveActionModal] = useState<ActionType | null>(null);
-  const [holdAmount, setHoldAmount] = useState("50000");
+  const [holdAmount, setHoldAmount] = useState("");
+  const [holdAccountId, setHoldAccountId] = useState("");
   const [actionReason, setActionReason] = useState("");
   const [unitId, setUnitId] = useState("UNIT-CRIME-04");
+
+  const clusterId = alert?.forecast?.cluster_id ?? null;
+  const { data: holdAccounts = [] } = useAlertHoldAccounts(clusterId, activeActionModal === "request_hold");
+
+  // Default the lien amount to the proportionality-checked proposal once it is known.
+  const proposedPaise = alert?.interception.at(-1)?.proportionality?.proposed_paise ?? null;
+  useEffect(() => {
+    if (activeActionModal === "request_hold" && holdAmount === "" && proposedPaise) {
+      setHoldAmount(String(Math.round(proposedPaise / 100)));
+    }
+  }, [activeActionModal, holdAmount, proposedPaise]);
+  useEffect(() => {
+    if (activeActionModal === "request_hold" && !holdAccountId && holdAccounts.length > 0) {
+      setHoldAccountId(holdAccounts[0]!.id);
+    }
+  }, [activeActionModal, holdAccountId, holdAccounts]);
+
+  // Hotkeys in the inbox (f / d) ask for a dialog; only open what the server allows.
+  const requestedNonce = requestedAction?.nonce;
+  useEffect(() => {
+    if (!requestedAction || !alert) return;
+    if (alert.allowed_actions.includes(requestedAction.type) && HOLD_ACTIONS.includes(requestedAction.type)) {
+      setActiveActionModal(requestedAction.type);
+    }
+    // Fires once per nonce, once the alert has loaded; deliberately not keyed on `alert` itself.
+  }, [requestedNonce, alert?.id]);
 
   if (!alertId) return null;
 
   if (isLoading || !alert) {
-    return (
+    const loading = (
+      <div className="nk-drawer-loading" aria-live="polite">
+        Loading alert details…
+      </div>
+    );
+    return variant === "panel" ? (
+      <aside className="nk-alert-panel">{loading}</aside>
+    ) : (
       <Drawer open={Boolean(alertId)} onClose={onClose} title="Alert Detail" width="lg">
-        <div className="nk-drawer-loading" aria-live="polite">
-          Loading alert details…
-        </div>
+        {loading}
       </Drawer>
     );
   }
@@ -70,32 +112,76 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
 
   const targetName = String(alert.target.name ?? alert.target.id ?? "Target");
 
+  const LABEL: Record<ActionType, string> = {
+    acknowledge: "Acknowledge",
+    request_hold: "Hold request",
+    notify_station: "Station notification",
+    dispatch: "Dispatch",
+    override: "Override",
+  };
+
   function handleActionSubmit(type: ActionType) {
     if (!alert) return;
 
     const params: Record<string, unknown> = {};
+    let holdToken: string | null = null;
     if (type === "request_hold") {
-      params.lien_amount_paise = parseInt(holdAmount, 10) * 100;
+      const proposed = Math.round(Number(holdAmount) * 100);
+      if (!holdAccountId || !Number.isFinite(proposed) || proposed <= 0) {
+        toast.error("Choose an account and a lien amount above ₹0.");
+        return;
+      }
+      params.account_id = holdAccountId;
+      params.proposed_paise = proposed;
+      // The tally ticks the instant the hold actuates (optimistic), then reconciles to the bank.
+      holdToken = holdTally.begin(alert.id, proposed);
     } else if (type === "dispatch") {
       params.unit_id = unitId;
     }
 
-    actionMutation.mutate(
-      {
-        alertId: alert.id,
-        action: {
-          type,
-          reason: actionReason || undefined,
-          params,
-        },
+    const reason = actionReason || undefined;
+    const request = actionMutation.mutateAsync({ alertId: alert.id, action: { type, reason, params } });
+    setActiveActionModal(null);
+    setActionReason("");
+
+    const label = LABEL[type];
+    const settle = request.then(
+      (action) => {
+        if (holdToken) holdTally.confirm(holdToken, action.id);
+        return action;
       },
-      {
-        onSuccess: () => {
-          setActiveActionModal(null);
-          setActionReason("");
-        },
+      (err: unknown) => {
+        if (holdToken) holdTally.rollback(holdToken);
+        throw err;
       },
     );
+
+    if (type === "override") {
+      // An override supersedes the platform's own recommendation, so its confirmation is
+      // explicit: no swipe-away, no timeout, dismissed only by the operator's own click.
+      const id = toast.loading("Recording override…");
+      settle.then(
+        () =>
+          toast.success("Override recorded in the audit log", {
+            id,
+            duration: Infinity,
+            dismissible: false,
+            action: { label: "Acknowledge", onClick: () => undefined },
+          }),
+        (err: unknown) =>
+          toast.error(err instanceof Error ? err.message : "Override failed", { id, duration: 8000, dismissible: true }),
+      );
+      return;
+    }
+
+    toast.promise(settle, {
+      loading: `${label}…`,
+      success: () =>
+        type === "request_hold"
+          ? `Hold requested — waiting for the bank to confirm (${formatInr(Number(params.proposed_paise), { compact: true })})`
+          : `${label} recorded`,
+      error: (err: unknown) => (err instanceof Error ? err.message : `${label} failed`),
+    });
   }
 
   // Convert alert timeline to UITimelineEntry[]
@@ -117,13 +203,9 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
               : undefined,
     }));
 
-  return (
-    <Drawer
-      open={Boolean(alertId)}
-      onClose={onClose}
-      title={`${alert.cluster_ref} · ${targetName}`}
-      width="lg"
-    >
+  const heading = `${alert.cluster_ref} · ${targetName}`;
+
+  const body = (
       <div className="nk-alert-detail">
           {/* Subtitle */}
           <div className="nk-text-xs font-mono text-muted mb-2">
@@ -234,6 +316,21 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
               <div className="nk-action-dialog-body">
                 {activeActionModal === "request_hold" && (
                   <div className="nk-form-group">
+                    <label htmlFor="hold-account-select" className="nk-label">
+                      Account to hold
+                    </label>
+                    {holdAccounts.length > 0 ? (
+                      <Select
+                        id="hold-account-select"
+                        value={holdAccountId}
+                        onValueChange={setHoldAccountId}
+                        options={holdAccounts.map((a) => ({ value: a.id, label: a.label }))}
+                      />
+                    ) : (
+                      <span className="nk-text-xs nk-text-secondary">
+                        No traced accounts are available for this alert, so a hold cannot be requested from here.
+                      </span>
+                    )}
                     <label htmlFor="hold-amount-input" className="nk-label">
                       Proposed Lien Amount (₹)
                     </label>
@@ -284,15 +381,27 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
                 </div>
 
                 <div className="nk-action-dialog-footer">
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    loading={actionMutation.isPending}
-                    disabled={activeActionModal === "override" && !actionReason.trim()}
-                    onClick={() => handleActionSubmit(activeActionModal)}
-                  >
-                    Confirm & Execute
-                  </Button>
+                  {HOLD_ACTIONS.includes(activeActionModal) ? (
+                    // The hold is the confirmation: no second dialog, and letting go early does nothing.
+                    <HoldToActuateButton
+                      label={activeActionModal === "request_hold" ? "Hold to request lien" : "Hold to dispatch"}
+                      variant="danger"
+                      autoFocus
+                      loading={actionMutation.isPending}
+                      disabled={activeActionModal === "request_hold" && (!holdAccountId || !Number(holdAmount))}
+                      onActuate={() => handleActionSubmit(activeActionModal)}
+                    />
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      loading={actionMutation.isPending}
+                      disabled={activeActionModal === "override" && !actionReason.trim()}
+                      onClick={() => handleActionSubmit(activeActionModal)}
+                    >
+                      Confirm & Execute
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"
@@ -386,6 +495,25 @@ export function AlertDetail({ alertId, onClose }: AlertDetailProps) {
             <DeliveryLog deliveries={alert.deliveries} />
           </div>
       </div>
+  );
+
+  if (variant === "panel") {
+    return (
+      <aside className="nk-alert-panel" aria-label="Alert detail">
+        <div className="nk-alert-panel__header">
+          <h2 className="nk-alert-panel__title">{heading}</h2>
+          <Button size="sm" variant="ghost" onClick={onClose} aria-label="Close alert detail">
+            Esc ✕
+          </Button>
+        </div>
+        {body}
+      </aside>
+    );
+  }
+
+  return (
+    <Drawer open={Boolean(alertId)} onClose={onClose} title={heading} width="lg">
+      {body}
     </Drawer>
   );
 }

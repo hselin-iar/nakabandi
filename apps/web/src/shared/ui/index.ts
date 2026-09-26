@@ -17,7 +17,7 @@ export { Countdown } from "./Countdown";
 export { MaskedRef } from "./MaskedRef";
 
 export { DataTable } from "./DataTable";
-export type { Column } from "./DataTable";
+export type { Column, DataTableHandle } from "./DataTable";
 
 export { KeyValue } from "./KeyValue";
 
@@ -35,3 +35,8 @@ export { ErrorState } from "./ErrorState";
 export { ShortcutSheet } from "./ShortcutSheet";
 export { registerShortcuts, useRegisterShortcuts } from "./shortcutRegistry";
 export type { ShortcutEntry, ShortcutScope } from "./shortcutRegistry";
+
+export { CountdownRing } from "./CountdownRing";
+export { HoldToActuateButton } from "./HoldToActuateButton";
+export { RollingCounter } from "./RollingCounter";
+export { ConsequenceTally } from "./ConsequenceTally";

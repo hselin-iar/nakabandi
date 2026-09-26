@@ -3,14 +3,16 @@
  * DOC 3 Web App Shell: app/providers.tsx (QueryClient, router, toast, stream provider)
  *
  * C3: StreamProviderPlaceholder replaced with the real SSE StreamProvider.
+ * Overhaul Phase 2: sonner replaces react-hot-toast; TimeProvider (one rAF loop) sits under StreamProvider.
  */
 
 import React from "react";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "react-hot-toast";
+import { Toaster } from "sonner";
 import { AuthProvider } from "./auth/AuthContext";
 import { StreamProvider } from "../shared/stream/useStream";
+import { TimeProvider } from "../shared/time/TimeProvider";
 import { TooltipProvider } from "../shared/ui/Tooltip";
 
 /** TanStack Query client with sensible defaults for the app. */
@@ -37,21 +39,27 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <StreamProvider>
-            <TooltipProvider delayDuration={200}>
-              {children}
-              {/* Toast container — positioned top-right, accessible */}
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  duration: 5000,
-                  style: {
-                    background: "var(--nk-surface-raised, #1e2130)",
-                    color: "var(--nk-text-primary, #e2e8f0)",
-                    border: "1px solid var(--nk-border-subtle, #2d3748)",
-                  },
-                }}
-              />
-            </TooltipProvider>
+            {/* One rAF loop, anchored to sim.time ticks; depends on StreamProvider. */}
+            <TimeProvider>
+              <TooltipProvider delayDuration={200}>
+                {children}
+                {/* Toast container: stacked, top-right, themed to the tactical tokens. */}
+                <Toaster
+                  position="top-right"
+                  theme="dark"
+                  duration={5000}
+                  toastOptions={{
+                    style: {
+                      background: "var(--nk-surface-elevated)",
+                      color: "var(--nk-text-primary)",
+                      border: "1px solid var(--nk-border-strong)",
+                      borderRadius: "var(--nk-radius-lg)",
+                      fontFamily: "var(--nk-font-sans)",
+                    },
+                  }}
+                />
+              </TooltipProvider>
+            </TimeProvider>
           </StreamProvider>
         </AuthProvider>
       </QueryClientProvider>

@@ -40,14 +40,16 @@
     "@radix-ui/react-select": "^2.3.7",
     "@radix-ui/react-tooltip": "^1.2.16",
     "@tanstack/react-query": "^5.103.2",
+    "@tanstack/react-virtual": "^3.14.13",
     "cytoscape": "^3.34.3",
     "date-fns": "^4.4.0",
     "maplibre-gl": "^6.11.1",
     "openapi-fetch": "^0.13.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-hot-toast": "^2.6.1",
+    "react-hotkeys-hook": "^5.3.3",
     "react-router-dom": "^6.30.6",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "sonner": "^2.0.8"
   }
 }

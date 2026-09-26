@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AlertDetail } from "../AlertDetail";
@@ -69,8 +69,12 @@ let alertState: AlertDetailModel;
 
 function installStatefulMock(): void {
   alertState = fixtureDetail();
-  vi.mocked(apiClient.GET).mockImplementation((() =>
-    Promise.resolve({ data: alertState, error: undefined })) as unknown as typeof apiClient.GET);
+  vi.mocked(apiClient.GET).mockImplementation(((path: string) =>
+    Promise.resolve(
+      path === "/clusters/{cluster_id}"
+        ? { data: { nodes: [{ id: "ACC-7", kind: "account", masked_ref: "XXXX-4471", bank: "SBIN" }] }, error: undefined }
+        : { data: alertState, error: undefined },
+    )) as unknown as typeof apiClient.GET);
   vi.mocked(apiClient.POST).mockImplementation(((path: string, opts?: { body?: Record<string, unknown> }) => {
     if (path === "/alerts/{alert_id}/actions") {
       const body = opts?.body as { type: string; reason?: string; params?: Record<string, unknown> };
@@ -219,19 +223,37 @@ describe("AlertDetail", () => {
     expect(await screen.findByText(/acknowledged/i)).toBeTruthy();
   });
 
-  it("opens modal and submits Request Hold action", async () => {
+  it("Request Hold needs a press-and-hold: an early release sends nothing, a full hold sends the account and amount", async () => {
+    alertState = { ...alertState, forecast: { cluster_id: "CLU-1" } as never };
     renderAlertDetail("ALT-2026-001", ["VIEW_ALERTS", "REQUEST_HOLD"]);
 
-    const holdBtn = await screen.findByRole("button", { name: /Request Hold/i });
-    fireEvent.click(holdBtn);
+    fireEvent.click(await screen.findByRole("button", { name: /Request Hold/i }));
 
     expect(screen.getByText("Request Inter-Bank Lien Hold")).toBeTruthy();
-    expect(screen.getByLabelText(/Proposed Lien Amount/i)).toBeTruthy();
+    // The traced account from the cluster is offered and preselected.
+    expect(await screen.findByText(/XXXX-4471/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(/Proposed Lien Amount/i), { target: { value: "1500" } });
 
-    const confirmBtn = screen.getByRole("button", { name: /Confirm & Execute/i });
-    fireEvent.click(confirmBtn);
+    const holdBtn = screen.getByRole("button", { name: /Hold to request lien/i });
+    const actions = () =>
+      vi.mocked(apiClient.POST).mock.calls.filter((c) => c[0] === "/alerts/{alert_id}/actions");
 
-    // Action updates status to ACTIONED
+    // Let go well before 600 ms: nothing is sent.
+    fireEvent.pointerDown(holdBtn, { button: 0, pointerType: "mouse" });
+    await new Promise((r) => setTimeout(r, 150));
+    fireEvent.pointerUp(holdBtn);
+    await new Promise((r) => setTimeout(r, 700));
+    expect(actions()).toHaveLength(0);
+
+    // Hold through 600 ms: one request, carrying the account and integer paise.
+    fireEvent.pointerDown(holdBtn, { button: 0, pointerType: "mouse" });
+    await waitFor(() => expect(actions()).toHaveLength(1), { timeout: 2000 });
+    const [, opts] = actions()[0] as unknown as [string, { body: { type: string; params: Record<string, unknown> } }];
+    const body = opts.body;
+    expect(body.type).toBe("request_hold");
+    expect(body.params).toEqual({ account_id: "ACC-7", proposed_paise: 150000 });
+
+    // Optimistic status flip: the alert reads as actioned.
     expect(await screen.findByText(/actioned/i)).toBeTruthy();
   });
 

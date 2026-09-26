@@ -6,13 +6,22 @@
  * updates without full reload, rapid triage queue, and slide-over AlertDetail.
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useHotkeys } from "react-hotkeys-hook";
 import { useAlerts, type AlertFilters } from "./api/useAlerts";
 import { AlertDetail } from "./AlertDetail";
 import { ReviewQueue } from "./ReviewQueue";
 import { AttentionBudgetStrip } from "./AttentionBudgetStrip";
-import { DataTable, type Column } from "../../shared/ui/DataTable";
+import { DataTable, type Column, type DataTableHandle } from "../../shared/ui/DataTable";
+import { CountdownRing } from "../../shared/ui/CountdownRing";
+import { RollingCounter } from "../../shared/ui/RollingCounter";
+import { ConsequenceTally } from "../../shared/ui/ConsequenceTally";
+import { useRegisterShortcuts, type ShortcutScope } from "../../shared/ui/shortcutRegistry";
+import { useMediaQuery } from "../../shared/lib/useMediaQuery";
+import { armAudio, playTacticalPing } from "../../shared/audio/tacticalPing";
+import { setSoundEnabled, useSoundEnabled } from "../../shared/audio/soundPreference";
+import { useHoldTally } from "./holdTally";
 import { Select } from "../../shared/ui/Select";
 import { shouldShowKindBadge } from "../../shared/lib/format";
 import {
@@ -21,13 +30,75 @@ import {
   LadderBadge,
 } from "../../shared/ui/Badge";
 import { ConfidenceBar } from "../../shared/ui/ConfidenceBar";
-import { Countdown } from "../../shared/ui/Countdown";
 import { MaskedRef } from "../../shared/ui/MaskedRef";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { ErrorState } from "../../shared/ui/ErrorState";
 import { Button } from "../../shared/ui/Button";
-import type { AlertStatus, LadderLevel, Severity } from "../../shared/api/enums.ts";
+import type { ActionType, AlertStatus, LadderLevel, Severity } from "../../shared/api/enums.ts";
 import type { AlertSummary } from "../../shared/api/types.ts";
+
+const EMPTY_ALERTS: AlertSummary[] = [];
+const SEVERITY_RANK: Record<string, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
+const LADDER_RANK: Record<string, number> = { NONE: 0, L1: 1, L2: 2, L3: 3 };
+
+type Density = "comfortable" | "compact";
+const ROW_HEIGHT: Record<Density, number> = { comfortable: 64, compact: 48 };
+
+function readDensity(): Density {
+  try {
+    return window.localStorage.getItem("nk.density") === "compact" ? "compact" : "comfortable";
+  } catch {
+    return "comfortable";
+  }
+}
+
+/** Is an action dialog (hold / dispatch / override) currently open? Hotkeys must not steal its keys. */
+function actionDialogOpen(): boolean {
+  return document.querySelector(".nk-action-dialog") !== null;
+}
+
+const TRIAGE_SHORTCUTS: ShortcutScope = {
+  scope: "triage-inbox",
+  title: "Triage inbox",
+  entries: [
+    { keys: "J / K", description: "Next / previous alert" },
+    { keys: "1 – 9", description: "Jump to the Nth alert" },
+    { keys: "Space", description: "Peek at the selected alert" },
+    { keys: "F", description: "Freeze: request a hold (hold the button to confirm)" },
+    { keys: "D", description: "Dispatch a unit (hold the button to confirm)" },
+    { keys: "X / Esc", description: "Close the detail panel" },
+  ],
+};
+
+/**
+ * Hold back alerts that arrive while the operator is scrolled down, so the list never jumps
+ * under their eyes. They appear on demand (the "▲ N new" pill) or once the list is back at the top.
+ */
+function useHeldNewRows(alerts: AlertSummary[], scrolled: boolean, resetKey: unknown) {
+  const [seen, setSeen] = useState<Set<string> | null>(null);
+
+  useEffect(() => setSeen(null), [resetKey]);
+
+  useEffect(() => {
+    setSeen((prev) => {
+      if (prev === null) return new Set(alerts.map((a) => a.id));
+      if (scrolled) return prev;
+      let next: Set<string> | null = null;
+      for (const a of alerts) {
+        if (!prev.has(a.id)) {
+          next ??= new Set(prev);
+          next.add(a.id);
+        }
+      }
+      return next ?? prev;
+    });
+  }, [alerts, scrolled]);
+
+  const visible = useMemo(() => (seen ? alerts.filter((a) => seen.has(a.id)) : alerts), [alerts, seen]);
+  const held = useMemo(() => (seen ? alerts.filter((a) => !seen.has(a.id)) : []), [alerts, seen]);
+  const release = useCallback(() => setSeen(new Set(alerts.map((a) => a.id))), [alerts]);
+  return { visible, held, release };
+}
 
 export default function AlertsInbox() {
   const { id: urlAlertId } = useParams<{ id?: string }>();
@@ -38,6 +109,18 @@ export default function AlertsInbox() {
   const [severityFilter, setSeverityFilter] = useState<Severity | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showReviewQueue, setShowReviewQueue] = useState(false);
+
+  // Cockpit state: keyboard-active row, density, list scroll state, requested action dialog
+  const tableRef = useRef<DataTableHandle>(null);
+  const [activeAlert, setActiveAlert] = useState<AlertSummary | null>(null);
+  const [density, setDensity] = useState<Density>(readDensity);
+  const [scrolled, setScrolled] = useState(false);
+  const [requestedAction, setRequestedAction] = useState<{ type: ActionType; nonce: number } | null>(null);
+  const soundOn = useSoundEnabled();
+  const wide = useMediaQuery("(min-width: 1280px)");
+  const tally = useHoldTally();
+
+  useRegisterShortcuts(TRIAGE_SHORTCUTS);
 
   // Selected alert ID for drawer (defaults to URL param if provided)
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(urlAlertId ?? null);
@@ -59,7 +142,13 @@ export default function AlertsInbox() {
     [statusFilter, severityFilter, searchQuery],
   );
 
-  const { data: alerts = [], isLoading, error, refetch } = useAlerts(queryFilters);
+  const { data: alertsData, isLoading, error, refetch } = useAlerts(queryFilters);
+  const allAlerts = alertsData ?? EMPTY_ALERTS;
+  const { visible: alerts, held: heldAlerts, release: releaseHeld } = useHeldNewRows(
+    allAlerts,
+    scrolled,
+    queryFilters,
+  );
 
   // Attention-budget strip (§4.2/§7.6): the same filters, against the deferred backlog —
   // makes the alert-budget policy visible as a trust signal, not an invisible server split.
@@ -77,6 +166,73 @@ export default function AlertsInbox() {
     navigate("/alerts");
   }
 
+  function showHeld() {
+    releaseHeld();
+    tableRef.current?.scrollToTop();
+  }
+
+  function toggleDensity() {
+    const next: Density = density === "compact" ? "comfortable" : "compact";
+    setDensity(next);
+    try {
+      window.localStorage.setItem("nk.density", next);
+    } catch {
+      /* preference just isn't remembered */
+    }
+  }
+
+  function toggleSound() {
+    const next = !soundOn;
+    setSoundEnabled(next);
+    if (next) {
+      // Enabling is a user gesture: unlock audio and give an audible confirmation.
+      armAudio();
+      window.setTimeout(() => playTacticalPing("MEDIUM"), 60);
+    }
+  }
+
+  // ---- Keyboard triage (react-hotkeys-hook; single-key, off while typing in a form field) ----
+  const hotkeysOn = !(selectedAlertId && !wide); // the modal drawer owns the keyboard when open
+  const guarded = (fn: () => void) => () => {
+    if (!actionDialogOpen()) fn();
+  };
+  const requestAction = (type: ActionType) => {
+    if (!activeAlert) return;
+    setSelectedAlertId(activeAlert.id);
+    navigate(`/alerts/${activeAlert.id}`);
+    setRequestedAction({ type, nonce: Date.now() });
+  };
+  useHotkeys("j", guarded(() => tableRef.current?.step(1)), { enabled: hotkeysOn }, [hotkeysOn]);
+  useHotkeys("k", guarded(() => tableRef.current?.step(-1)), { enabled: hotkeysOn }, [hotkeysOn]);
+  useHotkeys(
+    "1,2,3,4,5,6,7,8,9",
+    (e) => {
+      if (!actionDialogOpen()) tableRef.current?.activate(Number(e.key) - 1);
+    },
+    { enabled: hotkeysOn },
+    [hotkeysOn],
+  );
+  useHotkeys(
+    "space",
+    guarded(() => {
+      if (!activeAlert) return;
+      setSelectedAlertId(activeAlert.id);
+      navigate(`/alerts/${activeAlert.id}`);
+    }),
+    { enabled: hotkeysOn, preventDefault: true },
+    [hotkeysOn, activeAlert],
+  );
+  useHotkeys("f", guarded(() => requestAction("request_hold")), { enabled: hotkeysOn }, [hotkeysOn, activeAlert]);
+  useHotkeys("d", guarded(() => requestAction("dispatch")), { enabled: hotkeysOn }, [hotkeysOn, activeAlert]);
+  useHotkeys(
+    "x,escape",
+    guarded(() => {
+      if (selectedAlertId) handleCloseDetail();
+    }),
+    { enabled: Boolean(selectedAlertId) && wide },
+    [selectedAlertId, wide],
+  );
+
   // DataTable column definitions
   const columns: Column<AlertSummary>[] = useMemo(
     () => [
@@ -84,6 +240,7 @@ export default function AlertsInbox() {
         key: "severity",
         header: "Severity",
         sortable: true,
+        sortValue: (row) => SEVERITY_RANK[row.severity] ?? -1,
         width: "9rem",
         cell: (row) => <SeverityBadge severity={row.severity as Severity} />,
       },
@@ -91,6 +248,7 @@ export default function AlertsInbox() {
         key: "id",
         header: "Cluster",
         sortable: true,
+        sortValue: (row) => row.cluster_ref,
         width: "14rem",
         cell: (row) => (
           <div className="nk-alert-id-cell">
@@ -103,6 +261,7 @@ export default function AlertsInbox() {
         key: "target",
         header: "Target Facility",
         sortable: true,
+        sortValue: (row) => String(row.target.name ?? row.target.id ?? ""),
         cell: (row) => {
           const name = String(row.target.name ?? row.target.id ?? "");
           const kind = String(row.target.kind ?? "");
@@ -136,17 +295,17 @@ export default function AlertsInbox() {
         key: "ladder_level",
         header: "Ladder",
         sortable: true,
+        sortValue: (row) => LADDER_RANK[row.ladder_level] ?? -1,
         width: "9rem",
         cell: (row) => <LadderBadge level={row.ladder_level as LadderLevel} />,
       },
       {
         key: "expires_at",
-        header: "Expires In",
+        header: "Window",
         sortable: true,
-        width: "9rem",
-        cell: (row) => (
-          <Countdown target={row.expires_at} warnThreshold={900} />
-        ),
+        sortValue: (row) => new Date(row.expires_at).getTime(),
+        width: "5rem",
+        cell: (row) => <CountdownRing expiresAt={row.expires_at} createdAt={row.created_at} />,
       },
       {
         key: "actions",
@@ -167,7 +326,15 @@ export default function AlertsInbox() {
         ),
       },
     ],
+    // handleRowClick only touches setState/navigate, which are stable
     [],
+  );
+
+  // With the detail pane open the list is narrower: drop the lowest-value columns.
+  const splitOpen = wide && Boolean(selectedAlertId);
+  const visibleColumns = useMemo(
+    () => (splitOpen ? columns.filter((c) => c.key !== "ladder_level" && c.key !== "actions" && c.key !== "confidence") : columns),
+    [columns, splitOpen],
   );
 
   const statusOptions: { label: string; value: AlertStatus | "all" }[] = [
@@ -208,6 +375,31 @@ export default function AlertsInbox() {
         </div>
 
         <div className="nk-inbox-top-actions">
+          <div className="nk-inbox-tools">
+            <ConsequenceTally
+              heldPaise={tally.heldPaise}
+              actionCount={tally.actionCount}
+              pendingCount={tally.pendingCount}
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={toggleSound}
+              aria-pressed={soundOn}
+              title="Play a cue when a CRITICAL alert arrives"
+            >
+              {soundOn ? "🔔 Sound on" : "🔕 Sound off"}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={toggleDensity}
+              aria-pressed={density === "compact"}
+              title="Row density"
+            >
+              {density === "compact" ? "Compact" : "Comfortable"}
+            </Button>
+          </div>
           <Button
             variant={showReviewQueue ? "primary" : "outline"}
             onClick={() => setShowReviewQueue((prev) => !prev)}
@@ -225,22 +417,22 @@ export default function AlertsInbox() {
       <div className="nk-kpi-strip" aria-label="Alert summary statistics">
         <div className="nk-kpi-card">
           <span className="nk-kpi-card__label"><span className="nk-live-dot" aria-hidden="true" />Live Alerts</span>
-          <span className={`nk-kpi-card__value${kpiCounts.open > 0 ? " nk-kpi-card__value--brand" : ""}`}>{alerts.length}</span>
+          <span className={`nk-kpi-card__value${kpiCounts.open > 0 ? " nk-kpi-card__value--brand" : ""}`}><RollingCounter value={alerts.length} /></span>
           <span className="nk-kpi-card__sub">{kpiCounts.open} open</span>
         </div>
         <div className="nk-kpi-card">
           <span className="nk-kpi-card__label">Critical</span>
-          <span className={`nk-kpi-card__value${kpiCounts.critical > 0 ? " nk-kpi-card__value--critical" : " nk-kpi-card__value--good"}`}>{kpiCounts.critical}</span>
+          <span className={`nk-kpi-card__value${kpiCounts.critical > 0 ? " nk-kpi-card__value--critical" : " nk-kpi-card__value--good"}`}><RollingCounter value={kpiCounts.critical} /></span>
           <span className="nk-kpi-card__sub">immediate action</span>
         </div>
         <div className="nk-kpi-card">
           <span className="nk-kpi-card__label">High Severity</span>
-          <span className={`nk-kpi-card__value${kpiCounts.high > 0 ? " nk-kpi-card__value--high" : " nk-kpi-card__value--good"}`}>{kpiCounts.high}</span>
+          <span className={`nk-kpi-card__value${kpiCounts.high > 0 ? " nk-kpi-card__value--high" : " nk-kpi-card__value--good"}`}><RollingCounter value={kpiCounts.high} /></span>
           <span className="nk-kpi-card__sub">elevated risk</span>
         </div>
         <div className="nk-kpi-card">
           <span className="nk-kpi-card__label">Active Clusters</span>
-          <span className="nk-kpi-card__value nk-kpi-card__value--brand">{kpiCounts.clusters}</span>
+          <span className="nk-kpi-card__value nk-kpi-card__value--brand"><RollingCounter value={kpiCounts.clusters} /></span>
           <span className="nk-kpi-card__sub">mule networks</span>
         </div>
       </div>
@@ -295,58 +487,79 @@ export default function AlertsInbox() {
         </div>
       </div>
 
-      {/* Main Alerts Table */}
-      <main className="nk-inbox-table-area">
-        {isLoading ? (
-          <div className="nk-inbox-loading" aria-live="polite">
-            Streaming live alerts…
-          </div>
-        ) : error ? (
-          <ErrorState
-            error={{ code: "error", message: error.message }}
-            onRetry={() => void refetch()}
-          />
-        ) : (
-          <DataTable
-            columns={columns}
-            data={alerts}
-            getRowKey={(row) => row.id}
-            onRowClick={handleRowClick}
-            caption="Active fraud interception alerts"
-            rowClassName={(row) => {
-              const s = String(row.severity ?? "").toUpperCase();
-              if (s === "CRITICAL") return "nk-table__row--critical";
-              if (s === "HIGH") return "nk-table__row--high";
-              if (s === "MEDIUM") return "nk-table__row--medium";
-              return "nk-table__row--low";
-            }}
-            emptyState={
-              <EmptyState
-                title="No alerts matching criteria"
-                message="No alerts found for the selected status and severity filters."
-                action={
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setStatusFilter("all");
-                      setSeverityFilter("all");
-                      setSearchQuery("");
-                    }}
-                  >
-                    Reset Filters
-                  </Button>
-                }
-              />
-            }
+      {/* Main Alerts Table (+ in-place detail pane on wide screens) */}
+      <div className={splitOpen ? "nk-triage-split" : undefined}>
+        <main className="nk-inbox-table-area">
+          {heldAlerts.length > 0 && (
+            <button type="button" className="nk-new-pill" onClick={showHeld}>
+              ▲ {heldAlerts.length} new {heldAlerts.length === 1 ? "alert" : "alerts"}
+              {heldAlerts.some((a) => a.severity === "CRITICAL")
+                ? ` (${heldAlerts.filter((a) => a.severity === "CRITICAL").length} critical)`
+                : ""}
+            </button>
+          )}
+          {isLoading ? (
+            <div className="nk-inbox-loading" aria-live="polite">
+              Streaming live alerts…
+            </div>
+          ) : error ? (
+            <ErrorState
+              error={{ code: "error", message: error.message }}
+              onRetry={() => void refetch()}
+            />
+          ) : (
+            <DataTable
+              ref={tableRef}
+              columns={visibleColumns}
+              data={alerts}
+              getRowKey={(row) => row.id}
+              onRowClick={handleRowClick}
+              onActiveChange={setActiveAlert}
+              onScrolledChange={setScrolled}
+              virtualized
+              rowHeight={ROW_HEIGHT[density]}
+              height="clamp(20rem, calc(100dvh - 27rem), 60rem)"
+              caption="Active fraud interception alerts"
+              rowClassName={(row) => {
+                const s = String(row.severity ?? "").toUpperCase();
+                if (s === "CRITICAL") return "nk-table__row--critical";
+                if (s === "HIGH") return "nk-table__row--high";
+                if (s === "MEDIUM") return "nk-table__row--medium";
+                return "nk-table__row--low";
+              }}
+              emptyState={
+                <EmptyState
+                  title="No alerts matching criteria"
+                  message="No alerts found for the selected status and severity filters."
+                  action={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setStatusFilter("all");
+                        setSeverityFilter("all");
+                        setSearchQuery("");
+                      }}
+                    >
+                      Reset Filters
+                    </Button>
+                  }
+                />
+              }
+            />
+          )}
+        </main>
+
+        {/* Alert detail: inline pane beside the queue on wide screens, slide-over drawer otherwise */}
+        {selectedAlertId && (
+          <AlertDetail
+            alertId={selectedAlertId}
+            onClose={handleCloseDetail}
+            variant={wide ? "panel" : "drawer"}
+            requestedAction={requestedAction}
           />
         )}
-      </main>
-
-      {/* Slide-over Alert Detail Drawer */}
-      {selectedAlertId && (
-        <AlertDetail alertId={selectedAlertId} onClose={handleCloseDetail} />
-      )}
+      </div>
     </div>
   );
 }

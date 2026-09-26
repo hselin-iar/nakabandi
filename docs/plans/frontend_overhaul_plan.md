@@ -24,6 +24,7 @@ The four research reports and the original task brief both contain a few claims 
 | `react-hot-toast` is in active use | It is mounted (`<Toaster />` in `app/providers.tsx`) but **zero components call `toast.*()` anywhere in the codebase.** | Swapping to `sonner` (task-mandated, and the research's 3-of-4 convergence pick over `react-toastify`) is a one-file change with no call-site migration risk. |
 | OSIRIS's always-visible "ZULU" (UTC) clock is a cheap HUD element to copy | A wall-clock UTC readout would contradict this app's sim-clock convention (§0 timers row) and confuse a demo where sim time and wall time differ. | The HUD clock reads `useSimTime()` and is labelled **"SIM ⟨time⟩Z"**, never `new Date()`. |
 | OSIRIS's "viewport-aware fetching" and "lazy-load a layer on first toggle" are worth copying | The map's data hooks (`useHeatmap`, `useLocations`, alerts) pass filters, not a bounding box, and the whole dataset is four demo states. Viewport-scoped fetching would need a new backend query param for no measurable gain at this data size. `MapAdapter.setLayerVisibility()` **already exists**, so layer toggling is a UI job, not an adapter job. | Adopt the *toggle + live count* pattern (§2.3). Do **not** build viewport-scoped fetching. Optionally gate each layer's query with `enabled: layerOn`; skip if it complicates the existing debounced-invalidate flow. |
+| The current `request_hold` UI works against the real backend | It sends `params.lien_amount_paise`, but `RecordAction._validate_hold` requires `params.account_id` and integer `params.proposed_paise` and otherwise returns `LIEN_INVALID`. The UI could never complete a hold; its test only passed because the API was mocked. Also: a `request_hold`/`dispatch` moves the alert to `actioned`, after which no further action (so no "undo") is accepted. | Phase 2 fixes the request (account picker sourced from `GET /clusters/{cluster_id}` nodes, amount defaulted from the proportionality proposal) and drops the planned UNDO toast (§2.1). A role without cluster access sees "no traced accounts available" instead of a broken request. |
 | `DataTable`'s column sort is functional | `sortKey`/`sortDir` state toggles in the UI, but the `visible` memo that feeds the table **never applies the sort** — it is currently cosmetic/non-functional. | Fixed opportunistically in Phase 2 while `DataTable` is already being extended for virtualization (§3 Phase 2) — small, in-scope fix, not a new work item. |
 
 ---
@@ -182,7 +183,7 @@ This is Gemini's `TimeProvider` concept corrected per §0: it anchors to the las
 - `j`/`k` — move selection down/up the virtualized list (scrolls the virtualizer to the selected index).
 - `f` — freeze (opens/confirms the `request_hold` hold-to-actuate control, §2.1 below) — **only if `"request_hold"` is present in the selected alert's `allowed_actions`**, otherwise no-op (server permission is authoritative, per §0).
 - `d` — dispatch (same gating against `allowed_actions` for `"dispatch"`).
-- `x` — dismiss/close.
+- `x` / `Escape` — close the detail pane (there is no dismiss action in the backend, so this only closes the view).
 - `Space` — quick-peek (opens the in-place detail panel without navigating away from the list).
 - `enableOnFormTags: false` so these never fire while the search/filter inputs have focus (Gemini's specific config finding).
 
@@ -211,12 +212,12 @@ Triggered from `useStream.tsx`'s existing `alert.created` handler, gated to `sev
 - `override` is a **reconsidered case, not bucketed with the other plain buttons**: an officer overriding the platform's automated recommendation is arguably the single most consequential action type in the system — it's a human deliberately superseding the model. It doesn't get the hold gesture (the research's hold-to-actuate pattern is specifically framed around funds-freeze/dispatch physical urgency, not deliberation), but per Claude's own tiering (its finding 5.3: a non-dismissible toast — `dismissible: false` — reserved for actions where premature dismissal would cause confusion), the click still fires the mutation optimistically like `acknowledge`/`notify_station`, but the resulting toast is **non-dismissible** (no auto-timeout, must be explicitly clicked closed) rather than the plain auto-dismissing success toast the softer actions get — forcing the officer to consciously register "an override was recorded" rather than letting it scroll past unread.
 - **600ms** hold duration (task-specified; note Gemini's own code used 650ms against its stated 600ms — we use exactly 600ms per the task brief, no ambiguity).
 - Mechanic: `pointerdown`/`f`-or-`d`-keydown starts a RAF loop computing `pct = min(100, (performance.now() - start) / 600 * 100)`, painted as an inset `<span>` fill (`width: ${pct}%`); release before 100% cancels instantly (RAF cancelled, fill resets — no fake "recoil" animation, matching what Gemini's actual code does rather than its more elaborate prose).
-- On reaching 100%: fires the TanStack Query mutation, then a **`sonner`** toast (see below) — reaching 100% is the actuation; the toast that follows is an **undo window, not a confirmation gate** (this resolves the research's Claude-vs-Gemini contradiction in favor of Gemini's model for these two specific action types, since the hold gesture itself already is the confirmation).
+- On reaching 100%: fires the TanStack Query mutation and a **`sonner`** `toast.promise` — reaching 100% is the actuation, and the hold gesture itself is the confirmation (no second dialog). **Correction (found while implementing Phase 2, verified in `alerting/application/record_action.py`): there is no undo.** A `request_hold`/`dispatch` moves the alert to `actioned`, and `actioned` is not in `ACTIONABLE_STATUSES`, so any follow-up action (including `override`) is rejected with `INVALID_TRANSITION` (409); an `override` also would not release a lien even if it were accepted, because it enqueues no delivery. The bank already received the hold request. The original draft's 5-second UNDO toast would have told the operator a freeze was reversed when it was not, so it is **not built**. A hold is released only by the bank/timer path (`released` callback, or the lien's `expires_at`).
 
 **Consequence toast + optimistic cache** (new dependency: `sonner`, replaces the currently-unused `react-hot-toast` `<Toaster/>` mount — one-line swap, zero call-site migration per §0):
 - `useMutation`'s `onMutate`: `queryClient.cancelQueries(streamKeys.alerts())`, snapshot previous cache, optimistically patch the alert's `status`, return the snapshot as mutation context.
 - **`acknowledge`/`notify_station`/outcomes use `toast.promise(mutation, { loading, success, error })`** (Claude's specific finding 5.2/5.4 — one call that auto-transitions loading→success/error tied to the real mutation, rather than manually calling `.success()`/`.error()` in separate `onSuccess`/`onError` callbacks) — the single-call form is what's actually idiomatic here and is what the plan now specifies, correcting the earlier draft's more generic phrasing.
-- For `request_hold`/`dispatch` (the hold-to-actuate pair, §2.1 above): on reaching 100% and the mutation firing, the follow-up toast carries a 5-second `action: { label: "UNDO", onClick: () => overrideMutation.mutate(...) }` — note "undo" for these two action types means firing a compensating `override` action server-side (there is no delete/undo endpoint — undo is a new forward action, not a client-side-only revert), so the toast's undo handler must call a real mutation, not just restore cache state. This is called out explicitly because naively restoring the optimistic cache snapshot on "undo" (as Gemini's sample code does) would desync the client from a server that already recorded the original action.
+- For `request_hold`/`dispatch`: the success toast states what is actually true and no more — "Hold requested — waiting for the bank to confirm (₹X)" (the action is `pending` until the bank's callback makes it `applied`/`rejected`). No UNDO button. The consequence tally (below) shows the hold as pending and reconciles when the bank answers.
 - `override` gets its own non-dismissible variant per the bullet above, not the plain `toast.promise()` treatment.
 - On error (any action): roll back the optimistic cache patch to the snapshot; `toast.promise()`'s own error branch surfaces this without a separate manual call.
 
@@ -429,14 +430,14 @@ Manual/visual: `npm run dev`, confirm a Tailwind arbitrary-value class (e.g. `bo
 
 **New packages:** `react-hotkeys-hook` (MIT), `@tanstack/react-virtual` (MIT), `sonner` (MIT). Remove `react-hot-toast` from `dependencies` (zero call sites to migrate, per §0).
 
-**Demo-ready when:** an alert can be seen arriving, pinged, acted on by hold, reflected in the tally, and undone within 5s — end to end, with the Dashboard KPIs rolling.
+**Demo-ready when:** an alert can be seen arriving, pinged, acted on by hold, and reflected in the tally (pending, then reconciled to what the bank applied) — end to end, with the Dashboard KPIs rolling.
 
 **Verification:**
 ```
 npx vitest run src/shared/ui/__tests__/CountdownRing.test.tsx src/features/alerts/__tests__/HoldToActuate.test.tsx src/shared/ui/__tests__/ConsequenceTally.test.tsx
 npm run ci:web
 ```
-Manual: open `/alerts` with the demo simulator running, confirm `j`/`k` traversal, confirm a CRITICAL alert plays the ping once (not per-render), confirm holding `f` for <600ms on a `request_hold`-eligible alert cancels with no mutation fired (Network tab), and confirm the freeze → undo path lands a compensating `override` in `/audit` (§2.1 correction: undo is a real backend action, not a cache rollback).
+Manual: open `/alerts` with the demo simulator running, confirm `j`/`k` traversal, confirm a CRITICAL alert plays the ping once (not per-render), confirm holding `f`, then holding the button for <600ms on a `request_hold`-eligible alert cancels with no mutation fired (Network tab), and a full hold sends `params.account_id` + `params.proposed_paise` and the tally reconciles once the bank-sim callback lands.
 
 ### Phase 3 — Command Palette & Tactical Map
 
@@ -506,7 +507,7 @@ Manual: dagre renders left-to-right in hop order matching the previous hand-comp
 **Target files:**
 - New: `apps/web/src/shared/api/fetchEvalResults.ts` — NaN-sanitizing fetch helper (§2.4): fetch as text, sanitize bare `NaN` tokens, `{ value: number | null, n: number }` per metric
 - Rewrite: `apps/web/src/features/evaluation/EvaluationPage.tsx` (or a new `features/system/SystemIntegrityPage.tsx` composition, matching the existing `feature:system → feature:[evaluation, ops, audit]` boundaries rule) — wire `/system/metrics`, `/audit/verify`, `/analytics/live-metrics`, sanitized `eval-results.json` per §2.4; `RollingCounter` on the exposure tiles; latency sparklines from a 10s client-side rolling buffer
-- Audit pass: every mutation across `alerts`, `casework`-adjacent actions (`EvidencePackPanel`'s generate action, `OutcomeButtons`), and `ops`/`audit` pages gets the consistent optimistic-update + `sonner` treatment of the tiered model in §2.1 (evidence-pack generation is naturally not undo-able: plain success/error toasts, not the undo-window pattern)
+- Audit pass: every mutation across `alerts`, `casework`-adjacent actions (`EvidencePackPanel`'s generate action, `OutcomeButtons`), and `ops`/`audit` pages gets the consistent optimistic-update + `sonner` treatment of the tiered model in §2.1 (evidence-pack generation gets plain success/error toasts)
 - Modify: `apps/web/src/shared/ui/ShortcutSheet.tsx` — final pass so every scope is listed and matches the real bindings
 
 **New packages:** none.
@@ -516,7 +517,7 @@ Manual: dagre renders left-to-right in hop order matching the previous hand-comp
 npm run ci:web
 npm run test:e2e --workspace apps/web   # if Playwright specs exist/are extended for the triage + case flows touched across phases
 ```
-Manual: full click-through of the demo flow (`npm run dev:sim` + `npm run dev`) — Dashboard → alert → hold-to-freeze → undo → `Cmd+K` to map → case dossier → System HUD; confirm the audit-chain indicator shows `ok`, and that an `eval-results.json` containing bare `NaN` renders "insufficient sample (n<30)" instead of throwing.
+Manual: full click-through of the demo flow (`npm run dev:sim` + `npm run dev`) — Dashboard → alert → hold-to-freeze → `Cmd+K` to map → case dossier → System HUD; confirm the audit-chain indicator shows `ok`, and that an `eval-results.json` containing bare `NaN` renders "insufficient sample (n<30)" instead of throwing.
 
 ---
 

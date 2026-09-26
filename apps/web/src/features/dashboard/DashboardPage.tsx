@@ -15,6 +15,7 @@ import { useLiveMetrics, useTimeseries } from "./api/useAnalytics";
 import { usePrincipal } from "../../app/auth/usePrincipal";
 import { formatInr } from "../../shared/lib/format";
 import { Countdown } from "../../shared/ui/Countdown";
+import { RollingCounter } from "../../shared/ui/RollingCounter";
 import { SeverityBadge } from "../../shared/ui/Badge";
 import type { Severity } from "../../shared/api/enums.ts";
 
@@ -22,7 +23,7 @@ import type { Severity } from "../../shared/api/enums.ts";
 // Mini sparkline (SVG) — renders a tiny trend line from an array of 0-1 values
 // ---------------------------------------------------------------------------
 
-function Sparkline({ values, color = "var(--nk-brand-primary)" }: { values: number[]; color?: string }) {
+function Sparkline({ values, color = "var(--nk-accent)" }: { values: number[]; color?: string }) {
   if (values.length < 2) return null;
   const w = 80;
   const h = 28;
@@ -51,7 +52,10 @@ function Sparkline({ values, color = "var(--nk-brand-primary)" }: { values: numb
 
 interface KpiCardProps {
   label: string;
-  value: string | number;
+  /** Static text; ignored when `rolling` is given. */
+  value?: string | number;
+  /** Numeric value that rolls to its new figure on every update instead of snapping. */
+  rolling?: { value: number; format?: (n: number) => string };
   sub?: string;
   color?: string;
   trend?: number[];
@@ -60,7 +64,7 @@ interface KpiCardProps {
   urgent?: boolean;
 }
 
-function KpiCard({ label, value, sub, color, trend, trendColor, onClick, urgent }: KpiCardProps) {
+function KpiCard({ label, value, rolling, sub, color, trend, trendColor, onClick, urgent }: KpiCardProps) {
   return (
     <button
       type="button"
@@ -70,12 +74,12 @@ function KpiCard({ label, value, sub, color, trend, trendColor, onClick, urgent 
     >
       <span className="nk-dash-kpi-card__label">{label}</span>
       <span className="nk-dash-kpi-card__value" style={{ color }}>
-        {value}
+        {rolling ? <RollingCounter value={rolling.value} format={rolling.format} /> : value}
       </span>
       {sub && <span className="nk-dash-kpi-card__sub">{sub}</span>}
       {trend && trend.length > 1 && (
         <div style={{ marginTop: 8 }}>
-          <Sparkline values={trend} color={trendColor ?? color ?? "var(--nk-brand-primary)"} />
+          <Sparkline values={trend} color={trendColor ?? color ?? "var(--nk-accent)"} />
         </div>
       )}
     </button>
@@ -176,53 +180,60 @@ export default function DashboardPage() {
       <div className="nk-dash-kpi-strip" role="region" aria-label="System-wide KPIs">
         <KpiCard
           label="Open Alerts"
-          value={kpis.openAlerts}
+          rolling={{ value: kpis.openAlerts }}
           sub={`${kpis.criticalAlerts} critical`}
-          color={kpis.criticalAlerts > 0 ? "#ef4444" : "var(--nk-text-primary)"}
+          // The only tile allowed a severity hue (Golden Color Rule): it is the critical count.
+          color={kpis.criticalAlerts > 0 ? "var(--nk-severity-critical)" : "var(--nk-text-primary)"}
           trend={kpis.trendData}
-          trendColor={kpis.criticalAlerts > 0 ? "#ef4444" : "var(--nk-brand-primary)"}
+          trendColor={kpis.criticalAlerts > 0 ? "var(--nk-severity-critical)" : "var(--nk-accent)"}
           onClick={() => navigate("/alerts")}
           urgent={kpis.criticalAlerts > 0}
         />
         <KpiCard
           label="Active Clusters"
-          value={kpis.activeClusters}
+          rolling={{ value: kpis.activeClusters }}
           sub={`${clusters.length} total mule networks`}
-          color="var(--nk-brand-primary)"
+          color="var(--nk-text-primary)"
           onClick={() => navigate("/cases")}
         />
         <KpiCard
           label="Total Disputed"
-          value={formatInr(kpis.totalPaise)}
+          rolling={{ value: kpis.totalPaise, format: (n) => formatInr(Math.round(n)) }}
           sub="across all active clusters"
-          color="#38bdf8"
+          color="var(--nk-text-primary)"
           onClick={() => navigate("/cases")}
         />
         <KpiCard
           label="Forecast Hotspots"
-          value={kpis.hotCells}
+          rolling={{ value: kpis.hotCells }}
           sub={`intensity ≥ 70% · ${kpis.totalAlerts} alert markers`}
-          color="#f59e0b"
+          color="var(--nk-text-primary)"
           onClick={() => navigate("/map")}
         />
         <KpiCard
           label="Peak Intensity"
-          value={`${(kpis.topIntensity * 100).toFixed(0)}%`}
+          rolling={{ value: kpis.topIntensity * 100, format: (n) => `${n.toFixed(0)}%` }}
           sub="highest cell forecast score"
-          color={kpis.topIntensity > 0.8 ? "#ef4444" : kpis.topIntensity > 0.6 ? "#f59e0b" : "#22c55e"}
+          color="var(--nk-text-primary)"
           onClick={() => navigate("/map")}
         />
-        <KpiCard
-          label="Forecast Mass (24h)"
-          value={liveMetrics ? liveMetrics.expected_mass.toFixed(1) : "—"}
-          sub={
-            liveMetrics
-              ? `probability-weighted cash-out risk · ${liveMetrics.active_locations} active locations`
-              : "GET /analytics/live-metrics"
-          }
-          color="#a78bfa"
-          onClick={() => navigate("/map")}
-        />
+        {liveMetrics ? (
+          <KpiCard
+            label="Forecast Mass (24h)"
+            rolling={{ value: liveMetrics.expected_mass, format: (n) => n.toFixed(1) }}
+            sub={`probability-weighted cash-out risk · ${liveMetrics.active_locations} active locations`}
+            color="var(--nk-text-primary)"
+            onClick={() => navigate("/map")}
+          />
+        ) : (
+          <KpiCard
+            label="Forecast Mass (24h)"
+            value="—"
+            sub="GET /analytics/live-metrics"
+            color="var(--nk-text-primary)"
+            onClick={() => navigate("/map")}
+          />
+        )}
       </div>
     </div>
   );
