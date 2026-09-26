@@ -17,3 +17,16 @@ test-results/
 playwright-report/
 cookies.txt
 data/evidence_packs/
+
+# Internal specifications & tracking docs
+docs/
+DOC1.md
+DOC2.md
+DOC3.md
+DOC4.md
+AGENTS.md
+CLAUDE.md
+design.md
+prompt-patterns.md
+vibe-antipatterns.md
+NAKABANDI_Frontend_Product_Strategy.md
